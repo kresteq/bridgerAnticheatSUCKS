@@ -1,6 +1,23 @@
 repeat task.wait() until game:IsLoaded()
 
+-- Очистка мусора от предыдущих сессий
+if type(clearteleportqueue) == "function" then
+    pcall(clearteleportqueue)
+elseif type(clearteleport_queue) == "function" then
+    pcall(clearteleport_queue)
+end
+
 local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Удаление старых GUI если они остались
+local oldGui = playerGui:FindFirstChild("NezurHub")
+if oldGui then oldGui:Destroy() end
+local oldNotif = playerGui:FindFirstChild("NezurNotifications")
+if oldNotif then oldNotif:Destroy() end
+
+
 local GuiService = game:GetService("GuiService")
 local VIM = game:GetService("VirtualInputManager")
 local RunService = game:GetService("RunService")
@@ -45,9 +62,6 @@ end
         pcall(queueonteleport, loader)
     end
 end
-
--- Вызываем сразу при старте
-SetupAutoExec()
 
 if not isfolder(ConfigFolder) then makefolder(ConfigFolder) end
 
@@ -203,6 +217,12 @@ end
 -- ==========================================
 -- GUI FRAMEWORK
 -- ==========================================
+-- Удаление старых GUI перед созданием новых
+local oldGui2 = playerGui:FindFirstChild("NezurHub")
+if oldGui2 then oldGui2:Destroy() end
+local oldNotif2 = playerGui:FindFirstChild("NezurNotifications")
+if oldNotif2 then oldNotif2:Destroy() end
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "NezurHub"
 ScreenGui.ResetOnSpawn = false
