@@ -348,7 +348,7 @@ local Features = {
     ClickTp={E=false,C=nil}, Fly={E=false,C=nil,KC=nil},
     RaknetDesync={E=false,C=nil}, HideName={E=false,C=nil}
 }
-local SHC = {MinPlayers=1, MaxPlayers=10}
+local SHC = {MinPlayers=1, MaxPlayers=25}
 local GuiKeybind = Enum.KeyCode.F1
 local FlyKeybind = Enum.KeyCode.E
 local FlySpeed = 30
@@ -670,6 +670,9 @@ sy = sy + 105
 local SaveCfgBtn, sy = CreateButton(SetC,"Save Config",sy,"SaveCfgBtn")
 local LoadCfgBtn, sy = CreateButton(SetC,"Load Config",sy,"LoadCfgBtn")
 local DelCfgBtn, sy = CreateButton(SetC,"Delete Config",sy,"DelCfgBtn")
+local SetupAutoLoadBtn, sy = CreateButton(SetC,"Setup AutoLoad",sy,"SetupAutoLoadBtn")
+local DeleteAutoLoadBtn, sy = CreateButton(SetC,"Delete AutoLoad",sy,"DeleteAutoLoadBtn")
+
 
 -- ==========================================
 -- UTILS
@@ -777,6 +780,39 @@ local function DeleteCurrentConfig()
 end
 
 -- ==========================================
+-- AUTOLOAD FUNCTIONS
+-- ==========================================
+local function SetupAutoLoad()
+    local name = ConfigNameBox.Text
+    if name == "" then
+        Notify("Enter config name first", 3)
+        return
+    end
+    name = name:gsub("[^%w_-]", "")
+    if name == "" then
+        Notify("Invalid config name", 3)
+        return
+    end
+    local path = ConfigFolder .. "/autoload.txt"
+    local ok = pcall(function() writefile(path, name) end)
+    if ok then
+        Notify("AutoLoad set to '" .. name .. "'", 3)
+    else
+        Notify("Failed to set AutoLoad", 3)
+    end
+end
+
+local function DeleteAutoLoad()
+    local path = ConfigFolder .. "/autoload.txt"
+    if isfile(path) then
+        pcall(function() delfile(path) end)
+        Notify("AutoLoad deleted", 3)
+    else
+        Notify("AutoLoad is empty", 3)
+    end
+end
+
+-- ==========================================
 -- AUTO EXECUTE PREPARE
 -- ==========================================
 -- ==========================================
@@ -790,9 +826,6 @@ local function ServerHop()
         return
     end
     ServerHopRunning = true
-
-    -- Автоматически сохраняем состояние перед телепортом
-    SaveCfg("autoexec", BuildCfg())
 
     -- Обновляем AutoExec перед телепортом
     SetupAutoExec()
@@ -1640,51 +1673,73 @@ RejoinBtn.MouseButton1Click:Connect(function()
     TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
 end)
 
+SetupAutoLoadBtn.MouseButton1Click:Connect(SetupAutoLoad)
+DeleteAutoLoadBtn.MouseButton1Click:Connect(DeleteAutoLoad)
+
 -- ==========================================
 -- AUTO-RESTORE (при заходе на новый сервер)
 -- ==========================================
 task.delay(3, function()
-    local autoCfg = LoadCfg("autoexec")
-    if autoCfg then
-        Notify("Auto-restoring session...", 3)
-        
-        -- Восстанавливаем настройки
-        if autoCfg.MinPlayers then SHC.MinPlayers = autoCfg.MinPlayers end
-        if autoCfg.MaxPlayers then SHC.MaxPlayers = autoCfg.MaxPlayers end
-        if autoCfg.FlySpeed then FlySpeed = autoCfg.FlySpeed end
-        if autoCfg.GuiKeybind then
-            local ok,kc=pcall(function() return Enum.KeyCode[autoCfg.GuiKeybind] end)
-            if ok and kc then GuiKeybind=kc end
-        end
-        if autoCfg.FlyKeybind then
-            local ok,kc=pcall(function() return Enum.KeyCode[autoCfg.FlyKeybind] end)
-            if ok and kc then FlyKeybind=kc end
-        end
-        
-        -- Восстанавливаем включенные фичи
-        local starters = {
-            Corpse=StartCorpse, Bank=StartBank, Chest=StartChest,
-            SaintScanner=StartScanner, ESP=StartESP, ClickTp=StartClickTp,
-            Fly=StartFly, RaknetDesync=StartRaknet, HideName=StartHide
-        }
-        
-        for name, enabled in pairs(autoCfg) do
-            if enabled == true and Features[name] and starters[name] then
-                Features[name].E = true
-                task.spawn(starters[name])
-                
-                -- Обновляем визуал тогглов
-                if name == "Corpse" then AnimToggle(CorpseT, CorpseC, CorpseS, true) end
-                if name == "Bank" then AnimToggle(BankT, BankC, BankS, true) end
-                if name == "Chest" then AnimToggle(ChestT, ChestC, ChestS, true) end
-                if name == "SaintScanner" then AnimToggle(ScanT, ScanC, ScanS, true) end
-                if name == "ESP" then AnimToggle(EspT, EspCir, EspS, true) end
-                if name == "ClickTp" then AnimToggle(ClickTpT, ClickTpC, ClickTpS, true) end
-                if name == "Fly" then AnimToggle(FlyT, FlyC, FlyS, true) end
-                if name == "RaknetDesync" then AnimToggle(RakT, RakC, RakS, true) end
-                if name == "HideName" then AnimToggle(HideT, HideC, HideS, true) end
+    local autoLoadPath = ConfigFolder .. "/autoload.txt"
+    if isfile(autoLoadPath) then
+        local ok, name = pcall(function() return readfile(autoLoadPath) end)
+        if ok and name and name ~= "" then
+            name = name:gsub("%s+", "")
+            if name ~= "" then
+                ConfigNameBox.Text = name
+                CurrentConfigName = name
+                local data = LoadCfg(name)
+                if data then
+                    -- Восстанавливаем настройки
+                    if data.MinPlayers then SHC.MinPlayers = data.MinPlayers end
+                    if data.MaxPlayers then SHC.MaxPlayers = data.MaxPlayers end
+                    if data.FlySpeed then FlySpeed = data.FlySpeed end
+                    if data.GuiKeybind then
+                        local ok,kc=pcall(function() return Enum.KeyCode[data.GuiKeybind] end)
+                        if ok and kc then GuiKeybind=kc KbBtn.Text=data.GuiKeybind end
+                    end
+                    if data.FlyKeybind then
+                        local ok,kc=pcall(function() return Enum.KeyCode[data.FlyKeybind] end)
+                        if ok and kc then FlyKeybind=kc FlyKbBtn.Text=data.FlyKeybind end
+                    end
+
+                    -- Восстанавливаем включенные фичи
+                    local starters = {
+                        Corpse=StartCorpse, Bank=StartBank, Chest=StartChest,
+                        SaintScanner=StartScanner, ESP=StartESP, ClickTp=StartClickTp,
+                        Fly=StartFly, RaknetDesync=StartRaknet, HideName=StartHide
+                    }
+
+                    for featName, enabled in pairs(data) do
+                        if enabled == true and Features[featName] and starters[featName] then
+                            Features[featName].E = true
+                            task.spawn(starters[featName])
+
+                            -- Обновляем визуал тогглов
+                            if featName == "Corpse" then AnimToggle(CorpseT, CorpseC, CorpseS, true) end
+                            if featName == "Bank" then AnimToggle(BankT, BankC, BankS, true) end
+                            if featName == "Chest" then AnimToggle(ChestT, ChestC, ChestS, true) end
+                            if featName == "SaintScanner" then AnimToggle(ScanT, ScanC, ScanS, true) end
+                            if featName == "ESP" then AnimToggle(EspT, EspCir, EspS, true) end
+                            if featName == "ClickTp" then AnimToggle(ClickTpT, ClickTpC, ClickTpS, true) end
+                            if featName == "Fly" then AnimToggle(FlyT, FlyC, FlyS, true) end
+                            if featName == "RaknetDesync" then AnimToggle(RakT, RakC, RakS, true) end
+                            if featName == "HideName" then AnimToggle(HideT, HideC, HideS, true) end
+                        end
+                    end
+
+                    Notify("AutoLoad successful", 3)
+                else
+                    Notify("AutoLoad failed: config '" .. name .. "' not found", 3)
+                end
+            else
+                Notify("AutoLoad is empty", 3)
             end
+        else
+            Notify("AutoLoad is empty", 3)
         end
+    else
+        Notify("AutoLoad is empty", 3)
     end
 end)
 
