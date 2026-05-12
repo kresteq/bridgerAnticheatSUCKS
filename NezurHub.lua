@@ -15,17 +15,40 @@ local Workspace = game:GetService("Workspace")
 local Mouse = player:GetMouse()
 
 -- ==========================================
--- AUTO EXECUTE SETUP (автоматический)
+-- AUTO EXECUTE CORE (URL-based)
+-- Compatible: Potassium, Volt, Fluxus, Synapse X
 -- ==========================================
+local SCRIPT_URL = "https://raw.githubusercontent.com/kresteq/NezurHub/refs/heads/main/NezurHub.lua"
+
 local ConfigFolder = "Nezur"
 
--- Устанавливаем автозагрузку при телепорте (всегда активно)
-if type(queue_on_teleport) == "function" then
-    local loader = 'repeat task.wait() until game:IsLoaded() task.wait(1.5) local ok,src=pcall(readfile,"Nezur.lua") if ok and src then loadstring(src)() end'
-    pcall(queue_on_teleport, loader)
+-- Утилита: ставим queue_on_teleport с HttpGet-загрузкой
+local function SetupAutoExec()
+    local loaderTemplate = [[
+repeat task.wait() until game:IsLoaded()
+task.wait(1.5)
+local ok, src = pcall(function()
+    return game:HttpGet("%s")
+end)
+if ok and src and #src > 100 then
+    loadstring(src)()
+else
+    warn("[Nezur] AutoExec failed: could not fetch script from URL")
+end
+]]
+
+    local loader = string.format(loaderTemplate, SCRIPT_URL)
+
+    if type(queue_on_teleport) == "function" then
+        pcall(queue_on_teleport, loader)
+    elseif type(queueonteleport) == "function" then
+        pcall(queueonteleport, loader)
+    end
 end
 
--- Создаем папку если нет
+-- Вызываем сразу при старте
+SetupAutoExec()
+
 if not isfolder(ConfigFolder) then makefolder(ConfigFolder) end
 
 -- ==========================================
@@ -648,40 +671,6 @@ local SaveCfgBtn, sy = CreateButton(SetC,"Save Config",sy,"SaveCfgBtn")
 local LoadCfgBtn, sy = CreateButton(SetC,"Load Config",sy,"LoadCfgBtn")
 local DelCfgBtn, sy = CreateButton(SetC,"Delete Config",sy,"DelCfgBtn")
 
-sy = CreateSection(SetC,"Auto Execute",sy+5)
-local PrepAutoBtn, sy = CreateButton(SetC,"Prepare AutoExec",sy,"PrepAutoBtn")
-local AutoExecStatus = Instance.new("TextLabel",SetC)
-AutoExecStatus.Size = UDim2.new(1,0,0,20)
-AutoExecStatus.Position = UDim2.new(0,0,0,sy)
-AutoExecStatus.BackgroundTransparency = 1
-AutoExecStatus.Text = "Status: Checking..."
-AutoExecStatus.TextColor3 = Color3.fromRGB(192,192,192)
-AutoExecStatus.TextSize = 11
-AutoExecStatus.Font = Enum.Font.Gotham
-AutoExecStatus.TextXAlignment = Enum.TextXAlignment.Left
-sy = sy + 22
-
-sy = CreateSection(SetC,"Executor",sy+5)
-local ExecNameLbl = Instance.new("TextLabel",SetC)
-ExecNameLbl.Size = UDim2.new(1,0,0,20)
-ExecNameLbl.Position = UDim2.new(0,0,0,sy)
-ExecNameLbl.BackgroundTransparency = 1
-ExecNameLbl.Text = "Executor: Detecting..."
-ExecNameLbl.TextColor3 = Color3.fromRGB(192,192,192)
-ExecNameLbl.TextSize = 12
-ExecNameLbl.Font = Enum.Font.Gotham
-ExecNameLbl.TextXAlignment = Enum.TextXAlignment.Left
-sy = sy + 22
-local ExecStatusLbl = Instance.new("TextLabel",SetC)
-ExecStatusLbl.Size = UDim2.new(1,0,0,20)
-ExecStatusLbl.Position = UDim2.new(0,0,0,sy)
-ExecStatusLbl.BackgroundTransparency = 1
-ExecStatusLbl.Text = "Status: Checking..."
-ExecStatusLbl.TextColor3 = Color3.fromRGB(255,200,100)
-ExecStatusLbl.TextSize = 12
-ExecStatusLbl.Font = Enum.Font.Gotham
-ExecStatusLbl.TextXAlignment = Enum.TextXAlignment.Left
-
 -- ==========================================
 -- UTILS
 -- ==========================================
@@ -701,57 +690,6 @@ local function findSaint()
 end
 
 -- Executor Detection
-local function DetectExecutor()
-    local name = "Unknown"
-    if type(identifyexecutor) == "function" then
-        local s,r = pcall(identifyexecutor)
-        if s and r then name = r end
-    elseif type(getexecutorname) == "function" then
-        local s,r = pcall(getexecutorname)
-        if s and r then name = r end
-    end
-    
-    if name == "Unknown" then
-        local env = {}
-        if type(getgenv) == "function" then
-            local s,r = pcall(getgenv)
-            if s and type(r) == "table" then env = r end
-        end
-        local map = {potassium="Potassium",fluxus="Fluxus",syn="Synapse X",krnl="KRNL",volt="Volt",xeno="Xeno",arceus="Arceus X"}
-        for k,v in pairs(map) do if env[k] ~= nil then name = v break end end
-    end
-    
-    local lower = name:lower()
-    local status = "Supported with issues"
-    local color = Color3.fromRGB(255,200,100)
-    if lower:find("potassium") or lower:find("volt") or lower:find("synapse") or lower:find("fluxus") then
-        status = "Supported"
-        color = Color3.fromRGB(100,255,100)
-    elseif lower:find("xeno") or lower:find("arceus") then
-        status = "Not supported"
-        color = Color3.fromRGB(255,100,100)
-    end
-    return name, status, color
-end
-
-task.spawn(function()
-    task.wait(0.5)
-    local name, status, color = DetectExecutor()
-    ExecNameLbl.Text = "Executor: " .. name
-    ExecStatusLbl.Text = "Status: " .. status
-    ExecStatusLbl.TextColor3 = color
-    
-    -- AutoExec status
-    local aeOk = pcall(function() return isfile("Nezur/NezurHub.lua") end)
-    if aeOk then
-        AutoExecStatus.Text = "AutoExec: Ready (file found)"
-        AutoExecStatus.TextColor3 = Color3.fromRGB(100,255,100)
-    else
-        AutoExecStatus.Text = "AutoExec: NOT READY - click Prepare"
-        AutoExecStatus.TextColor3 = Color3.fromRGB(255,100,100)
-    end
-end)
-
 -- ==========================================
 -- CONFIG LIST UI
 -- ==========================================
@@ -841,23 +779,6 @@ end
 -- ==========================================
 -- AUTO EXECUTE PREPARE
 -- ==========================================
-local function PrepareAutoExec()
-    if not isfolder(ConfigFolder) then makefolder(ConfigFolder) end
-    local bootCode = [[repeat task.wait() until game:IsLoaded()
-if game.PlaceId == ]] .. tostring(game.PlaceId) .. [[ then
-    local ok, src = pcall(function() return readfile("Nezur/NezurHub.lua") end)
-    if ok and src then
-        loadstring(src)()
-    else
-        warn("Nezur AutoExec: Script file not found. Save this script to Nezur/NezurHub.lua")
-    end
-end]]
-    pcall(function() writefile("Nezur/AutoBoot.lua", bootCode) end)
-    Notify("AutoExec prepared! Save THIS script as Nezur/NezurHub.lua", 8)
-    AutoExecStatus.Text = "AutoExec: Ready (save script now)"
-    AutoExecStatus.TextColor3 = Color3.fromRGB(100,255,100)
-end
-
 -- ==========================================
 -- SERVER HOP (единая функция)
 -- ==========================================
@@ -873,11 +794,8 @@ local function ServerHop()
     -- Автоматически сохраняем состояние перед телепортом
     SaveCfg("autoexec", BuildCfg())
 
-    -- Устанавливаем queue_on_teleport перед телепортом
-    if type(queue_on_teleport) == "function" then
-        local loader = 'repeat task.wait() until game:IsLoaded() task.wait(1.5) local ok,src=pcall(readfile,"Nezur/NezurHub.lua") if ok and src then loadstring(src)() end'
-        pcall(queue_on_teleport, loader)
-    end
+    -- Обновляем AutoExec перед телепортом
+    SetupAutoExec()
 
     task.spawn(function()
         local ok, err = pcall(function()
@@ -1718,9 +1636,9 @@ ServerHopBtn.MouseButton1Click:Connect(function()
 end)
 RejoinBtn.MouseButton1Click:Connect(function()
     Notify("Rejoining...", 3)
+    SetupAutoExec()
     TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
 end)
-PrepAutoBtn.MouseButton1Click:Connect(PrepareAutoExec)
 
 -- ==========================================
 -- AUTO-RESTORE (при заходе на новый сервер)
