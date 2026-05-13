@@ -33,7 +33,7 @@ local Mouse = player:GetMouse()
 -- AUTO EXECUTE CORE (URL-based)
 -- Compatible: Potassium, Volt, Fluxus, Synapse X
 -- ==========================================
-local SCRIPT_URL = "https://raw.githubusercontent.com/kresteq/NezurHub/refs/heads/main/NezurHub.lua"
+local SCRIPT_URL = "https://raw.githubusercontent.com/kresteq/bridgerAnticheatSUCKS/refs/heads/main/67.lua"
 
 local ConfigFolder = "Nezur"
 
