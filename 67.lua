@@ -625,6 +625,20 @@ local MovC = TabContents["Movement"]
 local mvy = 0
 mvy = CreateSection(MovC,"Movement",mvy)
 local ClickTpT, ClickTpC, ClickTpS, mvy = CreateToggle(MovC,"Click Teleport",mvy,"ClickTp")
+local FlyWarn = Instance.new("TextLabel",MovC)
+FlyWarn.Size = UDim2.new(1,0,0,40)
+FlyWarn.Position = UDim2.new(0,0,0,mvy)
+FlyWarn.BackgroundTransparency = 1
+FlyWarn.Text = "⚠️CAUTION⚠️
+After 10s of flying, AntiCheat drops HP to 0
+DONT TURN OFF FLY AT LOW HP⚠️"
+FlyWarn.TextColor3 = Color3.fromRGB(255,100,100)
+FlyWarn.TextSize = 10
+FlyWarn.Font = Enum.Font.GothamBold
+FlyWarn.TextXAlignment = Enum.TextXAlignment.Left
+FlyWarn.TextYAlignment = Enum.TextYAlignment.Top
+mvy = mvy + 44
+
 local FlyT, FlyC, FlyS, mvy = CreateToggle(MovC,"Fly",mvy,"Fly")
 mvy = mvy + 4
 local FlyKbLbl = Instance.new("TextLabel",MovC)
@@ -690,10 +704,7 @@ local RejoinBtn, sv = CreateButton(ServC,"Rejoin Server",sv,"RejoinBtn")
 -- Settings Tab
 local SetC = TabContents["Settings"]
 local sy = 0
-sy = CreateSection(SetC,"Config Management",sy)
-local ConfigNameBox, sy = CreateTextBox(SetC,"Config Name",sy,"Enter name...")
-
-sy = CreateSection(SetC,"Executor",sy+5)
+sy = CreateSection(SetC,"Executor",sy)
 local ExecNameLbl = Instance.new("TextLabel",SetC)
 ExecNameLbl.Size = UDim2.new(1,0,0,20)
 ExecNameLbl.Position = UDim2.new(0,0,0,sy)
@@ -714,6 +725,9 @@ ExecStatusLbl.TextSize = 12
 ExecStatusLbl.Font = Enum.Font.Gotham
 ExecStatusLbl.TextXAlignment = Enum.TextXAlignment.Left
 sy = sy + 22
+
+sy = CreateSection(SetC,"Config Management",sy+5)
+local ConfigNameBox, sy = CreateTextBox(SetC,"Config Name",sy,"Enter name...")
 sy = sy + 5
 
 local ConfigListFrame = Instance.new("ScrollingFrame")
