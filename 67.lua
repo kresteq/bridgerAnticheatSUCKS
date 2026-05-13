@@ -1,5 +1,4 @@
 repeat task.wait() until game:IsLoaded()
-print("[Nezur] Script starting...")
 
 -- Очистка мусора от предыдущих сессий
 if type(clearteleportqueue) == "function" then
@@ -7,15 +6,13 @@ if type(clearteleportqueue) == "function" then
 elseif type(clearteleport_queue) == "function" then
     pcall(clearteleport_queue)
 end
-print("[Nezur] Cleared teleport queue")
 
 -- Предотвращение повторного запуска
-print("[Nezur] Checking _G.NezurHubLoaded = " .. tostring(_G.NezurHubLoaded))
-if _G.NezurHubLoaded then
+if getgenv().NezurHubLoaded then
     print("[Nezur] Already loaded, skipping...")
     return
 end
-_G.NezurHubLoaded = true
+getgenv().NezurHubLoaded = true
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
@@ -731,6 +728,25 @@ sy = sy + 22
 
 sy = CreateSection(SetC,"Config Management",sy+5)
 local ConfigNameBox, sy = CreateTextBox(SetC,"Config Name",sy,"Enter name...")
+ExecNameLbl.Size = UDim2.new(1,0,0,20)
+ExecNameLbl.Position = UDim2.new(0,0,0,sy)
+ExecNameLbl.BackgroundTransparency = 1
+ExecNameLbl.Text = "Executor: Detecting..."
+ExecNameLbl.TextColor3 = Color3.fromRGB(192,192,192)
+ExecNameLbl.TextSize = 12
+ExecNameLbl.Font = Enum.Font.Gotham
+ExecNameLbl.TextXAlignment = Enum.TextXAlignment.Left
+sy = sy + 22
+local ExecStatusLbl = Instance.new("TextLabel",SetC)
+ExecStatusLbl.Size = UDim2.new(1,0,0,20)
+ExecStatusLbl.Position = UDim2.new(0,0,0,sy)
+ExecStatusLbl.BackgroundTransparency = 1
+ExecStatusLbl.Text = "Status: Detecting..."
+ExecStatusLbl.TextColor3 = Color3.fromRGB(255,200,100)
+ExecStatusLbl.TextSize = 12
+ExecStatusLbl.Font = Enum.Font.Gotham
+ExecStatusLbl.TextXAlignment = Enum.TextXAlignment.Left
+sy = sy + 22
 sy = sy + 5
 
 local ConfigListFrame = Instance.new("ScrollingFrame")
@@ -1845,7 +1861,11 @@ local function DetectExecutor()
     end
 
     if name == "Unknown" then
-        local env = _G
+        local env = {}
+        if type(getgenv) == "function" then
+            local s,r = pcall(getgenv)
+            if s and type(r) == "table" then env = r end
+        end
         local map = {potassium="Potassium",fluxus="Fluxus",syn="Synapse X",krnl="KRNL",volt="Volt",xeno="Xeno",arceus="Arceus X"}
         for k,v in pairs(map) do if env[k] ~= nil then name = v break end end
     end
@@ -1994,6 +2014,4 @@ ScreenGui.Destroying:Connect(function()
     ESPDrawings = {}
 end)
 
-pcall(function()
-    Notify("✅ Nezur loaded successfully", 4)
-end)
+Notify("✅ Nezur loaded successfully", 4)
