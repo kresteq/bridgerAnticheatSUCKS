@@ -26,8 +26,6 @@ local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
 local Workspace = game:GetService("Workspace")
 local Mouse = player:GetMouse()
 
@@ -222,17 +220,10 @@ end
 -- ==========================================
 -- GUI FRAMEWORK
 -- ==========================================
--- Удаление старых GUI перед созданием новых
-local oldGui2 = playerGui:FindFirstChild("NezurHub")
-if oldGui2 then oldGui2:Destroy() end
-local oldNotif2 = playerGui:FindFirstChild("NezurNotifications")
-if oldNotif2 then oldNotif2:Destroy() end
-
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "NezurHub"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.DisplayOrder = 10
 ScreenGui.Parent = playerGui
 
 local MainFrame = Instance.new("Frame")
