@@ -14,6 +14,10 @@ if getgenv().NezurHubLoaded then
 end
 getgenv().NezurHubLoaded = true
 
+-- Очистка глобальных таблиц от предыдущей сессии
+_G.NezurStarters = nil
+_G.NezurStoppers = nil
+
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -820,6 +824,7 @@ local function SaveCurrentConfig()
 end
 
 local function LoadCurrentConfig()
+    local ok, err = pcall(function()
     print("[Nezur] LoadCurrentConfig called, textbox: '" .. tostring(ConfigNameBox.Text) .. "'")
     local name = ConfigNameBox.Text
     if name == "" then 
@@ -892,6 +897,11 @@ local function LoadCurrentConfig()
     end
 
     Notify("📂 Config '"..name.."' loaded!", 3)
+    end)
+    if not ok then
+        warn("[Nezur] LoadConfig error: " .. tostring(err))
+        Notify("❌ Load Config error: " .. tostring(err):sub(1, 40), 5)
+    end
 end
 
 local function DeleteCurrentConfig()
@@ -1702,6 +1712,10 @@ end
 -- ==========================================
 -- GLOBAL STARTERS TABLE (для Load Config / AutoLoad)
 -- ==========================================
+_G.NezurStarters = _G.NezurStarters or {}
+_G.NezurStoppers = _G.NezurStoppers or {}
+
+-- Перезаписываем гарантированно
 _G.NezurStarters = {
     Corpse = StartCorpse,
     Bank = StartBank,
@@ -1887,7 +1901,8 @@ DeleteAutoLoadBtn.MouseButton1Click:Connect(DeleteAutoLoad)
 -- AUTO-RESTORE (при заходе на новый сервер)
 -- ==========================================
 task.delay(3, function()
-    local autoLoadPath = ConfigFolder .. "/autoload.txt"
+    local ok, err = pcall(function()
+        local autoLoadPath = ConfigFolder .. "/autoload.txt"
     if isfile(autoLoadPath) then
         local ok, name = pcall(function() return readfile(autoLoadPath) end)
         if ok and name and name ~= "" then
@@ -1959,6 +1974,10 @@ task.delay(3, function()
         end
     else
         Notify("📭 AutoLoad is empty", 3)
+    end
+    end)
+    if not ok then
+        warn("[Nezur] AutoLoad error: " .. tostring(err))
     end
 end)
 
