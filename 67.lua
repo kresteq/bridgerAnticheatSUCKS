@@ -771,26 +771,43 @@ local function SaveCurrentConfig()
 end
 
 local function LoadCurrentConfig()
-    local name = ConfigNameBox.Text
-    if name == "" then name = CurrentConfigName end
-    local data = LoadCfg(name)
-    if data then
-        -- Восстанавливаем слайдеры и значения
-        if data.MinPlayers and SetMin then SetMin(data.MinPlayers) end
-        if data.MaxPlayers and SetMax then SetMax(data.MaxPlayers) end
-        if data.FlySlider and SetFlySpeed then SetFlySpeed(data.FlySlider) end
+    local ok, err = pcall(function()
+        local name = ConfigNameBox.Text
+        if name == "" then 
+            Notify("Enter config name first", 3)
+            return
+        end
+        CurrentConfigName = name
+        local data = LoadCfg(name)
+        if not data then
+            Notify("Config '"..name.."' not found", 3)
+            return
+        end
+
+        -- Восстанавливаем слайдеры
+        if data.MinPlayers and SetMin then 
+            SetMin(data.MinPlayers) 
+        end
+        if data.MaxPlayers and SetMax then 
+            SetMax(data.MaxPlayers) 
+        end
+        if data.FlySlider and SetFlySpeed then 
+            SetFlySpeed(data.FlySlider) 
+        elseif data.FlySpeed then
+            FlySpeed = data.FlySpeed
+        end
 
         -- Восстанавливаем кейбинды
         if data.GuiKeybind then
-            local ok,kc=pcall(function() return Enum.KeyCode[data.GuiKeybind] end)
-            if ok and kc then GuiKeybind=kc KbBtn.Text=data.GuiKeybind end
+            local ok2,kc=pcall(function() return Enum.KeyCode[data.GuiKeybind] end)
+            if ok2 and kc then GuiKeybind=kc KbBtn.Text=data.GuiKeybind end
         end
         if data.FlyKeybind then
-            local ok,kc=pcall(function() return Enum.KeyCode[data.FlyKeybind] end)
-            if ok and kc then FlyKeybind=kc FlyKbBtn.Text=data.FlyKeybind end
+            local ok2,kc=pcall(function() return Enum.KeyCode[data.FlyKeybind] end)
+            if ok2 and kc then FlyKeybind=kc FlyKbBtn.Text=data.FlyKeybind end
         end
 
-        -- Восстанавливаем тогглы фич
+        -- Восстанавливаем включенные фичи
         local starters = {
             Corpse=StartCorpse, Bank=StartBank, Chest=StartChest,
             SaintScanner=StartScanner, ESP=StartESP, ClickTp=StartClickTp,
@@ -799,6 +816,19 @@ local function LoadCurrentConfig()
 
         for featName, enabled in pairs(data) do
             if enabled == true and Features[featName] and starters[featName] then
+                -- Отключаем если уже включено, чтобы избежать дублей
+                if Features[featName].E then
+                    Features[featName].E = false
+                    if featName == "Corpse" then StopCorpse() end
+                    if featName == "Bank" then StopBank() end
+                    if featName == "Chest" then StopChest() end
+                    if featName == "SaintScanner" then StopScanner() end
+                    if featName == "ESP" then StopESP() end
+                    if featName == "ClickTp" then StopClickTp() end
+                    if featName == "Fly" then StopFly() end
+                    if featName == "RaknetDesync" then StopRaknet() end
+                    if featName == "HideName" then StopHide() end
+                end
                 Features[featName].E = true
                 task.spawn(starters[featName])
 
@@ -816,8 +846,10 @@ local function LoadCurrentConfig()
         end
 
         Notify("Config '"..name.."' loaded!", 3)
-    else
-        Notify("Config '"..name.."' not found", 3)
+    end)
+    if not ok then
+        warn("[Nezur] LoadConfig error: " .. tostring(err))
+        Notify("Load Config error: " .. tostring(err):sub(1, 40), 5)
     end
 end
 
@@ -882,8 +914,19 @@ local function ServerHop()
     end
     ServerHopRunning = true
 
-    -- Обновляем AutoExec перед телепортом
+    local startJobId = game.JobId
     SetupAutoExec()
+
+    -- Retry: if still on same server after 7s, try again
+    task.delay(7, function()
+        if not ServerHopRunning then return end
+        if game.JobId == startJobId then
+            Notify("Teleport failed, retrying...", 3)
+            ServerHopRunning = false
+            task.wait(1)
+            ServerHop()
+        end
+    end)
 
     task.spawn(function()
         local ok, err = pcall(function()
@@ -969,7 +1012,9 @@ local function ServerHop()
                                             writefile("NotSameServers.json", HttpService:JSONEncode(AIDs))
                                         end)
                                         Notify("Teleporting (" .. pl .. "/" .. mp .. ")", 3)
-                                        TeleportService:TeleportToPlaceInstance(PID, sid, player)
+                                        pcall(function()
+                                            TeleportService:TeleportToPlaceInstance(PID, sid, player)
+                                        end)
                                         found = true
                                         break
                                     end
@@ -1749,19 +1794,23 @@ task.delay(3, function()
                 CurrentConfigName = name
                 local data = LoadCfg(name)
                 if data then
-                    -- Восстанавливаем слайдеры и значения
+                    -- Восстанавливаем слайдеры
                     if data.MinPlayers and SetMin then SetMin(data.MinPlayers) end
                     if data.MaxPlayers and SetMax then SetMax(data.MaxPlayers) end
-                    if data.FlySlider and SetFlySpeed then SetFlySpeed(data.FlySlider) end
+                    if data.FlySlider and SetFlySpeed then 
+                        SetFlySpeed(data.FlySlider) 
+                    elseif data.FlySpeed then
+                        FlySpeed = data.FlySpeed
+                    end
 
                     -- Восстанавливаем кейбинды
                     if data.GuiKeybind then
-                        local ok,kc=pcall(function() return Enum.KeyCode[data.GuiKeybind] end)
-                        if ok and kc then GuiKeybind=kc KbBtn.Text=data.GuiKeybind end
+                        local ok2,kc=pcall(function() return Enum.KeyCode[data.GuiKeybind] end)
+                        if ok2 and kc then GuiKeybind=kc KbBtn.Text=data.GuiKeybind end
                     end
                     if data.FlyKeybind then
-                        local ok,kc=pcall(function() return Enum.KeyCode[data.FlyKeybind] end)
-                        if ok and kc then FlyKeybind=kc FlyKbBtn.Text=data.FlyKeybind end
+                        local ok2,kc=pcall(function() return Enum.KeyCode[data.FlyKeybind] end)
+                        if ok2 and kc then FlyKeybind=kc FlyKbBtn.Text=data.FlyKeybind end
                     end
 
                     -- Восстанавливаем включенные фичи
