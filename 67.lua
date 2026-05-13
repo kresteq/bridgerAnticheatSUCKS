@@ -816,12 +816,14 @@ local function LoadCurrentConfig()
     }
 
     for featName, enabled in pairs(data) do
-        print("[Nezur] Checking feature: " .. tostring(featName) .. " = " .. tostring(enabled))
-        if enabled == true and Features[featName] and starters[featName] then
+        print("[Nezur] Checking feature: " .. tostring(featName) .. " = " .. tostring(enabled) .. " type=" .. type(enabled))
+        local isEnabled = (enabled == true) or (enabled == "true") or (enabled == 1)
+        print("[Nezur] isEnabled result: " .. tostring(isEnabled) .. " | Features exists: " .. tostring(Features[featName] ~= nil) .. " | Starter exists: " .. tostring(starters[featName] ~= nil))
+        if isEnabled and Features[featName] and starters[featName] then
             if not Features[featName].E then
                 Features[featName].E = true
                 task.spawn(starters[featName])
-                print("[Nezur] LoadConfig: enabled " .. featName)
+                print("[Nezur] LoadConfig: ENABLED " .. featName)
             end
 
             -- Обновляем визуал тогглов
