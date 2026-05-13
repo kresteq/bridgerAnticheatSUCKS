@@ -1,4 +1,5 @@
 repeat task.wait() until game:IsLoaded()
+print("[Nezur] Script starting...")
 
 -- Очистка мусора от предыдущих сессий
 if type(clearteleportqueue) == "function" then
@@ -6,17 +7,15 @@ if type(clearteleportqueue) == "function" then
 elseif type(clearteleport_queue) == "function" then
     pcall(clearteleport_queue)
 end
+print("[Nezur] Cleared teleport queue")
 
 -- Предотвращение повторного запуска
-if getgenv().NezurHubLoaded then
+print("[Nezur] Checking _G.NezurHubLoaded = " .. tostring(_G.NezurHubLoaded))
+if _G.NezurHubLoaded then
     print("[Nezur] Already loaded, skipping...")
     return
 end
-getgenv().NezurHubLoaded = true
-
--- Очистка глобальных таблиц от предыдущей сессии
-_G.NezurStarters = nil
-_G.NezurStoppers = nil
+_G.NezurHubLoaded = true
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
@@ -824,7 +823,6 @@ local function SaveCurrentConfig()
 end
 
 local function LoadCurrentConfig()
-    local ok, err = pcall(function()
     print("[Nezur] LoadCurrentConfig called, textbox: '" .. tostring(ConfigNameBox.Text) .. "'")
     local name = ConfigNameBox.Text
     if name == "" then 
@@ -897,11 +895,6 @@ local function LoadCurrentConfig()
     end
 
     Notify("📂 Config '"..name.."' loaded!", 3)
-    end)
-    if not ok then
-        warn("[Nezur] LoadConfig error: " .. tostring(err))
-        Notify("❌ Load Config error: " .. tostring(err):sub(1, 40), 5)
-    end
 end
 
 local function DeleteCurrentConfig()
@@ -1712,10 +1705,6 @@ end
 -- ==========================================
 -- GLOBAL STARTERS TABLE (для Load Config / AutoLoad)
 -- ==========================================
-_G.NezurStarters = _G.NezurStarters or {}
-_G.NezurStoppers = _G.NezurStoppers or {}
-
--- Перезаписываем гарантированно
 _G.NezurStarters = {
     Corpse = StartCorpse,
     Bank = StartBank,
@@ -1856,11 +1845,7 @@ local function DetectExecutor()
     end
 
     if name == "Unknown" then
-        local env = {}
-        if type(getgenv) == "function" then
-            local s,r = pcall(getgenv)
-            if s and type(r) == "table" then env = r end
-        end
+        local env = _G
         local map = {potassium="Potassium",fluxus="Fluxus",syn="Synapse X",krnl="KRNL",volt="Volt",xeno="Xeno",arceus="Arceus X"}
         for k,v in pairs(map) do if env[k] ~= nil then name = v break end end
     end
@@ -1901,8 +1886,7 @@ DeleteAutoLoadBtn.MouseButton1Click:Connect(DeleteAutoLoad)
 -- AUTO-RESTORE (при заходе на новый сервер)
 -- ==========================================
 task.delay(3, function()
-    local ok, err = pcall(function()
-        local autoLoadPath = ConfigFolder .. "/autoload.txt"
+    local autoLoadPath = ConfigFolder .. "/autoload.txt"
     if isfile(autoLoadPath) then
         local ok, name = pcall(function() return readfile(autoLoadPath) end)
         if ok and name and name ~= "" then
@@ -1975,10 +1959,6 @@ task.delay(3, function()
     else
         Notify("📭 AutoLoad is empty", 3)
     end
-    end)
-    if not ok then
-        warn("[Nezur] AutoLoad error: " .. tostring(err))
-    end
 end)
 
 -- ==========================================
@@ -2014,4 +1994,6 @@ ScreenGui.Destroying:Connect(function()
     ESPDrawings = {}
 end)
 
-Notify("✅ Nezur loaded successfully", 4)
+pcall(function()
+    Notify("✅ Nezur loaded successfully", 4)
+end)
