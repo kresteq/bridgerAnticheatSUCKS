@@ -544,7 +544,15 @@ local function CreateSlider(parent,text,posY,min,max,def,onChange)
         end
     end)
     
-    return row, function() return val end, posY+50
+    local function SetValue(v)
+        v = math.clamp(v, min, max)
+        val = v
+        fl.Size = UDim2.new((val-min)/(max-min),0,1,0)
+        vl.Text = tostring(val)
+        if onChange then onChange(val) end
+    end
+
+    return row, function() return val end, posY+50, SetValue
 end
 
 local function CreateTextBox(parent,text,posY,placeholder)
@@ -626,7 +634,7 @@ FlyKbBtn.Font = Enum.Font.GothamMedium
 FlyKbBtn.AutoButtonColor = false
 Instance.new("UICorner",FlyKbBtn).CornerRadius = UDim.new(0,6)
 mvy = mvy + 30
-local SpeedRow, GetFlySpeed, mvy = CreateSlider(MovC,"Fly Speed",mvy,10,50,20,function(v) FlySpeed = v + (v * v) / 100 end)
+local SpeedRow, GetFlySpeed, mvy, SetFlySpeed = CreateSlider(MovC,"Fly Speed",mvy,10,50,20,function(v) FlySpeed = v + (v * v) / 100 end)
 
 -- Misc Tab
 local MiscC = TabContents["Misc"]
@@ -660,8 +668,8 @@ Instance.new("UICorner",KbBtn).CornerRadius = UDim.new(0,6)
 local ServC = TabContents["Server"]
 local sv = 0
 sv = CreateSection(ServC,"Server Hop",sv)
-local MinRow, GetMin, sv = CreateSlider(ServC,"Min Players",sv,1,25,1,function(v) SHC.MinPlayers=v end)
-local MaxRow, GetMax, sv = CreateSlider(ServC,"Max Players",sv,1,25,25,function(v) SHC.MaxPlayers=v end)
+local MinRow, GetMin, sv, SetMin = CreateSlider(ServC,"Min Players",sv,1,25,1,function(v) SHC.MinPlayers=v end)
+local MaxRow, GetMax, sv, SetMax = CreateSlider(ServC,"Max Players",sv,1,25,25,function(v) SHC.MaxPlayers=v end)
 sv = CreateSection(ServC,"Actions",sv+5)
 local ServerHopBtn, sv = CreateButton(ServC,"Server Hop",sv,"ServerHopBtn")
 local RejoinBtn, sv = CreateButton(ServC,"Rejoin Server",sv,"RejoinBtn")
@@ -741,9 +749,9 @@ local function BuildCfg()
     local c={} for n,f in pairs(Features) do c[n]=f.E end
     c.GuiKeybind=tostring(GuiKeybind)
     c.FlyKeybind=tostring(FlyKeybind)
-    c.FlySpeed=FlySpeed
-    c.MinPlayers=SHC.MinPlayers
-    c.MaxPlayers=SHC.MaxPlayers
+    c.FlySlider=GetFlySpeed and GetFlySpeed() or 20
+    c.MinPlayers=GetMin and GetMin() or 1
+    c.MaxPlayers=GetMax and GetMax() or 25
     return c
 end
 
@@ -767,9 +775,12 @@ local function LoadCurrentConfig()
     if name == "" then name = CurrentConfigName end
     local data = LoadCfg(name)
     if data then
-        if data.MinPlayers then SHC.MinPlayers = data.MinPlayers end
-        if data.MaxPlayers then SHC.MaxPlayers = data.MaxPlayers end
-        if data.FlySpeed then FlySpeed = data.FlySpeed end
+        -- Восстанавливаем слайдеры и значения
+        if data.MinPlayers and SetMin then SetMin(data.MinPlayers) end
+        if data.MaxPlayers and SetMax then SetMax(data.MaxPlayers) end
+        if data.FlySlider and SetFlySpeed then SetFlySpeed(data.FlySlider) end
+
+        -- Восстанавливаем кейбинды
         if data.GuiKeybind then
             local ok,kc=pcall(function() return Enum.KeyCode[data.GuiKeybind] end)
             if ok and kc then GuiKeybind=kc KbBtn.Text=data.GuiKeybind end
@@ -778,6 +789,32 @@ local function LoadCurrentConfig()
             local ok,kc=pcall(function() return Enum.KeyCode[data.FlyKeybind] end)
             if ok and kc then FlyKeybind=kc FlyKbBtn.Text=data.FlyKeybind end
         end
+
+        -- Восстанавливаем тогглы фич
+        local starters = {
+            Corpse=StartCorpse, Bank=StartBank, Chest=StartChest,
+            SaintScanner=StartScanner, ESP=StartESP, ClickTp=StartClickTp,
+            Fly=StartFly, RaknetDesync=StartRaknet, HideName=StartHide
+        }
+
+        for featName, enabled in pairs(data) do
+            if enabled == true and Features[featName] and starters[featName] then
+                Features[featName].E = true
+                task.spawn(starters[featName])
+
+                -- Обновляем визуал тогглов
+                if featName == "Corpse" then AnimToggle(CorpseT, CorpseC, CorpseS, true) end
+                if featName == "Bank" then AnimToggle(BankT, BankC, BankS, true) end
+                if featName == "Chest" then AnimToggle(ChestT, ChestC, ChestS, true) end
+                if featName == "SaintScanner" then AnimToggle(ScanT, ScanC, ScanS, true) end
+                if featName == "ESP" then AnimToggle(EspT, EspCir, EspS, true) end
+                if featName == "ClickTp" then AnimToggle(ClickTpT, ClickTpC, ClickTpS, true) end
+                if featName == "Fly" then AnimToggle(FlyT, FlyC, FlyS, true) end
+                if featName == "RaknetDesync" then AnimToggle(RakT, RakC, RakS, true) end
+                if featName == "HideName" then AnimToggle(HideT, HideC, HideS, true) end
+            end
+        end
+
         Notify("Config '"..name.."' loaded!", 3)
     else
         Notify("Config '"..name.."' not found", 3)
@@ -1712,10 +1749,12 @@ task.delay(3, function()
                 CurrentConfigName = name
                 local data = LoadCfg(name)
                 if data then
-                    -- Восстанавливаем настройки
-                    if data.MinPlayers then SHC.MinPlayers = data.MinPlayers end
-                    if data.MaxPlayers then SHC.MaxPlayers = data.MaxPlayers end
-                    if data.FlySpeed then FlySpeed = data.FlySpeed end
+                    -- Восстанавливаем слайдеры и значения
+                    if data.MinPlayers and SetMin then SetMin(data.MinPlayers) end
+                    if data.MaxPlayers and SetMax then SetMax(data.MaxPlayers) end
+                    if data.FlySlider and SetFlySpeed then SetFlySpeed(data.FlySlider) end
+
+                    -- Восстанавливаем кейбинды
                     if data.GuiKeybind then
                         local ok,kc=pcall(function() return Enum.KeyCode[data.GuiKeybind] end)
                         if ok and kc then GuiKeybind=kc KbBtn.Text=data.GuiKeybind end
