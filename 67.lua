@@ -33,7 +33,7 @@ local Mouse = player:GetMouse()
 -- AUTO EXECUTE CORE (URL-based)
 -- Compatible: Potassium, Volt, Fluxus, Synapse X
 -- ==========================================
-local SCRIPT_URL = "https://raw.githubusercontent.com/kresteq/bridgerAnticheatSUCKS/refs/heads/main/67.lua"
+local SCRIPT_URL = "https://raw.githubusercontent.com/kresteq/NezurHub/refs/heads/main/NezurHub.lua"
 
 local ConfigFolder = "Nezur"
 
@@ -771,86 +771,70 @@ local function SaveCurrentConfig()
 end
 
 local function LoadCurrentConfig()
-    local ok, err = pcall(function()
-        local name = ConfigNameBox.Text
-        if name == "" then 
-            Notify("Enter config name first", 3)
-            return
-        end
-        CurrentConfigName = name
-        local data = LoadCfg(name)
-        if not data then
-            Notify("Config '"..name.."' not found", 3)
-            return
-        end
+    local name = ConfigNameBox.Text
+    if name == "" then 
+        Notify("Enter config name first", 3)
+        return
+    end
+    CurrentConfigName = name
+    local data = LoadCfg(name)
+    if not data then
+        Notify("Config '"..name.."' not found", 3)
+        return
+    end
 
-        -- Восстанавливаем слайдеры
-        if data.MinPlayers and SetMin then 
-            SetMin(data.MinPlayers) 
-        end
-        if data.MaxPlayers and SetMax then 
-            SetMax(data.MaxPlayers) 
-        end
-        if data.FlySlider and SetFlySpeed then 
-            SetFlySpeed(data.FlySlider) 
-        elseif data.FlySpeed then
-            FlySpeed = data.FlySpeed
-        end
+    -- Восстанавливаем слайдеры
+    if data.MinPlayers and SetMin then 
+        SetMin(data.MinPlayers) 
+    end
+    if data.MaxPlayers and SetMax then 
+        SetMax(data.MaxPlayers) 
+    end
+    if data.FlySlider and SetFlySpeed then 
+        SetFlySpeed(data.FlySlider) 
+    elseif data.FlySpeed then
+        FlySpeed = data.FlySpeed
+    end
 
-        -- Восстанавливаем кейбинды
-        if data.GuiKeybind then
-            local ok2,kc=pcall(function() return Enum.KeyCode[data.GuiKeybind] end)
-            if ok2 and kc then GuiKeybind=kc KbBtn.Text=data.GuiKeybind end
-        end
-        if data.FlyKeybind then
-            local ok2,kc=pcall(function() return Enum.KeyCode[data.FlyKeybind] end)
-            if ok2 and kc then FlyKeybind=kc FlyKbBtn.Text=data.FlyKeybind end
-        end
+    -- Восстанавливаем кейбинды
+    if data.GuiKeybind then
+        local ok,kc=pcall(function() return Enum.KeyCode[data.GuiKeybind] end)
+        if ok and kc then GuiKeybind=kc KbBtn.Text=data.GuiKeybind end
+    end
+    if data.FlyKeybind then
+        local ok,kc=pcall(function() return Enum.KeyCode[data.FlyKeybind] end)
+        if ok and kc then FlyKeybind=kc FlyKbBtn.Text=data.FlyKeybind end
+    end
 
-        -- Восстанавливаем включенные фичи
-        local starters = {
-            Corpse=StartCorpse, Bank=StartBank, Chest=StartChest,
-            SaintScanner=StartScanner, ESP=StartESP, ClickTp=StartClickTp,
-            Fly=StartFly, RaknetDesync=StartRaknet, HideName=StartHide
-        }
+    -- Восстанавливаем включенные фичи
+    local starters = {
+        Corpse=StartCorpse, Bank=StartBank, Chest=StartChest,
+        SaintScanner=StartScanner, ESP=StartESP, ClickTp=StartClickTp,
+        Fly=StartFly, RaknetDesync=StartRaknet, HideName=StartHide
+    }
 
-        for featName, enabled in pairs(data) do
-            if enabled == true and Features[featName] and starters[featName] then
-                -- Отключаем если уже включено, чтобы избежать дублей
-                if Features[featName].E then
-                    Features[featName].E = false
-                    if featName == "Corpse" then StopCorpse() end
-                    if featName == "Bank" then StopBank() end
-                    if featName == "Chest" then StopChest() end
-                    if featName == "SaintScanner" then StopScanner() end
-                    if featName == "ESP" then StopESP() end
-                    if featName == "ClickTp" then StopClickTp() end
-                    if featName == "Fly" then StopFly() end
-                    if featName == "RaknetDesync" then StopRaknet() end
-                    if featName == "HideName" then StopHide() end
-                end
+    for featName, enabled in pairs(data) do
+        if enabled == true and Features[featName] and starters[featName] then
+            if not Features[featName].E then
                 Features[featName].E = true
                 task.spawn(starters[featName])
-
-                -- Обновляем визуал тогглов
-                if featName == "Corpse" then AnimToggle(CorpseT, CorpseC, CorpseS, true) end
-                if featName == "Bank" then AnimToggle(BankT, BankC, BankS, true) end
-                if featName == "Chest" then AnimToggle(ChestT, ChestC, ChestS, true) end
-                if featName == "SaintScanner" then AnimToggle(ScanT, ScanC, ScanS, true) end
-                if featName == "ESP" then AnimToggle(EspT, EspCir, EspS, true) end
-                if featName == "ClickTp" then AnimToggle(ClickTpT, ClickTpC, ClickTpS, true) end
-                if featName == "Fly" then AnimToggle(FlyT, FlyC, FlyS, true) end
-                if featName == "RaknetDesync" then AnimToggle(RakT, RakC, RakS, true) end
-                if featName == "HideName" then AnimToggle(HideT, HideC, HideS, true) end
+                warn("[Nezur] LoadConfig: enabled " .. featName)
             end
-        end
 
-        Notify("Config '"..name.."' loaded!", 3)
-    end)
-    if not ok then
-        warn("[Nezur] LoadConfig error: " .. tostring(err))
-        Notify("Load Config error: " .. tostring(err):sub(1, 40), 5)
+            -- Обновляем визуал тогглов
+            if featName == "Corpse" then AnimToggle(CorpseT, CorpseC, CorpseS, true) end
+            if featName == "Bank" then AnimToggle(BankT, BankC, BankS, true) end
+            if featName == "Chest" then AnimToggle(ChestT, ChestC, ChestS, true) end
+            if featName == "SaintScanner" then AnimToggle(ScanT, ScanC, ScanS, true) end
+            if featName == "ESP" then AnimToggle(EspT, EspCir, EspS, true) end
+            if featName == "ClickTp" then AnimToggle(ClickTpT, ClickTpC, ClickTpS, true) end
+            if featName == "Fly" then AnimToggle(FlyT, FlyC, FlyS, true) end
+            if featName == "RaknetDesync" then AnimToggle(RakT, RakC, RakS, true) end
+            if featName == "HideName" then AnimToggle(HideT, HideC, HideS, true) end
+        end
     end
+
+    Notify("Config '"..name.."' loaded!", 3)
 end
 
 local function DeleteCurrentConfig()
