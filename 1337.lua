@@ -39,7 +39,7 @@ local Mouse = player:GetMouse()
 -- AUTO EXECUTE CORE (URL-based)
 -- Compatible: Potassium, Volt, Fluxus, Synapse X
 -- ==========================================
-local SCRIPT_URL = "https://raw.githubusercontent.com/kresteq/bridgerAnticheatSUCKS/refs/heads/main/1337.lua"
+local SCRIPT_URL = "https://raw.githubusercontent.com/kresteq/bridgerAnticheatSUCKS/refs/heads/main/1337.lua?v=20"
 
 local ConfigFolder = "Nezur"
 
@@ -638,21 +638,9 @@ FlyWarn.TextSize = 10
 FlyWarn.Font = Enum.Font.GothamBold
 FlyWarn.TextXAlignment = Enum.TextXAlignment.Left
 FlyWarn.TextYAlignment = Enum.TextYAlignment.Top
+FlyWarn.TextWrapped = true
 mvy = mvy + 44
 
-local FlyWarn = Instance.new("TextLabel",MovC)
-FlyWarn.Size = UDim2.new(1,0,0,40)
-FlyWarn.Position = UDim2.new(0,0,0,mvy)
-FlyWarn.BackgroundTransparency = 1
-FlyWarn.Text = "⚠️CAUTION⚠️
-After 10s of flying, AntiCheat drops HP to 0
-DONT TURN OFF FLY AT LOW HP⚠️"
-FlyWarn.TextColor3 = Color3.fromRGB(255,100,100)
-FlyWarn.TextSize = 10
-FlyWarn.Font = Enum.Font.GothamBold
-FlyWarn.TextXAlignment = Enum.TextXAlignment.Left
-FlyWarn.TextYAlignment = Enum.TextYAlignment.Top
-mvy = mvy + 44
 
 local FlyT, FlyC, FlyS, mvy = CreateToggle(MovC,"Fly",mvy,"Fly")
 mvy = mvy + 4
@@ -751,17 +739,6 @@ ExecNameLbl.TextColor3 = Color3.fromRGB(192,192,192)
 ExecNameLbl.TextSize = 12
 ExecNameLbl.Font = Enum.Font.Gotham
 ExecNameLbl.TextXAlignment = Enum.TextXAlignment.Left
-sy = sy + 22
-local ExecStatusLbl = Instance.new("TextLabel",SetC)
-ExecStatusLbl.Size = UDim2.new(1,0,0,20)
-ExecStatusLbl.Position = UDim2.new(0,0,0,sy)
-ExecStatusLbl.BackgroundTransparency = 1
-ExecStatusLbl.Text = "Status: Detecting..."
-ExecStatusLbl.TextColor3 = Color3.fromRGB(255,200,100)
-ExecStatusLbl.TextSize = 12
-ExecStatusLbl.Font = Enum.Font.Gotham
-ExecStatusLbl.TextXAlignment = Enum.TextXAlignment.Left
-sy = sy + 22
 sy = sy + 5
 
 local ConfigListFrame = Instance.new("ScrollingFrame")
