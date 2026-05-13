@@ -21,8 +21,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- Удаление старых GUI если они остались
 local oldGui = playerGui:FindFirstChild("NezurHub")
 if oldGui then oldGui:Destroy() end
-local oldNotif = playerGui:FindFirstChild("NezurNotifications")
-if oldNotif then oldNotif:Destroy() end
+
 
 
 local GuiService = game:GetService("GuiService")
@@ -227,9 +226,9 @@ end
 -- ==========================================
 -- GUI FRAMEWORK
 -- ==========================================
--- Дополнительная защита от дублирования GUI
+-- Дополнительная защита от дублирования GUI (только NezurHub)
 for _, child in ipairs(playerGui:GetChildren()) do
-    if child.Name == "NezurHub" or child.Name == "NezurNotifications" then
+    if child.Name == "NezurHub" then
         child:Destroy()
     end
 end
@@ -276,7 +275,7 @@ local TitleText = Instance.new("TextLabel",TitleBar)
 TitleText.Size = UDim2.new(1,-15,1,0)
 TitleText.Position = UDim2.new(0,15,0,0)
 TitleText.BackgroundTransparency = 1
-TitleText.Text = "▼ Nezur"
+TitleText.Text = "▼ Nezur 🔮"
 TitleText.TextColor3 = Color3.fromRGB(192,192,192)
 TitleText.TextSize = 14
 TitleText.Font = Enum.Font.GothamSemibold
@@ -693,6 +692,28 @@ local SetC = TabContents["Settings"]
 local sy = 0
 sy = CreateSection(SetC,"Config Management",sy)
 local ConfigNameBox, sy = CreateTextBox(SetC,"Config Name",sy,"Enter name...")
+
+sy = CreateSection(SetC,"Executor",sy+5)
+local ExecNameLbl = Instance.new("TextLabel",SetC)
+ExecNameLbl.Size = UDim2.new(1,0,0,20)
+ExecNameLbl.Position = UDim2.new(0,0,0,sy)
+ExecNameLbl.BackgroundTransparency = 1
+ExecNameLbl.Text = "Executor: Detecting..."
+ExecNameLbl.TextColor3 = Color3.fromRGB(192,192,192)
+ExecNameLbl.TextSize = 12
+ExecNameLbl.Font = Enum.Font.Gotham
+ExecNameLbl.TextXAlignment = Enum.TextXAlignment.Left
+sy = sy + 22
+local ExecStatusLbl = Instance.new("TextLabel",SetC)
+ExecStatusLbl.Size = UDim2.new(1,0,0,20)
+ExecStatusLbl.Position = UDim2.new(0,0,0,sy)
+ExecStatusLbl.BackgroundTransparency = 1
+ExecStatusLbl.Text = "Status: Detecting..."
+ExecStatusLbl.TextColor3 = Color3.fromRGB(255,200,100)
+ExecStatusLbl.TextSize = 12
+ExecStatusLbl.Font = Enum.Font.Gotham
+ExecStatusLbl.TextXAlignment = Enum.TextXAlignment.Left
+sy = sy + 22
 sy = sy + 5
 
 local ConfigListFrame = Instance.new("ScrollingFrame")
@@ -777,10 +798,10 @@ local function SaveCurrentConfig()
     CurrentConfigName = name
     local ok = SaveCfg(name, BuildCfg())
     if ok then
-        Notify("Config '"..name.."' saved!", 3)
+        Notify("💾 Config '"..name.."' saved!", 3)
         RefreshConfigListUI()
     else
-        Notify("Failed to save config", 3)
+        Notify("❌ Failed to save config", 3)
     end
 end
 
@@ -788,14 +809,14 @@ local function LoadCurrentConfig()
     print("[Nezur] LoadCurrentConfig called, textbox: '" .. tostring(ConfigNameBox.Text) .. "'")
     local name = ConfigNameBox.Text
     if name == "" then 
-        Notify("Enter config name first", 3)
+        Notify("⚠️ Enter config name first", 3)
         return
     end
     CurrentConfigName = name
     local data = LoadCfg(name)
     print("[Nezur] LoadCfg returned: " .. tostring(data ~= nil))
     if not data then
-        Notify("Config '"..name.."' not found", 3)
+        Notify("❌ Config '"..name.."' not found", 3)
         return
     end
 
@@ -856,7 +877,7 @@ local function LoadCurrentConfig()
         end
     end
 
-    Notify("Config '"..name.."' loaded!", 3)
+    Notify("📂 Config '"..name.."' loaded!", 3)
 end
 
 local function DeleteCurrentConfig()
@@ -868,7 +889,7 @@ local function DeleteCurrentConfig()
         Notify("Config '"..name.."' deleted!", 3)
         RefreshConfigListUI()
     else
-        Notify("Config not found", 3)
+        Notify("❌ Config not found", 3)
     end
 end
 
@@ -878,7 +899,7 @@ end
 local function SetupAutoLoad()
     local name = ConfigNameBox.Text
     if name == "" then
-        Notify("Enter config name first", 3)
+        Notify("⚠️ Enter config name first", 3)
         return
     end
     name = name:gsub("[^%w_-]", "")
@@ -889,7 +910,7 @@ local function SetupAutoLoad()
     local path = ConfigFolder .. "/autoload.txt"
     local ok = pcall(function() writefile(path, name) end)
     if ok then
-        Notify("AutoLoad set to '" .. name .. "'", 3)
+        Notify("📌 AutoLoad set to '" .. name .. "'", 3)
     else
         Notify("Failed to set AutoLoad", 3)
     end
@@ -899,9 +920,9 @@ local function DeleteAutoLoad()
     local path = ConfigFolder .. "/autoload.txt"
     if isfile(path) then
         pcall(function() delfile(path) end)
-        Notify("AutoLoad deleted", 3)
+        Notify("🗑️ AutoLoad deleted", 3)
     else
-        Notify("AutoLoad is empty", 3)
+        Notify("📭 AutoLoad is empty", 3)
     end
 end
 
@@ -915,7 +936,7 @@ local ServerHopRunning = false
 
 local function ServerHop()
     if ServerHopRunning then
-        Notify("Server hop already running", 3)
+        Notify("🔄 Server hop already running", 3)
         return
     end
     ServerHopRunning = true
@@ -927,7 +948,7 @@ local function ServerHop()
     task.delay(7, function()
         if not ServerHopRunning then return end
         if game.JobId == startJobId then
-            Notify("Teleport failed, retrying...", 3)
+            Notify("🔄 Teleport failed, retrying...", 3)
             ServerHopRunning = false
             task.wait(1)
             ServerHop()
@@ -936,7 +957,7 @@ local function ServerHop()
 
     task.spawn(function()
         local ok, err = pcall(function()
-            Notify("Fetching servers...", 2)
+            Notify("🔍 Fetching servers...", 2)
             local PID = game.PlaceId
             local CJID = game.JobId
             local Mn = SHC.MinPlayers
@@ -1017,7 +1038,7 @@ local function ServerHop()
                                         pcall(function()
                                             writefile("NotSameServers.json", HttpService:JSONEncode(AIDs))
                                         end)
-                                        Notify("Teleporting (" .. pl .. "/" .. mp .. ")", 3)
+                                        Notify("🚀 Teleporting (" .. pl .. "/" .. mp .. ")", 3)
                                         pcall(function()
                                             TeleportService:TeleportToPlaceInstance(PID, sid, player)
                                         end)
@@ -1035,7 +1056,7 @@ local function ServerHop()
             end
 
             if not found then
-                Notify("No server found (try lower Min)", 5)
+                Notify("❌ No server found (try lower Min)", 5)
             end
         end)
 
@@ -1052,7 +1073,7 @@ end
 -- AUTO CORPSE
 -- ==========================================
 local function StartCorpse()
-    Notify("Auto corpse active")
+    Notify("🟣 Auto Corpse active")
     local VIM = game:GetService("VirtualInputManager")
     local SAFE = CFrame.new(-4387.25,217.5,-4482.04)
     local processing = false
@@ -1135,7 +1156,7 @@ local function StartCorpse()
     end)
 end
 local function StopCorpse()
-    Notify("Auto corpse disabled")
+    Notify("⚫ Auto Corpse disabled")
     if Features.Corpse.C then Features.Corpse.C:Disconnect() Features.Corpse.C = nil end
 end
 
@@ -1148,7 +1169,7 @@ local BankThread = nil
 local function StartBank()
     if BankRunning then return end
     BankRunning = true
-    Notify("Auto rob bank")
+    Notify("🟣 Auto Bank active")
     
     BankThread = task.spawn(function()
         local ok, err = pcall(function()
@@ -1361,7 +1382,7 @@ local function StartBank()
 end
 
 local function StopBank()
-    Notify("Auto bank disabled")
+    Notify("⚫ Auto Bank disabled")
     BankRunning = false
     if BankThread then
         pcall(function() coroutine.close(BankThread) end)
@@ -1374,7 +1395,7 @@ end
 -- AUTO CHEST
 -- ==========================================
 local function StartChest()
-    Notify("Auto chest enabled")
+    Notify("🟣 Auto Chest active")
     repeat task.wait() until game:IsLoaded()
     local char = player.Character or player.CharacterAdded:Wait()
     local hrp = char:WaitForChild("HumanoidRootPart")
@@ -1404,7 +1425,7 @@ local function StartChest()
     ServerHop()
 end
 local function StopChest()
-    Notify("Auto chest disabled")
+    Notify("⚫ Auto Chest disabled")
     if Features.Chest.C then Features.Chest.C:Disconnect() Features.Chest.C = nil end
 end
 
@@ -1412,7 +1433,7 @@ end
 -- SAINT SCANNER
 -- ==========================================
 local function StartScanner()
-    Notify("Saint scanner enabled")
+    Notify("🔮 Saint Scanner active")
     ScannerData.Scan = true
     local last = nil
     Features.SaintScanner.C = RunService.Heartbeat:Connect(function()
@@ -1436,7 +1457,7 @@ local function StartScanner()
     end)
 end
 local function StopScanner()
-    Notify("Saint scanner disabled")
+    Notify("⚫ Saint Scanner disabled")
     ScannerData.Scan = false
     ScannerData.DP = nil
     ScannerData.DPos = nil
@@ -1508,7 +1529,7 @@ local function UpdateESP()
 end
 
 local function StartESP()
-    Notify("Player ESP enabled")
+    Notify("👁️ Player ESP active")
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= player then CreateESPText(p) end
     end
@@ -1518,7 +1539,7 @@ local function StartESP()
 end
 
 local function StopESP()
-    Notify("Player ESP disabled")
+    Notify("⚫ Player ESP disabled")
     if Features.ESP.C then Features.ESP.C:Disconnect() Features.ESP.C = nil end
     if Features.ESP.PlayerAdded then Features.ESP.PlayerAdded:Disconnect() Features.ESP.PlayerAdded = nil end
     if Features.ESP.PlayerRemoving then Features.ESP.PlayerRemoving:Disconnect() Features.ESP.PlayerRemoving = nil end
@@ -1530,7 +1551,7 @@ end
 -- CLICK TP
 -- ==========================================
 local function StartClickTp()
-    Notify("ClickTP enabled (Shift+Click)")
+    Notify("🖱️ ClickTP active (Shift+Click)")
     Features.ClickTp.C = UserInputService.InputBegan:Connect(function(i, g)
         if g then return end
         if i.UserInputType == Enum.UserInputType.MouseButton1 and UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
@@ -1547,7 +1568,7 @@ local function StartClickTp()
     end)
 end
 local function StopClickTp()
-    Notify("ClickTP disabled")
+    Notify("⚫ ClickTP disabled")
     if Features.ClickTp.C then Features.ClickTp.C:Disconnect() Features.ClickTp.C = nil end
 end
 
@@ -1558,7 +1579,7 @@ local FlyConn = nil
 local FlyAct = false
 
 local function StartFly()
-    Notify("Fly enabled")
+    Notify("🪽 Fly active")
     task.delay(0.5, function()
         Notify("!!CAUTION!! If Fly resets your HP to 0 after 10 seconds of flying - DONT TURN IT OFF WHILE LOW HP", 6)
     end)
@@ -1601,7 +1622,7 @@ local function StartFly()
 end
 
 local function StopFly()
-    Notify("Fly disabled")
+    Notify("⚫ Fly disabled")
     FlyAct = false
     if FlyConn then FlyConn:Disconnect() FlyConn = nil end
     local c = player.Character
@@ -1620,7 +1641,7 @@ end
 -- RAKNET
 -- ==========================================
 local function StartRaknet()
-    Notify("Raknet enabled (U)")
+    Notify("📡 Raknet active (U)")
     local uis = game:GetService("UserInputService")
     local h = false
     local function rh(p)
@@ -1637,7 +1658,7 @@ local function StartRaknet()
     end)
 end
 local function StopRaknet()
-    Notify("Raknet disabled")
+    Notify("⚫ Raknet disabled")
     if Features.RaknetDesync.C then Features.RaknetDesync.C:Disconnect() Features.RaknetDesync.C = nil end
 end
 
@@ -1645,7 +1666,7 @@ end
 -- HIDE NAME
 -- ==========================================
 local function StartHide()
-    Notify("Hide name enabled")
+    Notify("👤 Hide Name active")
     local function upd()
         local g = player:FindFirstChild("PlayerGui")
         if not g then return end
@@ -1660,7 +1681,7 @@ local function StartHide()
     Features.HideName.C = RunService.Heartbeat:Connect(upd)
 end
 local function StopHide()
-    Notify("Hide name disabled")
+    Notify("⚫ Hide Name disabled")
     if Features.HideName.C then Features.HideName.C:Disconnect() Features.HideName.C = nil end
 end
 
@@ -1794,6 +1815,42 @@ UserInputService.InputBegan:Connect(function(i, g)
 end)
 
 -- ==========================================
+-- EXECUTOR DETECTION
+-- ==========================================
+local function DetectExecutor()
+    local name = "Unknown"
+    if type(identifyexecutor) == "function" then
+        local s,r = pcall(identifyexecutor)
+        if s and r then name = r end
+    elseif type(getexecutorname) == "function" then
+        local s,r = pcall(getexecutorname)
+        if s and r then name = r end
+    end
+
+    if name == "Unknown" then
+        local env = {}
+        if type(getgenv) == "function" then
+            local s,r = pcall(getgenv)
+            if s and type(r) == "table" then env = r end
+        end
+        local map = {potassium="Potassium",fluxus="Fluxus",syn="Synapse X",krnl="KRNL",volt="Volt",xeno="Xeno",arceus="Arceus X"}
+        for k,v in pairs(map) do if env[k] ~= nil then name = v break end end
+    end
+
+    local lower = name:lower()
+    local status = "🟠 Supported with issues"
+    local color = Color3.fromRGB(255,200,100)
+    if lower:find("potassium") or lower:find("volt") or lower:find("synapse") or lower:find("fluxus") then
+        status = "🟢 Supported"
+        color = Color3.fromRGB(100,255,100)
+    elseif lower:find("xeno") or lower:find("arceus") then
+        status = "🔴 Not supported"
+        color = Color3.fromRGB(255,100,100)
+    end
+    return name, status, color
+end
+
+-- ==========================================
 -- BUTTONS
 -- ==========================================
 SaveCfgBtn.MouseButton1Click:Connect(SaveCurrentConfig)
@@ -1804,7 +1861,7 @@ ServerHopBtn.MouseButton1Click:Connect(function()
     ServerHop()
 end)
 RejoinBtn.MouseButton1Click:Connect(function()
-    Notify("Rejoining...", 3)
+    Notify("🔄 Rejoining...", 3)
     SetupAutoExec()
     TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
 end)
@@ -1876,18 +1933,18 @@ task.delay(3, function()
                         end
                     end
 
-                    Notify("AutoLoad successful", 3)
+                    Notify("✅ AutoLoad successful", 3)
                 else
-                    Notify("AutoLoad failed: config '" .. name .. "' not found", 3)
+                    Notify("❌ AutoLoad failed: config '" .. name .. "' not found", 3)
                 end
             else
-                Notify("AutoLoad is empty", 3)
+                Notify("📭 AutoLoad is empty", 3)
             end
         else
-            Notify("AutoLoad is empty", 3)
+            Notify("📭 AutoLoad is empty", 3)
         end
     else
-        Notify("AutoLoad is empty", 3)
+        Notify("📭 AutoLoad is empty", 3)
     end
 end)
 
@@ -1895,6 +1952,17 @@ end)
 -- INIT
 -- ==========================================
 RefreshConfigListUI()
+
+-- Executor detection
+pcall(function()
+    task.spawn(function()
+        task.wait(0.5)
+        local name, status, color = DetectExecutor()
+        ExecNameLbl.Text = "Executor: " .. name
+        ExecStatusLbl.Text = "Status: " .. status
+        ExecStatusLbl.TextColor3 = color
+    end)
+end)
 
 ScreenGui.Destroying:Connect(function()
     for _, f in pairs(Features) do
@@ -1913,4 +1981,4 @@ ScreenGui.Destroying:Connect(function()
     ESPDrawings = {}
 end)
 
-Notify("Nezur loaded successfully", 4)
+Notify("✅ Nezur loaded successfully", 4)
