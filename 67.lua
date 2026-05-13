@@ -845,7 +845,7 @@ local function LoadCurrentConfig()
 
             if not Features[featName].E then
                 Features[featName].E = true
-                local starterFunc = _G.NezurStarters and _G.NezurStarters[featName]
+                local starterFunc = _G.NezurStarters[featName]
                 if starterFunc then
                     task.spawn(starterFunc)
                     print("[Nezur] LoadConfig: ENABLED " .. featName)
@@ -1052,10 +1052,6 @@ end
 -- AUTO CORPSE
 -- ==========================================
 local function StartCorpse()
-    _G.NezurStarters = _G.NezurStarters or {}
-    _G.NezurStarters.Corpse = StartCorpse
-    _G.NezurStoppers = _G.NezurStoppers or {}
-    _G.NezurStoppers.Corpse = StopCorpse
     Notify("Auto corpse active")
     local VIM = game:GetService("VirtualInputManager")
     local SAFE = CFrame.new(-4387.25,217.5,-4482.04)
@@ -1150,10 +1146,6 @@ local BankRunning = false
 local BankThread = nil
 
 local function StartBank()
-    _G.NezurStarters = _G.NezurStarters or {}
-    _G.NezurStarters.Bank = StartBank
-    _G.NezurStoppers = _G.NezurStoppers or {}
-    _G.NezurStoppers.Bank = StopBank
     if BankRunning then return end
     BankRunning = true
     Notify("Auto rob bank")
@@ -1382,10 +1374,6 @@ end
 -- AUTO CHEST
 -- ==========================================
 local function StartChest()
-    _G.NezurStarters = _G.NezurStarters or {}
-    _G.NezurStarters.Chest = StartChest
-    _G.NezurStoppers = _G.NezurStoppers or {}
-    _G.NezurStoppers.Chest = StopChest
     Notify("Auto chest enabled")
     repeat task.wait() until game:IsLoaded()
     local char = player.Character or player.CharacterAdded:Wait()
@@ -1424,10 +1412,6 @@ end
 -- SAINT SCANNER
 -- ==========================================
 local function StartScanner()
-    _G.NezurStarters = _G.NezurStarters or {}
-    _G.NezurStarters.SaintScanner = StartScanner
-    _G.NezurStoppers = _G.NezurStoppers or {}
-    _G.NezurStoppers.SaintScanner = StopScanner
     Notify("Saint scanner enabled")
     ScannerData.Scan = true
     local last = nil
@@ -1524,10 +1508,6 @@ local function UpdateESP()
 end
 
 local function StartESP()
-    _G.NezurStarters = _G.NezurStarters or {}
-    _G.NezurStarters.ESP = StartESP
-    _G.NezurStoppers = _G.NezurStoppers or {}
-    _G.NezurStoppers.ESP = StopESP
     Notify("Player ESP enabled")
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= player then CreateESPText(p) end
@@ -1550,10 +1530,6 @@ end
 -- CLICK TP
 -- ==========================================
 local function StartClickTp()
-    _G.NezurStarters = _G.NezurStarters or {}
-    _G.NezurStarters.ClickTp = StartClickTp
-    _G.NezurStoppers = _G.NezurStoppers or {}
-    _G.NezurStoppers.ClickTp = StopClickTp
     Notify("ClickTP enabled (Shift+Click)")
     Features.ClickTp.C = UserInputService.InputBegan:Connect(function(i, g)
         if g then return end
@@ -1582,10 +1558,6 @@ local FlyConn = nil
 local FlyAct = false
 
 local function StartFly()
-    _G.NezurStarters = _G.NezurStarters or {}
-    _G.NezurStarters.Fly = StartFly
-    _G.NezurStoppers = _G.NezurStoppers or {}
-    _G.NezurStoppers.Fly = StopFly
     Notify("Fly enabled")
     task.delay(0.5, function()
         Notify("!!CAUTION!! If Fly resets your HP to 0 after 10 seconds of flying - DONT TURN IT OFF WHILE LOW HP", 6)
@@ -1648,10 +1620,6 @@ end
 -- RAKNET
 -- ==========================================
 local function StartRaknet()
-    _G.NezurStarters = _G.NezurStarters or {}
-    _G.NezurStarters.RaknetDesync = StartRaknet
-    _G.NezurStoppers = _G.NezurStoppers or {}
-    _G.NezurStoppers.RaknetDesync = StopRaknet
     Notify("Raknet enabled (U)")
     local uis = game:GetService("UserInputService")
     local h = false
@@ -1677,10 +1645,6 @@ end
 -- HIDE NAME
 -- ==========================================
 local function StartHide()
-    _G.NezurStarters = _G.NezurStarters or {}
-    _G.NezurStarters.HideName = StartHide
-    _G.NezurStoppers = _G.NezurStoppers or {}
-    _G.NezurStoppers.HideName = StopHide
     Notify("Hide name enabled")
     local function upd()
         local g = player:FindFirstChild("PlayerGui")
@@ -1699,6 +1663,32 @@ local function StopHide()
     Notify("Hide name disabled")
     if Features.HideName.C then Features.HideName.C:Disconnect() Features.HideName.C = nil end
 end
+
+-- ==========================================
+-- GLOBAL STARTERS TABLE (для Load Config / AutoLoad)
+-- ==========================================
+_G.NezurStarters = {
+    Corpse = StartCorpse,
+    Bank = StartBank,
+    Chest = StartChest,
+    SaintScanner = StartScanner,
+    ESP = StartESP,
+    ClickTp = StartClickTp,
+    Fly = StartFly,
+    RaknetDesync = StartRaknet,
+    HideName = StartHide
+}
+_G.NezurStoppers = {
+    Corpse = StopCorpse,
+    Bank = StopBank,
+    Chest = StopChest,
+    SaintScanner = StopScanner,
+    ESP = StopESP,
+    ClickTp = StopClickTp,
+    Fly = StopFly,
+    RaknetDesync = StopRaknet,
+    HideName = StopHide
+}
 
 -- ==========================================
 -- TOGGLE SETUP
@@ -1863,11 +1853,9 @@ task.delay(3, function()
                     }
 
                     for featName, enabled in pairs(data) do
-                        if enabled == true and Features[featName] and starters[featName] then
-                            Features[featName].E = true
-                            task.spawn(starters[featName])
-
-                            -- Обновляем визуал тогглов
+                        local isEnabled = (enabled == true) or (enabled == "true") or (enabled == 1)
+                        if isEnabled and Features[featName] then
+                            -- Обновляем визуал тогглов ВСЕГДА
                             if featName == "Corpse" then AnimToggle(CorpseT, CorpseC, CorpseS, true) end
                             if featName == "Bank" then AnimToggle(BankT, BankC, BankS, true) end
                             if featName == "Chest" then AnimToggle(ChestT, ChestC, ChestS, true) end
@@ -1877,6 +1865,14 @@ task.delay(3, function()
                             if featName == "Fly" then AnimToggle(FlyT, FlyC, FlyS, true) end
                             if featName == "RaknetDesync" then AnimToggle(RakT, RakC, RakS, true) end
                             if featName == "HideName" then AnimToggle(HideT, HideC, HideS, true) end
+
+                            if not Features[featName].E then
+                                Features[featName].E = true
+                                local starterFunc = _G.NezurStarters[featName]
+                                if starterFunc then
+                                    task.spawn(starterFunc)
+                                end
+                            end
                         end
                     end
 
