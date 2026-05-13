@@ -771,6 +771,7 @@ local function SaveCurrentConfig()
 end
 
 local function LoadCurrentConfig()
+    print("[Nezur] LoadCurrentConfig called, textbox: '" .. tostring(ConfigNameBox.Text) .. "'")
     local name = ConfigNameBox.Text
     if name == "" then 
         Notify("Enter config name first", 3)
@@ -778,6 +779,7 @@ local function LoadCurrentConfig()
     end
     CurrentConfigName = name
     local data = LoadCfg(name)
+    print("[Nezur] LoadCfg returned: " .. tostring(data ~= nil))
     if not data then
         Notify("Config '"..name.."' not found", 3)
         return
@@ -814,11 +816,12 @@ local function LoadCurrentConfig()
     }
 
     for featName, enabled in pairs(data) do
+        print("[Nezur] Checking feature: " .. tostring(featName) .. " = " .. tostring(enabled))
         if enabled == true and Features[featName] and starters[featName] then
             if not Features[featName].E then
                 Features[featName].E = true
                 task.spawn(starters[featName])
-                warn("[Nezur] LoadConfig: enabled " .. featName)
+                print("[Nezur] LoadConfig: enabled " .. featName)
             end
 
             -- Обновляем визуал тогглов
