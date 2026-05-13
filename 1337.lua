@@ -39,7 +39,7 @@ local Mouse = player:GetMouse()
 -- AUTO EXECUTE CORE (URL-based)
 -- Compatible: Potassium, Volt, Fluxus, Synapse X
 -- ==========================================
-local SCRIPT_URL = "https://raw.githubusercontent.com/kresteq/bridgerAnticheatSUCKS/refs/heads/main/67.lua"
+local SCRIPT_URL = "https://raw.githubusercontent.com/kresteq/bridgerAnticheatSUCKS/refs/heads/main/1337.lua"
 
 local ConfigFolder = "Nezur"
 
@@ -48,8 +48,9 @@ local function SetupAutoExec()
     local loaderTemplate = [[
 repeat task.wait() until game:IsLoaded()
 task.wait(1.5)
+local url = "%s" .. "?nocache=" .. tostring(tick())
 local ok, src = pcall(function()
-    return game:HttpGet("%s")
+    return game:HttpGet(url)
 end)
 if ok and src and #src > 100 then
     loadstring(src)()
@@ -625,6 +626,20 @@ local MovC = TabContents["Movement"]
 local mvy = 0
 mvy = CreateSection(MovC,"Movement",mvy)
 local ClickTpT, ClickTpC, ClickTpS, mvy = CreateToggle(MovC,"Click Teleport",mvy,"ClickTp")
+local FlyWarn = Instance.new("TextLabel",MovC)
+FlyWarn.Size = UDim2.new(1,0,0,40)
+FlyWarn.Position = UDim2.new(0,0,0,mvy)
+FlyWarn.BackgroundTransparency = 1
+FlyWarn.Text = "⚠️CAUTION⚠️
+After 10s of flying, AntiCheat drops HP to 0
+DONT TURN OFF FLY AT LOW HP⚠️"
+FlyWarn.TextColor3 = Color3.fromRGB(255,100,100)
+FlyWarn.TextSize = 10
+FlyWarn.Font = Enum.Font.GothamBold
+FlyWarn.TextXAlignment = Enum.TextXAlignment.Left
+FlyWarn.TextYAlignment = Enum.TextYAlignment.Top
+mvy = mvy + 44
+
 local FlyT, FlyC, FlyS, mvy = CreateToggle(MovC,"Fly",mvy,"Fly")
 mvy = mvy + 4
 local FlyKbLbl = Instance.new("TextLabel",MovC)
@@ -690,11 +705,30 @@ local RejoinBtn, sv = CreateButton(ServC,"Rejoin Server",sv,"RejoinBtn")
 -- Settings Tab
 local SetC = TabContents["Settings"]
 local sy = 0
-sy = CreateSection(SetC,"Config Management",sy)
-local ConfigNameBox, sy = CreateTextBox(SetC,"Config Name",sy,"Enter name...")
-
-sy = CreateSection(SetC,"Executor",sy+5)
+sy = CreateSection(SetC,"Executor",sy)
 local ExecNameLbl = Instance.new("TextLabel",SetC)
+ExecNameLbl.Size = UDim2.new(1,0,0,20)
+ExecNameLbl.Position = UDim2.new(0,0,0,sy)
+ExecNameLbl.BackgroundTransparency = 1
+ExecNameLbl.Text = "Executor: Detecting..."
+ExecNameLbl.TextColor3 = Color3.fromRGB(192,192,192)
+ExecNameLbl.TextSize = 12
+ExecNameLbl.Font = Enum.Font.Gotham
+ExecNameLbl.TextXAlignment = Enum.TextXAlignment.Left
+sy = sy + 22
+local ExecStatusLbl = Instance.new("TextLabel",SetC)
+ExecStatusLbl.Size = UDim2.new(1,0,0,20)
+ExecStatusLbl.Position = UDim2.new(0,0,0,sy)
+ExecStatusLbl.BackgroundTransparency = 1
+ExecStatusLbl.Text = "Status: Detecting..."
+ExecStatusLbl.TextColor3 = Color3.fromRGB(255,200,100)
+ExecStatusLbl.TextSize = 12
+ExecStatusLbl.Font = Enum.Font.Gotham
+ExecStatusLbl.TextXAlignment = Enum.TextXAlignment.Left
+sy = sy + 22
+
+sy = CreateSection(SetC,"Config Management",sy+5)
+local ConfigNameBox, sy = CreateTextBox(SetC,"Config Name",sy,"Enter name...")
 ExecNameLbl.Size = UDim2.new(1,0,0,20)
 ExecNameLbl.Position = UDim2.new(0,0,0,sy)
 ExecNameLbl.BackgroundTransparency = 1
