@@ -39,7 +39,7 @@ local Mouse = player:GetMouse()
 -- AUTO EXECUTE CORE (URL-based)
 -- Compatible: Potassium, Volt, Fluxus, Synapse X
 -- ==========================================
-local SCRIPT_URL = "https://raw.githubusercontent.com/kresteq/bridgerAnticheatSUCKS/refs/heads/main/1337.lua"
+local SCRIPT_URL = "https://raw.githubusercontent.com/kresteq/bridgerAnticheatSUCKS/refs/heads/main/67.lua"
 
 local ConfigFolder = "Nezur"
 
@@ -48,9 +48,8 @@ local function SetupAutoExec()
     local loaderTemplate = [[
 repeat task.wait() until game:IsLoaded()
 task.wait(1.5)
-local url = "%s" .. "?nocache=" .. tostring(tick())
 local ok, src = pcall(function()
-    return game:HttpGet(url)
+    return game:HttpGet("%s")
 end)
 if ok and src and #src > 100 then
     loadstring(src)()
@@ -729,25 +728,6 @@ sy = sy + 22
 
 sy = CreateSection(SetC,"Config Management",sy+5)
 local ConfigNameBox, sy = CreateTextBox(SetC,"Config Name",sy,"Enter name...")
-ExecNameLbl.Size = UDim2.new(1,0,0,20)
-ExecNameLbl.Position = UDim2.new(0,0,0,sy)
-ExecNameLbl.BackgroundTransparency = 1
-ExecNameLbl.Text = "Executor: Detecting..."
-ExecNameLbl.TextColor3 = Color3.fromRGB(192,192,192)
-ExecNameLbl.TextSize = 12
-ExecNameLbl.Font = Enum.Font.Gotham
-ExecNameLbl.TextXAlignment = Enum.TextXAlignment.Left
-sy = sy + 22
-local ExecStatusLbl = Instance.new("TextLabel",SetC)
-ExecStatusLbl.Size = UDim2.new(1,0,0,20)
-ExecStatusLbl.Position = UDim2.new(0,0,0,sy)
-ExecStatusLbl.BackgroundTransparency = 1
-ExecStatusLbl.Text = "Status: Detecting..."
-ExecStatusLbl.TextColor3 = Color3.fromRGB(255,200,100)
-ExecStatusLbl.TextSize = 12
-ExecStatusLbl.Font = Enum.Font.Gotham
-ExecStatusLbl.TextXAlignment = Enum.TextXAlignment.Left
-sy = sy + 22
 sy = sy + 5
 
 local ConfigListFrame = Instance.new("ScrollingFrame")
