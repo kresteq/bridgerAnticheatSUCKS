@@ -830,14 +830,20 @@ local function LoadCurrentConfig()
     }
 
     for featName, enabled in pairs(data) do
-        print("[Nezur] Checking feature: " .. tostring(featName) .. " = " .. tostring(enabled) .. " type=" .. type(enabled))
         local isEnabled = (enabled == true) or (enabled == "true") or (enabled == 1)
-        print("[Nezur] isEnabled result: " .. tostring(isEnabled) .. " | Features exists: " .. tostring(Features[featName] ~= nil) .. " | Starter exists: " .. tostring(starters[featName] ~= nil))
-        if isEnabled and Features[featName] and starters[featName] then
+        if isEnabled and Features[featName] then
             if not Features[featName].E then
                 Features[featName].E = true
-                task.spawn(starters[featName])
-                print("[Nezur] LoadConfig: ENABLED " .. featName)
+                local funcName = "Start" .. featName
+                local ok, starterFunc = pcall(function()
+                    return _G[funcName] or loadstring("return " .. funcName)()
+                end)
+                if ok and type(starterFunc) == "function" then
+                    task.spawn(starterFunc)
+                    print("[Nezur] LoadConfig: ENABLED " .. featName)
+                else
+                    print("[Nezur] LoadConfig: FAILED to find " .. funcName .. " type=" .. type(starterFunc))
+                end
             end
 
             -- Обновляем визуал тогглов
