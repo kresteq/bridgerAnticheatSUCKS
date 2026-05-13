@@ -22,7 +22,7 @@ local Mouse = player:GetMouse()
 local oldGui = playerGui:FindFirstChild("NezurHub")
 if oldGui then oldGui:Destroy() end
 
-local SCRIPT_URL = "https://raw.githubusercontent.com/kresteq/bridgerAnticheatSUCKS/refs/heads/main/1337.lua?v=20"
+local SCRIPT_URL = "https://raw.githubusercontent.com/kresteq/bridgerAnticheatSUCKS/refs/heads/main/1337.lua"
 local ConfigFolder = "Nezur"
 if not isfolder(ConfigFolder) then makefolder(ConfigFolder) end
 
