@@ -152,7 +152,11 @@ end
 
 while true do
     if Workspace.Entities:FindFirstChild(player.Name) then break end
-    PressPlayButton()
+    if PressPlayButton() then
+        task.delay(0.5, function()
+            GuiService.SelectedObject = nil
+        end)
+    end
     task.wait(3)
 end
 
@@ -166,6 +170,7 @@ local NotifGui = Instance.new("ScreenGui")
 NotifGui.Name = "NezurNotifications"
 NotifGui.ResetOnSpawn = false
 NotifGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+NotifGui.DisplayOrder = 100
 NotifGui.Parent = playerGui
 local NotifContainer = Instance.new("Frame")
 NotifContainer.Size = UDim2.new(0, 280, 1, -20)
@@ -227,11 +232,12 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "NezurHub"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 10
 ScreenGui.Parent = playerGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0,360,0,420)
-MainFrame.Position = UDim2.new(0.5,-180,0.5,-210)
+MainFrame.Size = UDim2.new(0,400,0,520)
+MainFrame.Position = UDim2.new(0.5,-200,0.5,-260)
 MainFrame.BackgroundColor3 = Color3.fromRGB(22,22,29)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -331,12 +337,16 @@ for i,name in ipairs(TabNames) do
     line.Visible = name=="Auto Farms"
     TabButtons[name] = {Button=btn,Line=line}
     
-    local content = Instance.new("Frame")
+    local content = Instance.new("ScrollingFrame")
     content.Size = UDim2.new(1,-30,1,-85)
     content.Position = UDim2.new(0,15,0,75)
     content.BackgroundTransparency = 1
     content.Visible = name=="Auto Farms"
     content.Parent = MainFrame
+    content.ScrollBarThickness = 4
+    content.ScrollingDirection = Enum.ScrollingDirection.Y
+    content.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    content.CanvasSize = UDim2.new(0,0,0,0)
     TabContents[name] = content
     
     btn.MouseButton1Click:Connect(function()
@@ -349,12 +359,12 @@ for i,name in ipairs(TabNames) do
         line.Visible = true
         content.Visible = true
         ActiveTab = name
-        local ts = UDim2.new(0,360,0,420)
-        if name=="ESP" then ts = UDim2.new(0,360,0,300)
-        elseif name=="Movement" then ts = UDim2.new(0,360,0,440)
-        elseif name=="Misc" then ts = UDim2.new(0,360,0,340)
-        elseif name=="Server" then ts = UDim2.new(0,360,0,380)
-        elseif name=="Settings" then ts = UDim2.new(0,360,0,480) end
+        local ts = UDim2.new(0,400,0,520)
+        if name=="ESP" then ts = UDim2.new(0,400,0,360)
+        elseif name=="Movement" then ts = UDim2.new(0,400,0,520)
+        elseif name=="Misc" then ts = UDim2.new(0,400,0,420)
+        elseif name=="Server" then ts = UDim2.new(0,400,0,460)
+        elseif name=="Settings" then ts = UDim2.new(0,400,0,560) end
         TweenService:Create(MainFrame,TweenInfo.new(0.3),{Size=ts}):Play()
     end)
 end
@@ -371,7 +381,7 @@ local Features = {
 local SHC = {MinPlayers=1, MaxPlayers=25}
 local GuiKeybind = Enum.KeyCode.F1
 local FlyKeybind = Enum.KeyCode.E
-local FlySpeed = 30
+local FlySpeed = 24
 local IsListening = false
 local IsFlyListening = false
 local IsGuiHidden = false
@@ -625,7 +635,7 @@ FlyKbBtn.Font = Enum.Font.GothamMedium
 FlyKbBtn.AutoButtonColor = false
 Instance.new("UICorner",FlyKbBtn).CornerRadius = UDim.new(0,6)
 mvy = mvy + 30
-local SpeedRow, GetFlySpeed, mvy = CreateSlider(MovC,"Fly Speed",mvy,10,50,30,function(v) FlySpeed=v end)
+local SpeedRow, GetFlySpeed, mvy = CreateSlider(MovC,"Fly Speed",mvy,10,50,20,function(v) FlySpeed = v + (v * v) / 100 end)
 
 -- Misc Tab
 local MiscC = TabContents["Misc"]
@@ -660,7 +670,7 @@ local ServC = TabContents["Server"]
 local sv = 0
 sv = CreateSection(ServC,"Server Hop",sv)
 local MinRow, GetMin, sv = CreateSlider(ServC,"Min Players",sv,1,25,1,function(v) SHC.MinPlayers=v end)
-local MaxRow, GetMax, sv = CreateSlider(ServC,"Max Players",sv,1,25,10,function(v) SHC.MaxPlayers=v end)
+local MaxRow, GetMax, sv = CreateSlider(ServC,"Max Players",sv,1,25,25,function(v) SHC.MaxPlayers=v end)
 sv = CreateSection(ServC,"Actions",sv+5)
 local ServerHopBtn, sv = CreateButton(ServC,"Server Hop",sv,"ServerHopBtn")
 local RejoinBtn, sv = CreateButton(ServC,"Rejoin Server",sv,"RejoinBtn")
@@ -671,12 +681,9 @@ local sy = 0
 sy = CreateSection(SetC,"Config Management",sy)
 local ConfigNameBox, sy = CreateTextBox(SetC,"Config Name",sy,"Enter name...")
 sy = sy + 5
-local RefreshBtn, sy = CreateButton(SetC,"Refresh List",sy,"RefreshCfgBtn")
-RefreshBtn.Size = UDim2.new(0.48,0,0,28)
-RefreshBtn.Position = UDim2.new(0,0,0,sy-28)
 
 local ConfigListFrame = Instance.new("ScrollingFrame")
-ConfigListFrame.Size = UDim2.new(1,0,0,100)
+ConfigListFrame.Size = UDim2.new(1,0,0,140)
 ConfigListFrame.Position = UDim2.new(0,0,0,sy)
 ConfigListFrame.BackgroundColor3 = Color3.fromRGB(30,30,40)
 ConfigListFrame.BorderSizePixel = 0
@@ -1473,6 +1480,9 @@ local FlyAct = false
 
 local function StartFly()
     Notify("Fly enabled")
+    task.delay(0.5, function()
+        Notify("!!CAUTION!! If Fly resets your HP to 0 after 10 seconds of flying - DONT TURN IT OFF WHILE LOW HP", 6)
+    end)
     local c = player.Character
     if not c then return end
     local hrp = c:FindFirstChild("HumanoidRootPart")
@@ -1501,7 +1511,9 @@ local function StartFly()
                 hrp.Velocity = moveDir * FlySpeed
                 hrp.CFrame = CFrame.new(hrp.Position + moveDir * 0.5)
             else
-                hrp.Velocity = Vector3.new()
+                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                hrp.Velocity = Vector3.new(0, 0, 0)
             end
         else
             hrp.Velocity = Vector3.new()
@@ -1679,7 +1691,6 @@ end)
 -- ==========================================
 -- BUTTONS
 -- ==========================================
-RefreshBtn.MouseButton1Click:Connect(RefreshConfigListUI)
 SaveCfgBtn.MouseButton1Click:Connect(SaveCurrentConfig)
 LoadCfgBtn.MouseButton1Click:Connect(LoadCurrentConfig)
 DelCfgBtn.MouseButton1Click:Connect(DeleteCurrentConfig)
