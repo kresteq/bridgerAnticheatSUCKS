@@ -7,6 +7,13 @@ elseif type(clearteleport_queue) == "function" then
     pcall(clearteleport_queue)
 end
 
+-- Предотвращение повторного запуска
+if getgenv().NezurHubLoaded then
+    print("[Nezur] Already loaded, skipping...")
+    return
+end
+getgenv().NezurHubLoaded = true
+
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -220,6 +227,13 @@ end
 -- ==========================================
 -- GUI FRAMEWORK
 -- ==========================================
+-- Дополнительная защита от дублирования GUI
+for _, child in ipairs(playerGui:GetChildren()) do
+    if child.Name == "NezurHub" or child.Name == "NezurNotifications" then
+        child:Destroy()
+    end
+end
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "NezurHub"
 ScreenGui.ResetOnSpawn = false
