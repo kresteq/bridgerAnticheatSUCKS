@@ -33,12 +33,14 @@ local FlyKeybind = Enum.KeyCode.E
 local SpectatorKeybind = Enum.KeyCode.RightControl
 local FlySpeed = 24
 local IsListening = false
+local IsTreeListening = false
+local TreeKeybind = Enum.KeyCode.F2
 local IsFlyListening = false
 local IsGuiHidden = false
 local ServerHopRunning = false
 
 local Features = {
-    Corpse={E=false,C=nil}, Bank={E=false,C=nil}, Chest={E=false,C=nil},
+    Corpse={E=false,C=nil}, Bank={E=false,C=nil}, Chest={E=false,C=nil}, Tree={E=false,C=nil},
     SaintScanner={E=false,C=nil}, ESP={E=false,C=nil,PlayerAdded=nil,PlayerRemoving=nil},
     ClickTp={E=false,C=nil}, Fly={E=false,C=nil,KC=nil},
     RaknetDesync={E=false,C=nil}, HideName={E=false,C=nil},
@@ -364,7 +366,7 @@ local UI = (function()
         sd.Visible = false
         row.MouseEnter:Connect(function() lbl.TextColor3 = Color3.fromRGB(255,255,255) end)
         row.MouseLeave:Connect(function() lbl.TextColor3 = Color3.fromRGB(192,192,192) end)
-        return tbg, circ, sd, posY+36
+        return tbg, circ, sd, posY+36, row
     end
 
     local function CreateButton(parent,text,posY,bName)
@@ -813,6 +815,54 @@ local UI = (function()
     -- Auto Farms Tab
     local FarmC = TabContents["Auto Farms"]
     local fy = 0
+    ui.TreeT, ui.TreeC, ui.TreeS, fy, ui.TreeRow = CreateToggle(FarmC,"Auto Tree",fy,"Tree")
+    ui.TreeKbBtn = Instance.new("TextButton", ui.TreeRow)
+    ui.TreeKbBtn.Size = UDim2.new(0, 50, 0, 20)
+    ui.TreeKbBtn.Position = UDim2.new(0.55, 0, 0.5, -10)
+    ui.TreeKbBtn.BackgroundColor3 = Color3.fromRGB(42, 42, 53)
+    ui.TreeKbBtn.Text = "F2"
+    ui.TreeKbBtn.TextColor3 = Color3.fromRGB(184, 168, 216)
+    ui.TreeKbBtn.TextSize = 11
+    ui.TreeKbBtn.Font = Enum.Font.GothamMedium
+    ui.TreeKbBtn.AutoButtonColor = false
+    ui.TreeKbBtn.ZIndex = 52
+    Instance.new("UICorner", ui.TreeKbBtn).CornerRadius = UDim.new(0, 6)
+    local treeLbl = ui.TreeRow:FindFirstChild("Label")
+    if treeLbl then treeLbl.Size = UDim2.new(0.45, 0, 1, 0) end
+    fy = fy + 4
+    local treeTypeRow = Instance.new("Frame", FarmC)
+    treeTypeRow.Size = UDim2.new(1, 0, 0, 28)
+    treeTypeRow.Position = UDim2.new(0, 0, 0, fy)
+    treeTypeRow.BackgroundTransparency = 1
+    local treeTypeLbl = Instance.new("TextLabel", treeTypeRow)
+    treeTypeLbl.Size = UDim2.new(0.45, 0, 1, 0)
+    treeTypeLbl.BackgroundTransparency = 1
+    treeTypeLbl.Text = "Tree Type"
+    treeTypeLbl.TextColor3 = Color3.fromRGB(192, 192, 192)
+    treeTypeLbl.TextSize = 12
+    treeTypeLbl.Font = Enum.Font.Gotham
+    treeTypeLbl.TextXAlignment = Enum.TextXAlignment.Left
+    treeTypeLbl.TextYAlignment = Enum.TextYAlignment.Center
+    ui.TreeTypeBtn = Instance.new("TextButton", treeTypeRow)
+    ui.TreeTypeBtn.Size = UDim2.new(0, 120, 0, 24)
+    ui.TreeTypeBtn.Position = UDim2.new(0.55, 0, 0.5, -12)
+    ui.TreeTypeBtn.BackgroundColor3 = Color3.fromRGB(42, 42, 53)
+    ui.TreeTypeBtn.Text = "ForestTrees"
+    ui.TreeTypeBtn.TextColor3 = Color3.fromRGB(184, 168, 216)
+    ui.TreeTypeBtn.TextSize = 11
+    ui.TreeTypeBtn.Font = Enum.Font.GothamMedium
+    ui.TreeTypeBtn.AutoButtonColor = false
+    ui.TreeTypeBtn.ZIndex = 52
+    Instance.new("UICorner", ui.TreeTypeBtn).CornerRadius = UDim.new(0, 6)
+    local treeTypes = {"ForestTrees", "SwampTrees"}
+    local currentTreeIdx = 1
+    ui.TreeTypeBtn.MouseButton1Click:Connect(function()
+        currentTreeIdx = currentTreeIdx % #treeTypes + 1
+        local newType = treeTypes[currentTreeIdx]
+        ui.TreeTypeBtn.Text = newType
+        _G.NezurTreeSelection = newType
+    end)
+    fy = fy + 32
     fy = CreateSection(FarmC,"Auto Farms",fy)
     ui.CorpseT, ui.CorpseC, ui.CorpseS, fy = CreateToggle(FarmC,"Auto Corpse",fy,"Corpse")
     ui.BankT, ui.BankC, ui.BankS, fy = CreateToggle(FarmC,"Auto Bank",fy,"Bank")
@@ -2477,8 +2527,9 @@ local ConfigFuncs = (function()
         local list = {}
         if isfolder(ConfigFolder) then
             for _, file in ipairs(listfiles(ConfigFolder)) do
+                if not file:find("%.json$") then continue end
                 local name = file:gsub(".*[\\/]", ""):gsub("%.json$", "")
-                if name and name ~= "" and name ~= "NotSameServers" and name ~= "autoexec" then
+                if name and name ~= "" and name ~= "NotSameServers" and name ~= "autoexec" and name ~= "autoload" then
                     table.insert(list, name)
                 end
             end
@@ -2499,6 +2550,8 @@ local ConfigFuncs = (function()
         c.NPCTarget = UI.NPCDropdown.GetSelected()
         c.AttachKeybind = tostring(QoLFuncs.AttachKeybind())
         c.SpectatorKeybind = tostring(SpectatorFuncs.SpectatorKeybind())
+        c.TreeKeybind = tostring(TreeKeybind)
+        c.TreeType = UI.TreeTypeBtn.Text
         c.NoClip = Features.NoClip.E
         c.Invisible = Features.Invisible.E
         c.Spectator = Features.Spectator.E
@@ -2657,6 +2710,463 @@ end)()
 -- ==========================================
 -- GLOBAL STARTERS / STOPPERS
 -- ==========================================
+
+-- ==========================================
+-- AUTO TREE FARM (from nezua by 55.lua, adapted for Nezur)
+-- ==========================================
+local TreeFuncs = (function()
+    local tf = {}
+
+    local selection = "ForestTrees"
+    local tree = nil
+    local active = false
+    local wasActiveBeforeDeath = false
+    local ambushhide = Vector3.new(-5971, 242, -3820)
+    local bankedseed = false
+    local swamp = false
+    local autoclick = false
+    local bankFull = false
+    local chopThread = nil
+
+    local CLICK_COOLDOWN = 0.066
+    local CLICK_DURATION = 0.03
+    local lastChop = 0
+    local vim = game:GetService("VirtualInputManager")
+
+    local function equipaxe()
+        local axe = player.Backpack:FindFirstChild("LumberAxe")
+        if axe then
+            local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum:EquipTool(axe) end
+        end
+    end
+
+    local function getwoodcount()
+        local wood = player.Backpack:FindFirstChild("Wood")
+        if wood then
+            local q = wood:FindFirstChild("Quantity")
+            if q then return q.Value end
+        end
+        return 0
+    end
+
+    local function getseedcount()
+        local seed = player.Backpack:FindFirstChild("Rokakaka Seed")
+        if seed then
+            local q = seed:FindFirstChild("Quantity")
+            if q then return q.Value end
+        end
+        return 0
+    end
+
+    local function tp(pos)
+        local char = player.Character
+        if not char then return end
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        root.CFrame = CFrame.new(pos + Vector3.new(0, 5, 0))
+        root.Velocity = Vector3.new(0, 0, 0)
+        root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    end
+
+    local function depositseeds()
+        if bankFull then return end
+        local banker = workspace:FindFirstChild("NPC") and workspace.NPC:FindFirstChild("Banker")
+        if not banker then return end
+        tp(banker.HumanoidRootPart.Position)
+        task.wait(0.5)
+        local cd = banker:FindFirstChildOfClass("ClickDetector")
+        if cd then
+            fireclickdetector(cd)
+            task.wait(1)
+        end
+        local fullMsg = playerGui:FindFirstChild("DialogueGui", true)
+        if fullMsg then
+            local mainFrame = fullMsg:FindFirstChild("MainFrame")
+            if mainFrame then
+                for _, child in pairs(mainFrame:GetDescendants()) do
+                    if child:IsA("TextLabel") and child.Text:find("Storage is full") then
+                        bankFull = true
+                        print("[AutoTree] Bank is full. Skipping seed deposit.")
+                        local closeBtn = mainFrame:FindFirstChild("CloseButton") or mainFrame:FindFirstChild("X")
+                        if closeBtn then
+                            pcall(function() firesignal(closeBtn.MouseButton1Click) end)
+                        end
+                        return
+                    end
+                end
+            end
+        end
+        local gui = playerGui:WaitForChild("DialogueGui", 3)
+        if gui then
+            local choice = gui.MainFrame.ChoiceList:FindFirstChild("Choice_1")
+            if choice then
+                pcall(function() firesignal(choice.MouseButton1Click) end)
+                task.wait(1)
+            end
+        end
+        local storage = playerGui:WaitForChild("StorageGui", 3)
+        if storage then
+            for _, child in pairs(storage:GetDescendants()) do
+                if child:IsA("TextLabel") and child.Text:find("full") then
+                    bankFull = true
+                    print("[AutoTree] Bank is full. Skipping seed deposit.")
+                    return
+                end
+            end
+            local btn = storage.MainFrame.BackpackScroll:FindFirstChild("Rokakaka Seed")
+            if btn then
+                for i = 1, 5 do
+                    pcall(function() firesignal(btn.MouseButton1Click) end)
+                    task.wait(1)
+                end
+            end
+        end
+        task.wait(2)
+    end
+
+    local function sellwood()
+        local chuck = workspace.NPC:FindFirstChild("ChuckB")
+        if not chuck then return end
+        tp(chuck.HumanoidRootPart.Position)
+        task.wait(0.5)
+        local cd = chuck:FindFirstChildOfClass("ClickDetector")
+        if cd then
+            fireclickdetector(cd)
+            task.wait(1)
+        end
+        local gui = playerGui:WaitForChild("DialogueGui", 3)
+        if gui then
+            local list = gui.MainFrame.ChoiceList
+            while list:FindFirstChild("Choice_2") do
+                local choice = list.Choice_2
+                pcall(function() firesignal(choice.MouseButton1Click) end)
+                task.wait(0.3)
+            end
+        end
+    end
+
+    local function chop()
+        if autoclick then return end
+        local now = tick()
+        if now - lastChop < CLICK_COOLDOWN then return end
+        local axe = player.Character and (player.Character:FindFirstChild("LumberAxe") or player.Backpack:FindFirstChild("LumberAxe"))
+        if not axe then return end
+        if not player.Character:FindFirstChild("LumberAxe") then
+            equipaxe()
+            task.wait(0.15)
+        end
+        vim:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+        task.wait(CLICK_DURATION)
+        vim:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+        autoclick = true
+        lastChop = now
+        task.delay(CLICK_COOLDOWN, function()
+            autoclick = false
+        end)
+    end
+
+    local function stopChop()
+        autoclick = false
+    end
+
+    local function findbark(t)
+        for _, part in pairs(t:GetDescendants()) do
+            if part.Name == "TreeBark" and part:IsA("BasePart") then
+                return part
+            end
+        end
+    end
+
+    local function gettrees()
+        local folder = workspace.Map:FindFirstChild(selection)
+        if not folder then return {} end
+        local trees = {}
+        for _, t in pairs(folder:GetChildren()) do
+            if t:IsA("Model") and findbark(t) then
+                table.insert(trees, t)
+            end
+        end
+        return trees
+    end
+
+    local function nexttree()
+        local trees = gettrees()
+        if #trees == 0 then return end
+        local t = trees[math.random(1, #trees)]
+        local bark = findbark(t)
+        if bark then
+            tree = t
+            tp(bark.Position)
+        end
+    end
+
+    local function isplayernearby()
+        local entities = workspace:FindFirstChild("Entities")
+        if not entities then return end
+        local char = player.Character
+        if not char then return end
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        for _, ent in pairs(entities:GetChildren()) do
+            if ent:IsA("Model") then
+                local h = ent:FindFirstChild("HumanoidRootPart")
+                if h and (h.Position - root.Position).Magnitude < 50 then
+                    for _, p in pairs(Players:GetPlayers()) do
+                        if p.Name == ent.Name and p ~= player then
+                            return p.Name
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    local function isnpcnearby()
+        local entities = workspace:FindFirstChild("Entities")
+        if not entities then return false end
+        local char = player.Character
+        if not char then return false end
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if not root then return false end
+        local names = {}
+        for _, p in pairs(Players:GetPlayers()) do
+            names[p.Name] = true
+        end
+        for _, ent in pairs(entities:GetChildren()) do
+            if ent:IsA("Model") then
+                local h = ent:FindFirstChild("HumanoidRootPart")
+                if h and (h.Position - root.Position).Magnitude < 50 then
+                    if not names[ent.Name] then
+                        return true
+                    end
+                end
+            end
+        end
+        return false
+    end
+
+    local function cleanupTrees()
+        local target = Vector3.new(-9355.55, 126.95, -4578.25)
+        for i = 1, 10 do
+            local folder = workspace:FindFirstChild("Map", true) and workspace.Map:FindFirstChild("ForestTrees")
+            if folder then
+                for _, tree in ipairs(folder:GetChildren()) do
+                    local part = tree:FindFirstChildWhichIsA("BasePart")
+                    if part and (part.Position - target).Magnitude < 150 then
+                        tree:Destroy()
+                        return
+                    end
+                end
+            end
+            task.wait(0.1)
+        end
+    end
+
+    local treeHeartbeat = nil
+
+    local function startHeartbeat()
+        if treeHeartbeat then return end
+        treeHeartbeat = RunService.Heartbeat:Connect(function()
+            if not active then return end
+            if _G.NezurTreeSelection and _G.NezurTreeSelection ~= selection then
+                selection = _G.NezurTreeSelection
+                tree = nil
+                print("[AutoTree] Selection updated via GUI to:", selection)
+                _G.NezurTreeSelection = nil
+            end
+            local char = player.Character
+            if not char then return end
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+
+            if not player.Backpack:FindFirstChild("LumberAxe") and not char:FindFirstChild("LumberAxe") then
+                stopChop()
+                local old = root.CFrame
+                local chuck = workspace.NPC:FindFirstChild("ChuckB")
+                if chuck then
+                    local cd = chuck:FindFirstChildWhichIsA("ClickDetector", true)
+                    if cd then
+                        root.CFrame = chuck:GetPivot() * CFrame.new(0, 5, 0)
+                        task.wait(0.5)
+                        fireclickdetector(cd)
+                        task.wait(0.5)
+                        local gui = playerGui:WaitForChild("DialogueGui", 3)
+                        if gui then
+                            local list = gui.MainFrame.ChoiceList
+                            for i = 1, 2 do
+                                local btn = list:FindFirstChild("Choice_1")
+                                if btn then
+                                    pcall(function() firesignal(btn.MouseButton1Click) end)
+                                    task.wait(0.5)
+                                end
+                            end
+                        end
+                        root.CFrame = old
+                    end
+                end
+                task.wait(1)
+                return
+            end
+
+            if not char:FindFirstChild("LumberAxe") then
+                equipaxe()
+                task.wait(0.3)
+            end
+
+            if not autoclick and (not chopThread or coroutine.status(chopThread) == "dead") then
+                chopThread = task.spawn(function()
+                    while active and autoclick == false do
+                        chop()
+                        task.wait(0.02)
+                    end
+                end)
+            end
+
+            if not bankFull and not bankedseed and getseedcount() >= 5 then
+                stopChop()
+                depositseeds()
+                bankedseed = true
+                if not swamp then
+                    swamp = true
+                    selection = "SwampTrees"
+                end
+                task.wait(1)
+                return
+            end
+
+            if getwoodcount() >= 500 then
+                stopChop()
+                sellwood()
+                task.wait(1)
+                return
+            end
+
+            if swamp and getseedcount() >= 5 and bankedseed then
+                bankedseed = false
+                return
+            end
+
+            if not tree or not tree.Parent then
+                stopChop()
+                nexttree()
+                return
+            end
+
+            if isplayernearby() then
+                stopChop()
+                nexttree()
+                return
+            end
+
+            if isnpcnearby() then
+                stopChop()
+                tp(ambushhide)
+                task.wait(10)
+                if tree and tree.Parent then
+                    local bark = findbark(tree)
+                    if bark then tp(bark.Position) end
+                end
+                return
+            end
+
+            local bark = findbark(tree)
+            if bark then
+                if not bark.CanCollide then
+                    stopChop()
+                    nexttree()
+                else
+                    tp(bark.Position)
+                end
+            end
+        end)
+    end
+
+    local function stopHeartbeat()
+        if treeHeartbeat then
+            treeHeartbeat:Disconnect()
+            treeHeartbeat = nil
+        end
+        stopChop()
+    end
+
+    function tf.StartTree()
+        if active then return end
+        active = true
+        wasActiveBeforeDeath = true
+        autoclick = false
+        bankedseed = false
+        Notify("🌲 Auto Tree active")
+        cleanupTrees()
+        startHeartbeat()
+        nexttree()
+    end
+
+    function tf.StopTree()
+        active = false
+        wasActiveBeforeDeath = false
+        stopHeartbeat()
+        Notify("⚫ Auto Tree disabled")
+    end
+
+    function tf.SetSelection(sel)
+        selection = sel
+        tree = nil
+        if sel == "SwampTrees" then swamp = true else swamp = false end
+        print("[AutoTree] Selection changed to:", sel, "swamp =", swamp)
+    end
+
+    function tf.GetSelection() return selection end
+
+    player.CharacterAdded:Connect(function(newChar)
+        local newRoot = newChar:WaitForChild("HumanoidRootPart")
+        local shouldResume = wasActiveBeforeDeath
+        active = false
+        autoclick = false
+        bankedseed = false
+        if not shouldResume then
+            return
+        end
+        task.spawn(function()
+            print("[AutoTree] Death detected. Farm was active. Starting auto-recovery...")
+            task.wait(2)
+            print("[AutoTree] Getting axe from ChuckB...")
+            local chuck = workspace.NPC:FindFirstChild("ChuckB")
+            if chuck then
+                local cd = chuck:FindFirstChildWhichIsA("ClickDetector", true)
+                if cd then
+                    newRoot.CFrame = chuck:GetPivot() * CFrame.new(0, 5, 0)
+                    task.wait(0.5)
+                    fireclickdetector(cd)
+                    task.wait(0.5)
+                    local gui = playerGui:WaitForChild("DialogueGui", 3)
+                    if gui then
+                        local list = gui.MainFrame.ChoiceList
+                        for i = 1, 2 do
+                            local btn = list:FindFirstChild("Choice_1")
+                            if btn then
+                                pcall(function() firesignal(btn.MouseButton1Click) end)
+                                task.wait(0.5)
+                            end
+                        end
+                    end
+                end
+            end
+            print("[AutoTree] Waiting 5 seconds before resuming farm...")
+            task.wait(5)
+            print("[AutoTree] Auto-resuming farm...")
+            active = true
+            wasActiveBeforeDeath = true
+            autoclick = false
+            bankedseed = false
+            startHeartbeat()
+            nexttree()
+        end)
+    end)
+
+    return tf
+end)()
+
 _G.NezurStarters = {
     Corpse = FarmFuncs.StartCorpse,
     Bank = FarmFuncs.StartBank,
@@ -2676,6 +3186,7 @@ _G.NezurStoppers = {
     Corpse = FarmFuncs.StopCorpse,
     Bank = FarmFuncs.StopBank,
     Chest = FarmFuncs.StopChest,
+    Tree=TreeFuncs.StopTree,
     SaintScanner = ScannerFuncs.StopScanner,
     ESP = ESPFuncs.StopESP,
     ClickTp = MovementFuncs.StopClickTp,
@@ -2702,6 +3213,7 @@ end
 ST(UI.CorpseT, UI.CorpseC, UI.CorpseS, "Corpse", FarmFuncs.StartCorpse, FarmFuncs.StopCorpse)
 ST(UI.BankT, UI.BankC, UI.BankS, "Bank", FarmFuncs.StartBank, FarmFuncs.StopBank)
 ST(UI.ChestT, UI.ChestC, UI.ChestS, "Chest", FarmFuncs.StartChest, FarmFuncs.StopChest)
+ST(UI.TreeT, UI.TreeC, UI.TreeS, "Tree", TreeFuncs.StartTree, TreeFuncs.StopTree)
 ST(UI.ScanT, UI.ScanC, UI.ScanS, "SaintScanner", ScannerFuncs.StartScanner, ScannerFuncs.StopScanner)
 ST(UI.EspT, UI.EspCir, UI.EspS, "ESP", ESPFuncs.StartESP, ESPFuncs.StopESP)
 ST(UI.ClickTpT, UI.ClickTpC, UI.ClickTpS, "ClickTp", MovementFuncs.StartClickTp, MovementFuncs.StopClickTp)
@@ -2815,6 +3327,15 @@ end)
 
 UserInputService.InputBegan:Connect(function(i, g)
     if g then return end
+    if i.KeyCode == TreeKeybind then
+        Features.Tree.E = not Features.Tree.E
+        AnimToggle(UI.TreeT, UI.TreeC, UI.TreeS, Features.Tree.E)
+        if Features.Tree.E then TreeFuncs.StartTree() else TreeFuncs.StopTree() end
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(i, g)
+    if g then return end
     if i.KeyCode == QoLFuncs.AttachKeybind() then
         Features.AttachPlayer.E = not Features.AttachPlayer.E
         AnimToggle(UI.AttachT, UI.AttachC, UI.AttachS, Features.AttachPlayer.E)
@@ -2907,6 +3428,32 @@ UI.BuyItemBtn.MouseButton1Click:Connect(function()
     local items = UI.ItemDropdown.GetSelected()
     if #items == 0 then Notify("No items selected", 2) return end
     QoLFuncs.buyItems(items, true)
+end)
+
+UI.TreeKbBtn.MouseButton1Click:Connect(function()
+    if IsTreeListening then return end
+    IsTreeListening = true
+    UI.TreeKbBtn.Text = "Press key"
+    UI.TreeKbBtn.TextColor3 = Color3.new(1, 1, 1)
+    local conn
+    conn = UserInputService.InputBegan:Connect(function(i, g)
+        if g then return end
+        if i.UserInputType == Enum.UserInputType.Keyboard then
+            TreeKeybind = i.KeyCode
+            UI.TreeKbBtn.Text = tostring(i.KeyCode):gsub("Enum.KeyCode.", "")
+            UI.TreeKbBtn.TextColor3 = Color3.fromRGB(184, 168, 216)
+            IsTreeListening = false
+            if conn then conn:Disconnect() end
+        end
+    end)
+    task.delay(5, function()
+        if IsTreeListening then
+            IsTreeListening = false
+            UI.TreeKbBtn.Text = tostring(TreeKeybind):gsub("Enum.KeyCode.", "")
+            UI.TreeKbBtn.TextColor3 = Color3.fromRGB(184, 168, 216)
+            if conn then conn:Disconnect() end
+        end
+    end)
 end)
 
 UI.AttachKbBtn.MouseButton1Click:Connect(function()
@@ -3055,6 +3602,14 @@ task.delay(3, function()
                         local ok2,kc2=pcall(function() return Enum.KeyCode[data.SpectatorKeybind] end)
                         if ok2 and kc2 then SpectatorFuncs.SetSpectatorKeybind(kc2) UI.SpectatorKbBtn.Text=data.SpectatorKeybind end
                     end
+                    if data.TreeKeybind then
+                        local ok2,kc2=pcall(function() return Enum.KeyCode[data.TreeKeybind] end)
+                        if ok2 and kc2 then TreeKeybind=kc2 UI.TreeKbBtn.Text=data.TreeKeybind end
+                    end
+                    if data.TreeType then
+                        UI.TreeTypeBtn.Text = data.TreeType
+                        _G.NezurTreeSelection = data.TreeType
+                    end
 
                     local starters = {
                         Corpse=FarmFuncs.StartCorpse, Bank=FarmFuncs.StartBank, Chest=FarmFuncs.StartChest,
@@ -3062,7 +3617,7 @@ task.delay(3, function()
                         Fly=MovementFuncs.StartFly, RaknetDesync=ExploitFuncs.StartRaknet, HideName=ExploitFuncs.StartHide,
                         AutoBuy=QoLFuncs.startAutoBuy, AttachPlayer=QoLFuncs.startAttach,
                         NoClip=NoClipFuncs.StartNoClip, Invisible=NoClipFuncs.StartInvisible,
-                        Spectator=SpectatorFuncs.StartSpectator
+                        Spectator=SpectatorFuncs.StartSpectator, Tree=TreeFuncs.StartTree
                     }
 
                     for featName, enabled in pairs(data) do
