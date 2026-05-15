@@ -1467,11 +1467,33 @@ local FarmFuncs = (function()
         local function rejoin()
             local r = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
             if r then r.Anchored = true end
-            ServerHop()
+            -- Rejoin same server instead of ServerHop
+            local loaderTemplate = [[
+repeat task.wait() until game:IsLoaded()
+task.wait(1.5)
+local url = "%s" .. "?nocache=" .. tostring(tick())
+local ok, src = pcall(function() return game:HttpGet(url) end)
+if ok and src and #src > 100 then loadstring(src)() else warn("[Nezur] AutoExec failed") end
+]]
+            local loader = string.format(loaderTemplate, SCRIPT_URL)
+            if type(queue_on_teleport) == "function" then pcall(queue_on_teleport, loader)
+            elseif type(queueonteleport) == "function" then pcall(queueonteleport, loader) end
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
         end
-        local function holdPrompt(p)
+        local function holdPrompt(p, targetPart)
             if not p then return end
+            local char = player.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
+
             for _ = 1, 3 do
+                -- Face the prompt
+                if targetPart and targetPart.Parent then
+                    local promptPos = targetPart.Position
+                    local lookCFrame = CFrame.lookAt(hrp.Position, Vector3.new(promptPos.X, hrp.Position.Y, promptPos.Z))
+                    hrp.CFrame = lookCFrame
+                end
+
                 pcall(function() p:InputHoldBegin() end) task.wait(6)
                 pcall(function() p:InputHoldEnd() end) task.wait(0.5)
                 if not p.Parent then return true end
@@ -1484,7 +1506,7 @@ local FarmFuncs = (function()
         if nb then
             tapWA() task.wait(0.5)
             rt.CFrame = nb.CFrame + Vector3.new(0, 3, 0) task.wait(0.6)
-            holdPrompt(nb:FindFirstChildOfClass("ProximityPrompt") or nb.Parent:FindFirstChildOfClass("ProximityPrompt"))
+            holdPrompt(nb:FindFirstChildOfClass("ProximityPrompt") or nb.Parent:FindFirstChildOfClass("ProximityPrompt"), nb)
         else
             rt.CFrame = SAFE task.wait(1.5)
             Features.Corpse.C = RunService.Heartbeat:Connect(function()
@@ -1508,7 +1530,7 @@ local FarmFuncs = (function()
             if ns then
                 tapWA() task.wait(0.5)
                 nr.CFrame = ns.CFrame + Vector3.new(0, 3, 0) task.wait(0.6)
-                holdPrompt(ns:FindFirstChildOfClass("ProximityPrompt") or ns.Parent:FindFirstChildOfClass("ProximityPrompt"))
+                holdPrompt(ns:FindFirstChildOfClass("ProximityPrompt") or ns.Parent:FindFirstChildOfClass("ProximityPrompt"), ns)
             end
         end)
     end
@@ -2740,7 +2762,17 @@ local ConfigFuncs = (function()
             return
         end
         CurrentConfigName = name
-        local data = LoadCfg(name)
+
+        -- Inline config loading (same approach as AutoLoad)
+        local data = (function()
+            local path = ConfigFolder.."/"..name..".json"
+            if isfile(path) then
+                local s,r = pcall(function() return HttpService:JSONDecode(readfile(path)) end)
+                if s and type(r)=="table" then return r end
+            end
+            return nil
+        end)()
+
         if not data then
             Notify("❌ Config '"..name.."' not found", 3)
             return
@@ -2771,17 +2803,16 @@ local ConfigFuncs = (function()
             local ok2,kc2=pcall(function() return Enum.KeyCode[data.SpectatorKeybind] end)
             if ok2 and kc2 then SpectatorFuncs.SetSpectatorKeybind(kc2) UI.SpectatorKbBtn.Text=data.SpectatorKeybind end
         end
+        if data.TreeKeybind then
+            local ok2,kc2=pcall(function() return Enum.KeyCode[data.TreeKeybind] end)
+            if ok2 and kc2 then TreeKeybind=kc2 UI.TreeKbBtn.Text=data.TreeKeybind end
+        end
+        if data.TreeType then
+            UI.TreeTypeBtn.Text = data.TreeType
+            _G.NezurTreeSelection = data.TreeType
+        end
 
-        local starters = {
-            Corpse=FarmFuncs.StartCorpse, Bank=FarmFuncs.StartBank, Chest=FarmFuncs.StartChest,
-    Tree=TreeFuncs.StartTree,
-            SaintScanner=ScannerFuncs.StartScanner, ESP=ESPFuncs.StartESP, ClickTp=MovementFuncs.StartClickTp,
-            Fly=MovementFuncs.StartFly, RaknetDesync=ExploitFuncs.StartRaknet, HideName=ExploitFuncs.StartHide,
-            AutoBuy=QoLFuncs.startAutoBuy, AttachPlayer=QoLFuncs.startAttach,
-            NoClip=NoClipFuncs.StartNoClip, Invisible=NoClipFuncs.StartInvisible,
-            Spectator=SpectatorFuncs.StartSpectator,
-            Tree=TreeFuncs.StartTree
-        }
+        local starters = _G.NezurStarters
 
         for featName, enabled in pairs(data) do
             local isEnabled = (enabled == true) or (enabled == "true") or (enabled == 1)
@@ -2789,6 +2820,7 @@ local ConfigFuncs = (function()
                 if featName == "Corpse" then AnimToggle(UI.CorpseT, UI.CorpseC, UI.CorpseS, true) end
                 if featName == "Bank" then AnimToggle(UI.BankT, UI.BankC, UI.BankS, true) end
                 if featName == "Chest" then AnimToggle(UI.ChestT, UI.ChestC, UI.ChestS, true) end
+                if featName == "Tree" then AnimToggle(UI.TreeT, UI.TreeC, UI.TreeS, true) end
                 if featName == "SaintScanner" then AnimToggle(UI.ScanT, UI.ScanC, UI.ScanS, true) end
                 if featName == "ESP" then AnimToggle(UI.EspT, UI.EspCir, UI.EspS, true) end
                 if featName == "ClickTp" then AnimToggle(UI.ClickTpT, UI.ClickTpC, UI.ClickTpS, true) end
@@ -2799,6 +2831,8 @@ local ConfigFuncs = (function()
                 if featName == "AttachPlayer" then AnimToggle(UI.AttachT, UI.AttachC, UI.AttachS, true) end
                 if featName == "NoClip" then AnimToggle(UI.NoClipT, UI.NoClipC, UI.NoClipS, true) end
                 if featName == "Invisible" then AnimToggle(UI.InvisT, UI.InvisC, UI.InvisS, true) end
+                if featName == "Spectator" then AnimToggle(UI.SpectatorT, UI.SpectatorC, UI.SpectatorS, true) end
+                if featName == "FullBright" then AnimToggle(UI.FullBrightT, UI.FullBrightC, UI.FullBrightS, true) end
 
                 if not Features[featName].E then
                     Features[featName].E = true
@@ -3617,9 +3651,33 @@ UI.FpsApplyBtn.MouseButton1Click:Connect(function()
     local n = tonumber(UI.FpsBox.Text)
     if n and n > 0 then
         pcall(function() setfpscap(n) end)
+        _G.NezurFpsCap = n
+        _G.NezurFpsCheckTime = 0
         Notify("FPS Cap set to " .. n, 2)
     else
         Notify("Invalid FPS value", 2)
+    end
+end)
+
+-- Smart FPS Cap restore: only apply if current FPS exceeds the cap
+RunService.Heartbeat:Connect(function()
+    if not _G.NezurFpsCap or _G.NezurFpsCap <= 0 then return end
+    local now = tick()
+    -- Check every 2 seconds to avoid constant calls
+    if now - (_G.NezurFpsCheckTime or 0) < 2 then return end
+    _G.NezurFpsCheckTime = now
+
+    -- Check current FPS via workspace:GetRealPhysicsFPS() or similar
+    local currentFps = 60 -- default assumption
+    pcall(function()
+        if workspace.GetRealPhysicsFPS then
+            currentFps = workspace:GetRealPhysicsFPS()
+        end
+    end)
+
+    -- If current FPS is significantly higher than cap, re-apply
+    if currentFps > _G.NezurFpsCap + 10 then
+        pcall(function() setfpscap(_G.NezurFpsCap) end)
     end
 end)
 
@@ -3771,16 +3829,16 @@ task.delay(3, function()
                         local ok2,kc2=pcall(function() return Enum.KeyCode[data.SpectatorKeybind] end)
                         if ok2 and kc2 then SpectatorFuncs.SetSpectatorKeybind(kc2) UI.SpectatorKbBtn.Text=data.SpectatorKeybind end
                     end
+                    if data.TreeKeybind then
+                        local ok2,kc2=pcall(function() return Enum.KeyCode[data.TreeKeybind] end)
+                        if ok2 and kc2 then TreeKeybind=kc2 UI.TreeKbBtn.Text=data.TreeKeybind end
+                    end
+                    if data.TreeType then
+                        UI.TreeTypeBtn.Text = data.TreeType
+                        _G.NezurTreeSelection = data.TreeType
+                    end
 
-                    local starters = {
-                        Corpse=FarmFuncs.StartCorpse, Bank=FarmFuncs.StartBank, Chest=FarmFuncs.StartChest,
-                        SaintScanner=ScannerFuncs.StartScanner, ESP=ESPFuncs.StartESP, ClickTp=MovementFuncs.StartClickTp,
-                        Fly=MovementFuncs.StartFly, RaknetDesync=ExploitFuncs.StartRaknet, HideName=ExploitFuncs.StartHide,
-                        AutoBuy=QoLFuncs.startAutoBuy, AttachPlayer=QoLFuncs.startAttach,
-                        NoClip=NoClipFuncs.StartNoClip, Invisible=NoClipFuncs.StartInvisible,
-                        Spectator=SpectatorFuncs.StartSpectator, Tree=TreeFuncs.StartTree,
-                        FullBright=VisualFuncs.StartFullBright
-                    }
+                    local starters = _G.NezurStarters
 
                     for featName, enabled in pairs(data) do
                         local isEnabled = (enabled == true) or (enabled == "true") or (enabled == 1)
@@ -3788,6 +3846,7 @@ task.delay(3, function()
                             if featName == "Corpse" then AnimToggle(UI.CorpseT, UI.CorpseC, UI.CorpseS, true) end
                             if featName == "Bank" then AnimToggle(UI.BankT, UI.BankC, UI.BankS, true) end
                             if featName == "Chest" then AnimToggle(UI.ChestT, UI.ChestC, UI.ChestS, true) end
+                            if featName == "Tree" then AnimToggle(UI.TreeT, UI.TreeC, UI.TreeS, true) end
                             if featName == "SaintScanner" then AnimToggle(UI.ScanT, UI.ScanC, UI.ScanS, true) end
                             if featName == "ESP" then AnimToggle(UI.EspT, UI.EspCir, UI.EspS, true) end
                             if featName == "ClickTp" then AnimToggle(UI.ClickTpT, UI.ClickTpC, UI.ClickTpS, true) end
@@ -3798,6 +3857,8 @@ task.delay(3, function()
                             if featName == "AttachPlayer" then AnimToggle(UI.AttachT, UI.AttachC, UI.AttachS, true) end
                             if featName == "NoClip" then AnimToggle(UI.NoClipT, UI.NoClipC, UI.NoClipS, true) end
                             if featName == "Invisible" then AnimToggle(UI.InvisT, UI.InvisC, UI.InvisS, true) end
+                            if featName == "Spectator" then AnimToggle(UI.SpectatorT, UI.SpectatorC, UI.SpectatorS, true) end
+                            if featName == "FullBright" then AnimToggle(UI.FullBrightT, UI.FullBrightC, UI.FullBrightS, true) end
                             if not Features[featName].E then
                                 Features[featName].E = true
                                 local starterFunc = starters[featName]
