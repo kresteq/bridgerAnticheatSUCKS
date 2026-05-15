@@ -46,7 +46,7 @@ local Features = {
     RaknetDesync={E=false,C=nil}, HideName={E=false,C=nil},
     AutoBuy={E=false,C=nil}, AttachPlayer={E=false,C=nil},
     NoClip={E=false,C=nil}, Invisible={E=false,C=nil},
-    Spectator={E=false,C=nil}
+    Spectator={E=false,C=nil}, FullBright={E=false,C=nil}
 }
 
 local saintsPartNames = {"SaintsLeftArm","SaintsRightArm","SaintsLeftLeg","SaintsRightLeg","SaintsRibcage"}
@@ -81,21 +81,42 @@ local function PressPlayButton()
     local bc = mainMenu:FindFirstChild("ButtonContainer")
     if not bc then return false end
     local pb = bc:FindFirstChild("PlayButton")
-    if not pb then return false end
-    GuiService.SelectedObject = pb
-    task.wait(0.2)
-    pcall(function()
+    if not pb or not pb:IsA("GuiButton") then return false end
+
+    -- Method 3: VIM + SelectedObject (works on Potassium)
+    local ok3 = pcall(function()
+        GuiService.SelectedObject = pb
+        task.wait(0.2)
         VIM:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
         task.wait(0.05)
         VIM:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+        task.wait(0.1)
+        GuiService.SelectedObject = nil
     end)
-    return true
+    if ok3 then return true end
+
+    -- Method 7: AutoSelectGuiEnabled + Enter (works on Volt)
+    local ok7 = pcall(function()
+        local oldAuto = GuiService.AutoSelectGuiEnabled
+        GuiService.AutoSelectGuiEnabled = true
+        GuiService.SelectedObject = pb
+        task.wait(0.3)
+        VIM:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+        task.wait(0.05)
+        VIM:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+        task.wait(0.1)
+        GuiService.SelectedObject = nil
+        GuiService.AutoSelectGuiEnabled = oldAuto
+    end)
+    if ok7 then return true end
+
+    return false
 end
 
 while true do
     if Workspace.Entities:FindFirstChild(player.Name) then break end
-    if PressPlayButton() then task.delay(0.5, function() GuiService.SelectedObject = nil end) end
-    task.wait(3)
+    PressPlayButton()
+    task.wait(1.5)
 end
 task.spawn(AutoEquipRandom)
 
@@ -175,8 +196,8 @@ local UI = (function()
     ui.ScreenGui = ScreenGui
 
     local MainFrame = Instance.new("Frame")
-    MainFrame.Size = UDim2.new(0,400,0,520)
-    MainFrame.Position = UDim2.new(0.5,-200,0.5,-260)
+    MainFrame.Size = UDim2.new(0,520,0,600)
+    MainFrame.Position = UDim2.new(0.5,-260,0.5,-300)
     MainFrame.BackgroundColor3 = Color3.fromRGB(22,22,29)
     MainFrame.BorderSizePixel = 0
     MainFrame.Active = true
@@ -234,7 +255,7 @@ local UI = (function()
     end)
 
     local TabsFrame = Instance.new("Frame")
-    TabsFrame.Size = UDim2.new(1,0,0,32)
+    TabsFrame.Size = UDim2.new(1,0,0,66)
     TabsFrame.Position = UDim2.new(0,0,0,35)
     TabsFrame.BackgroundColor3 = Color3.fromRGB(30,30,40)
     TabsFrame.BorderSizePixel = 0
@@ -244,6 +265,11 @@ local UI = (function()
     tf2.Position = UDim2.new(0,0,1,-10)
     tf2.BackgroundColor3 = Color3.fromRGB(30,30,40)
     tf2.BorderSizePixel = 0
+    local TabSep = Instance.new("Frame", TabsFrame)
+    TabSep.Size = UDim2.new(1,0,0,2)
+    TabSep.Position = UDim2.new(0,0,0,32)
+    TabSep.BackgroundColor3 = Color3.fromRGB(42,42,53)
+    TabSep.BorderSizePixel = 0
 
     local TabNames = {"Auto Farms","ESP","Movement","QoL","Players & NPCs","Misc","Server","Settings"}
     local TabButtons = {}
@@ -254,8 +280,10 @@ local UI = (function()
 
     for i,name in ipairs(TabNames) do
         local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1/8,-2,1,0)
-        btn.Position = UDim2.new((1/8)*(i-1),1,0,0)
+        local col = (i-1) % 4
+        local row = math.floor((i-1)/4)
+        btn.Size = UDim2.new(1/4,-4,0,28)
+        btn.Position = UDim2.new((1/4)*col,2,0,row*32 + 2)
         btn.BackgroundTransparency = 1
         btn.Text = name
         btn.TextColor3 = name=="Auto Farms" and Color3.fromRGB(184,168,216) or Color3.fromRGB(139,139,154)
@@ -271,8 +299,8 @@ local UI = (function()
         TabButtons[name] = {Button=btn,Line=line}
 
         local content = Instance.new("ScrollingFrame")
-        content.Size = UDim2.new(1,-30,1,-85)
-        content.Position = UDim2.new(0,15,0,75)
+        content.Size = UDim2.new(1,-30,1,-117)
+        content.Position = UDim2.new(0,15,0,107)
         content.BackgroundTransparency = 1
         content.Visible = name=="Auto Farms"
         content.Parent = MainFrame
@@ -292,14 +320,14 @@ local UI = (function()
             line.Visible = true
             content.Visible = true
             ActiveTab = name
-            local ts = UDim2.new(0,400,0,520)
-            if name=="ESP" then ts = UDim2.new(0,400,0,360)
-            elseif name=="Movement" then ts = UDim2.new(0,400,0,520)
-            elseif name=="QoL" then ts = UDim2.new(0,400,0,420)
-            elseif name=="Players & NPCs" then ts = UDim2.new(0,400,0,420)
-            elseif name=="Misc" then ts = UDim2.new(0,400,0,480)
-            elseif name=="Server" then ts = UDim2.new(0,400,0,460)
-            elseif name=="Settings" then ts = UDim2.new(0,400,0,560) end
+            local ts = UDim2.new(0,520,0,600)
+            if name=="ESP" then ts = UDim2.new(0,520,0,440)
+            elseif name=="Movement" then ts = UDim2.new(0,520,0,600)
+            elseif name=="QoL" then ts = UDim2.new(0,520,0,520)
+            elseif name=="Players & NPCs" then ts = UDim2.new(0,520,0,520)
+            elseif name=="Misc" then ts = UDim2.new(0,520,0,560)
+            elseif name=="Server" then ts = UDim2.new(0,520,0,540)
+            elseif name=="Settings" then ts = UDim2.new(0,520,0,640) end
             TweenService:Create(MainFrame,TweenInfo.new(0.3),{Size=ts}):Play()
         end)
     end
@@ -952,6 +980,44 @@ local UI = (function()
     ui.AttachKbBtn.AutoButtonColor = false
     Instance.new("UICorner", ui.AttachKbBtn).CornerRadius = UDim.new(0, 6)
 
+    qolY = qolY + 30
+    qolY = CreateSection(QoLC, "Performance", qolY + 8)
+
+    local fogRow = Instance.new("Frame")
+    fogRow.Size = UDim2.new(1, 0, 0, 32)
+    fogRow.Position = UDim2.new(0, 0, 0, qolY)
+    fogRow.BackgroundTransparency = 1
+    fogRow.Parent = QoLC
+    local fogLbl = Instance.new("TextLabel", fogRow)
+    fogLbl.Size = UDim2.new(0.7, 0, 1, 0)
+    fogLbl.BackgroundTransparency = 1
+    fogLbl.Text = "Remove Fog"
+    fogLbl.TextColor3 = Color3.fromRGB(192, 192, 192)
+    fogLbl.TextSize = 13
+    fogLbl.Font = Enum.Font.Gotham
+    fogLbl.TextXAlignment = Enum.TextXAlignment.Left
+    fogLbl.TextYAlignment = Enum.TextYAlignment.Center
+    local fogBtn = Instance.new("TextButton", fogRow)
+    fogBtn.Size = UDim2.new(0.3, -5, 1, -4)
+    fogBtn.Position = UDim2.new(0.7, 5, 0, 2)
+    fogBtn.BackgroundColor3 = Color3.fromRGB(58, 58, 69)
+    fogBtn.Text = "Apply"
+    fogBtn.TextColor3 = Color3.fromRGB(192, 192, 192)
+    fogBtn.TextSize = 13
+    fogBtn.Font = Enum.Font.GothamMedium
+    fogBtn.AutoButtonColor = false
+    Instance.new("UICorner", fogBtn).CornerRadius = UDim.new(0, 6)
+    fogBtn.MouseEnter:Connect(function()
+        TweenService:Create(fogBtn,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(107,91,149)}):Play()
+    end)
+    fogBtn.MouseLeave:Connect(function()
+        TweenService:Create(fogBtn,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(58,58,69)}):Play()
+    end)
+    ui.FogBtn = fogBtn
+    qolY = qolY + 36
+
+    ui.FullBrightT, ui.FullBrightC, ui.FullBrightS, qolY = CreateToggle(QoLC, "Full Brightness", qolY, "FullBright")
+
     -- Players & NPCs Tab
     local PnC = TabContents["Players & NPCs"]
     local pny = 0
@@ -1047,6 +1113,13 @@ local UI = (function()
     ui.InvisT, ui.InvisC, ui.InvisS, miy = CreateToggle(MiscC,"Invisible",miy,"Invisible")
     miy = CreateSection(MiscC,"General",miy+5)
     ui.HideT, ui.HideC, ui.HideS, miy = CreateToggle(MiscC,"Hide Name",miy,"HideName")
+    miy = miy + 4
+    ui.FpsBox, miy = CreateTextBox(MiscC,"FPS Cap",miy,"60")
+    ui.FpsBox.Text = "60"
+    ui.FpsBox:GetPropertyChangedSignal("Text"):Connect(function()
+        ui.FpsBox.Text = ui.FpsBox.Text:gsub("%D", "")
+    end)
+    ui.FpsApplyBtn, miy = CreateButton(MiscC,"Apply FPS Cap",miy,"FpsApplyBtn")
     miy = CreateSection(MiscC,"TEST",miy+5)
     ui.SpectatorT, ui.SpectatorC, ui.SpectatorS, miy = CreateToggle(MiscC,"Spectator Mode",miy,"Spectator")
     ui.SpectatorKbBtn = Instance.new("TextButton",MiscC)
@@ -2370,6 +2443,69 @@ local NoClipFuncs = (function()
 end)()
 
 -- ==========================================
+-- VISUAL FUNCTIONS (IIFE)
+-- ==========================================
+local VisualFuncs = (function()
+    local vis = {}
+    local Lighting = game:GetService("Lighting")
+    local orig = {}
+    local fbConn = nil
+
+    function vis.StartFullBright()
+        Notify("☀️ Full Brightness active")
+        orig.Brightness = Lighting.Brightness
+        orig.ClockTime = Lighting.ClockTime
+        orig.FogEnd = Lighting.FogEnd
+        orig.FogStart = Lighting.FogStart
+        orig.GlobalShadows = Lighting.GlobalShadows
+        orig.OutdoorAmbient = Lighting.OutdoorAmbient
+        orig.Ambient = Lighting.Ambient
+        Lighting.Brightness = 10
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 100000
+        Lighting.FogStart = 0
+        Lighting.GlobalShadows = false
+        Lighting.OutdoorAmbient = Color3.new(1,1,1)
+        Lighting.Ambient = Color3.new(1,1,1)
+        fbConn = Lighting:GetPropertyChangedSignal("Brightness"):Connect(function()
+            if Features.FullBright.E then
+                Lighting.Brightness = 10
+            end
+        end)
+        Features.FullBright.C = fbConn
+    end
+
+    function vis.StopFullBright()
+        Notify("⚫ Full Brightness disabled")
+        if fbConn then fbConn:Disconnect() fbConn = nil end
+        Features.FullBright.C = nil
+        if orig.Brightness ~= nil then Lighting.Brightness = orig.Brightness end
+        if orig.ClockTime ~= nil then Lighting.ClockTime = orig.ClockTime end
+        if orig.FogEnd ~= nil then Lighting.FogEnd = orig.FogEnd end
+        if orig.FogStart ~= nil then Lighting.FogStart = orig.FogStart end
+        if orig.GlobalShadows ~= nil then Lighting.GlobalShadows = orig.GlobalShadows end
+        if orig.OutdoorAmbient ~= nil then Lighting.OutdoorAmbient = orig.OutdoorAmbient end
+        if orig.Ambient ~= nil then Lighting.Ambient = orig.Ambient end
+        orig = {}
+    end
+
+    function vis.RemoveFog()
+        Lighting.FogEnd = 100000
+        Lighting.FogStart = 0
+        Lighting.FogColor = Color3.new(1,1,1)
+        local atm = Lighting:FindFirstChildOfClass("Atmosphere")
+        if atm then
+            atm.Density = 0
+            atm.Haze = 0
+            atm.Glare = 0
+        end
+        Notify("🌫️ Fog removed", 2)
+    end
+
+    return vis
+end)()
+
+-- ==========================================
 -- SERVER HOP (IIFE)
 -- ==========================================
 ServerHop = (function()
@@ -2555,6 +2691,7 @@ local ConfigFuncs = (function()
         c.NoClip = Features.NoClip.E
         c.Invisible = Features.Invisible.E
         c.Spectator = Features.Spectator.E
+        c.FullBright = Features.FullBright.E
         return c
     end
 
@@ -2637,10 +2774,13 @@ local ConfigFuncs = (function()
 
         local starters = {
             Corpse=FarmFuncs.StartCorpse, Bank=FarmFuncs.StartBank, Chest=FarmFuncs.StartChest,
+    Tree=TreeFuncs.StartTree,
             SaintScanner=ScannerFuncs.StartScanner, ESP=ESPFuncs.StartESP, ClickTp=MovementFuncs.StartClickTp,
             Fly=MovementFuncs.StartFly, RaknetDesync=ExploitFuncs.StartRaknet, HideName=ExploitFuncs.StartHide,
             AutoBuy=QoLFuncs.startAutoBuy, AttachPlayer=QoLFuncs.startAttach,
-            NoClip=NoClipFuncs.StartNoClip, Invisible=NoClipFuncs.StartInvisible
+            NoClip=NoClipFuncs.StartNoClip, Invisible=NoClipFuncs.StartInvisible,
+            Spectator=SpectatorFuncs.StartSpectator,
+            Tree=TreeFuncs.StartTree
         }
 
         for featName, enabled in pairs(data) do
@@ -2833,15 +2973,28 @@ local TreeFuncs = (function()
         local cd = chuck:FindFirstChildOfClass("ClickDetector")
         if cd then
             fireclickdetector(cd)
-            task.wait(1)
+            task.wait(1.5)
         end
         local gui = playerGui:WaitForChild("DialogueGui", 3)
         if gui then
             local list = gui.MainFrame.ChoiceList
-            while list:FindFirstChild("Choice_2") do
+            local attempts = 0
+            while list:FindFirstChild("Choice_2") and attempts < 10 do
                 local choice = list.Choice_2
+                -- Method 1: firesignal
                 pcall(function() firesignal(choice.MouseButton1Click) end)
-                task.wait(0.3)
+                -- Method 2: VIM click on button position (fallback)
+                pcall(function()
+                    if choice.AbsolutePosition and choice.AbsoluteSize then
+                        local x = choice.AbsolutePosition.X + choice.AbsoluteSize.X / 2
+                        local y = choice.AbsolutePosition.Y + choice.AbsoluteSize.Y / 2
+                        vim:SendMouseButtonEvent(x, y, 0, true, game, 0)
+                        task.wait(0.05)
+                        vim:SendMouseButtonEvent(x, y, 0, false, game, 0)
+                    end
+                end)
+                task.wait(0.5)
+                attempts = attempts + 1
             end
         end
     end
@@ -3171,6 +3324,7 @@ _G.NezurStarters = {
     Corpse = FarmFuncs.StartCorpse,
     Bank = FarmFuncs.StartBank,
     Chest = FarmFuncs.StartChest,
+    Tree = TreeFuncs.StartTree,
     SaintScanner = ScannerFuncs.StartScanner,
     ESP = ESPFuncs.StartESP,
     ClickTp = MovementFuncs.StartClickTp,
@@ -3180,13 +3334,14 @@ _G.NezurStarters = {
     AutoBuy = QoLFuncs.startAutoBuy,
     AttachPlayer = QoLFuncs.startAttach,
     NoClip = NoClipFuncs.StartNoClip,
-    Invisible = NoClipFuncs.StartInvisible
+    Invisible = NoClipFuncs.StartInvisible,
+    FullBright = VisualFuncs.StartFullBright
 }
 _G.NezurStoppers = {
     Corpse = FarmFuncs.StopCorpse,
     Bank = FarmFuncs.StopBank,
     Chest = FarmFuncs.StopChest,
-    Tree=TreeFuncs.StopTree,
+    Tree = TreeFuncs.StopTree,
     SaintScanner = ScannerFuncs.StopScanner,
     ESP = ESPFuncs.StopESP,
     ClickTp = MovementFuncs.StopClickTp,
@@ -3196,7 +3351,8 @@ _G.NezurStoppers = {
     AutoBuy = QoLFuncs.stopAutoBuy,
     AttachPlayer = QoLFuncs.stopAttach,
     NoClip = NoClipFuncs.StopNoClip,
-    Invisible = NoClipFuncs.StopInvisible
+    Invisible = NoClipFuncs.StopInvisible,
+    FullBright = VisualFuncs.StopFullBright
 }
 
 -- ==========================================
@@ -3225,6 +3381,7 @@ ST(UI.AttachT, UI.AttachC, UI.AttachS, "AttachPlayer", QoLFuncs.startAttach, QoL
 ST(UI.NoClipT, UI.NoClipC, UI.NoClipS, "NoClip", NoClipFuncs.StartNoClip, NoClipFuncs.StopNoClip)
 ST(UI.InvisT, UI.InvisC, UI.InvisS, "Invisible", NoClipFuncs.StartInvisible, NoClipFuncs.StopInvisible)
 ST(UI.SpectatorT, UI.SpectatorC, UI.SpectatorS, "Spectator", SpectatorFuncs.StartSpectator, SpectatorFuncs.StopSpectator)
+ST(UI.FullBrightT, UI.FullBrightC, UI.FullBrightS, "FullBright", VisualFuncs.StartFullBright, VisualFuncs.StopFullBright)
 
 -- ==========================================
 -- KEYBINDS
@@ -3456,6 +3613,18 @@ UI.TreeKbBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
+UI.FpsApplyBtn.MouseButton1Click:Connect(function()
+    local n = tonumber(UI.FpsBox.Text)
+    if n and n > 0 then
+        pcall(function() setfpscap(n) end)
+        Notify("FPS Cap set to " .. n, 2)
+    else
+        Notify("Invalid FPS value", 2)
+    end
+end)
+
+UI.FogBtn.MouseButton1Click:Connect(VisualFuncs.RemoveFog)
+
 UI.AttachKbBtn.MouseButton1Click:Connect(function()
     if QoLFuncs.IsAttachListening() then return end
     QoLFuncs.SetIsAttachListening(true)
@@ -3602,14 +3771,6 @@ task.delay(3, function()
                         local ok2,kc2=pcall(function() return Enum.KeyCode[data.SpectatorKeybind] end)
                         if ok2 and kc2 then SpectatorFuncs.SetSpectatorKeybind(kc2) UI.SpectatorKbBtn.Text=data.SpectatorKeybind end
                     end
-                    if data.TreeKeybind then
-                        local ok2,kc2=pcall(function() return Enum.KeyCode[data.TreeKeybind] end)
-                        if ok2 and kc2 then TreeKeybind=kc2 UI.TreeKbBtn.Text=data.TreeKeybind end
-                    end
-                    if data.TreeType then
-                        UI.TreeTypeBtn.Text = data.TreeType
-                        _G.NezurTreeSelection = data.TreeType
-                    end
 
                     local starters = {
                         Corpse=FarmFuncs.StartCorpse, Bank=FarmFuncs.StartBank, Chest=FarmFuncs.StartChest,
@@ -3617,7 +3778,8 @@ task.delay(3, function()
                         Fly=MovementFuncs.StartFly, RaknetDesync=ExploitFuncs.StartRaknet, HideName=ExploitFuncs.StartHide,
                         AutoBuy=QoLFuncs.startAutoBuy, AttachPlayer=QoLFuncs.startAttach,
                         NoClip=NoClipFuncs.StartNoClip, Invisible=NoClipFuncs.StartInvisible,
-                        Spectator=SpectatorFuncs.StartSpectator, Tree=TreeFuncs.StartTree
+                        Spectator=SpectatorFuncs.StartSpectator, Tree=TreeFuncs.StartTree,
+                        FullBright=VisualFuncs.StartFullBright
                     }
 
                     for featName, enabled in pairs(data) do
