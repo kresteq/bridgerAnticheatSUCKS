@@ -1434,6 +1434,19 @@ local FarmFuncs = (function()
         local VIM = game:GetService("VirtualInputManager")
         local SAFE = CFrame.new(-4387.25,217.5,-4482.04)
         local processing = false
+
+        local CorpseState = {
+            Active = true,
+            NoClipConn = nil,
+            MovementThread = nil,
+            SoundConn = nil,
+            StandCheckThread = nil,
+            BaseInventory = {},
+            BaseSounds = {},
+            Connected = false,
+            EscapeDone = false
+        }
+
         local function wfc()
             if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then return player.Character end
             return player.CharacterAdded:Wait()
@@ -1464,41 +1477,191 @@ local FarmFuncs = (function()
             VIM:SendKeyEvent(true, Enum.KeyCode.A, false, game) task.wait(0.12)
             VIM:SendKeyEvent(false, Enum.KeyCode.A, false, game) task.wait(0.3)
         end
-        local function rejoin()
-            local r = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-            if r then r.Anchored = true end
-            -- Rejoin same server instead of ServerHop
-            local loaderTemplate = [[
-repeat task.wait() until game:IsLoaded()
-task.wait(1.5)
-local url = "%s" .. "?nocache=" .. tostring(tick())
-local ok, src = pcall(function() return game:HttpGet(url) end)
-if ok and src and #src > 100 then loadstring(src)() else warn("[Nezur] AutoExec failed") end
-]]
-            local loader = string.format(loaderTemplate, SCRIPT_URL)
-            if type(queue_on_teleport) == "function" then pcall(queue_on_teleport, loader)
-            elseif type(queueonteleport) == "function" then pcall(queueonteleport, loader) end
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
+
+        -- Post-pickup helpers
+        local function getCurrentInventory()
+            local items = {}
+            local bp = player:FindFirstChild("Backpack")
+            if bp then
+                for _, item in ipairs(bp:GetChildren()) do
+                    if item:IsA("Tool") then items[item.Name] = true end
+                end
+            end
+            local char = player.Character
+            if char then
+                for _, item in ipairs(char:GetChildren()) do
+                    if item:IsA("Tool") then items[item.Name] = true end
+                end
+            end
+            return items
         end
+
+        local function enableCorpseNoClip()
+            local char = player.Character
+            if not char then return end
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+            CorpseState.NoClipConn = RunService.Stepped:Connect(function()
+                if not CorpseState.Active then return end
+                local c = player.Character
+                if not c then return end
+                for _, part in ipairs(c:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end)
+        end
+
+        local function disableCorpseNoClip()
+            if CorpseState.NoClipConn then CorpseState.NoClipConn:Disconnect() CorpseState.NoClipConn = nil end
+            local c = player.Character
+            if c then
+                for _, part in ipairs(c:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = true end
+                end
+            end
+        end
+
+        local function startUndergroundEscape()
+            local char = player.Character
+            if not char then return end
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
+            local downPos = hrp.Position - Vector3.new(0, 50, 0)
+            hrp.CFrame = CFrame.new(downPos)
+            hrp.Velocity = Vector3.new(0, 0, 0)
+            hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+            task.wait(0.1)
+            CorpseState.MovementThread = task.spawn(function()
+                while CorpseState.Active and not CorpseState.EscapeDone do
+                    local currentPos = hrp.Position
+                    local angle = math.random() * 2 * math.pi
+                    local radius = math.random(10, 100)
+                    local offsetX = math.cos(angle) * radius
+                    local offsetZ = math.sin(angle) * radius
+                    local newPos = Vector3.new(currentPos.X + offsetX, downPos.Y, currentPos.Z + offsetZ)
+                    hrp.CFrame = CFrame.new(newPos)
+                    hrp.Velocity = Vector3.new(0, 0, 0)
+                    hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    task.wait(0.3)
+                end
+            end)
+        end
+
+        local function onSaintEscapeDone()
+            if CorpseState.EscapeDone then return end
+            CorpseState.EscapeDone = true
+            CorpseState.Active = false
+            disableCorpseNoClip()
+            if Features.Corpse.C then Features.Corpse.C:Disconnect() Features.Corpse.C = nil end
+            if not Features.Corpse.E then return end
+            Features.Corpse.E = false
+            AnimToggle(UI.CorpseT, UI.CorpseC, UI.CorpseS, false)
+            Notify("✅ Saint secured! Auto Corpse stopped.", 3)
+        end
+
+        local function listenForConnectionSound()
+            CorpseState.BaseSounds = {}
+            local char = player.Character
+            if not char then return end
+            for _, sound in ipairs(char:GetDescendants()) do
+                if sound:IsA("Sound") then
+                    CorpseState.BaseSounds[sound] = true
+                    local conn = nil
+                    conn = sound:GetPropertyChangedSignal("Playing"):Connect(function()
+                        if not CorpseState.Active or CorpseState.EscapeDone then
+                            if conn then conn:Disconnect() end
+                            return
+                        end
+                        if sound.Playing then
+                            Notify("🔊 Saint connection detected (sound)", 3)
+                            onSaintEscapeDone()
+                            if conn then conn:Disconnect() end
+                        end
+                    end)
+                end
+            end
+            CorpseState.SoundConn = char.DescendantAdded:Connect(function(desc)
+                if not CorpseState.Active or CorpseState.EscapeDone then return end
+                if desc:IsA("Sound") then
+                    CorpseState.BaseSounds[desc] = true
+                    if desc.Playing then
+                        Notify("🔊 Saint connection detected (new sound)", 3)
+                        onSaintEscapeDone()
+                        return
+                    end
+                    local conn = nil
+                    conn = desc:GetPropertyChangedSignal("Playing"):Connect(function()
+                        if not CorpseState.Active or CorpseState.EscapeDone then
+                            if conn then conn:Disconnect() end
+                            return
+                        end
+                        if desc.Playing then
+                            Notify("🔊 Saint connection detected (new sound)", 3)
+                            onSaintEscapeDone()
+                            if conn then conn:Disconnect() end
+                        end
+                    end)
+                end
+            end)
+        end
+
+        local function startStandCheck()
+            CorpseState.StandCheckThread = task.spawn(function()
+                while CorpseState.Active and not CorpseState.EscapeDone do
+                    local current = getCurrentInventory()
+                    for itemName, _ in pairs(current) do
+                        if not CorpseState.BaseInventory[itemName] then
+                            if itemName:find("Stand") or itemName:find("Saint") then
+                                Notify("📦 Saint connection detected (Stand item)", 3)
+                                onSaintEscapeDone()
+                                return
+                            end
+                        end
+                    end
+                    task.wait(0.5)
+                end
+            end)
+        end
+
+        local function onPromptDisappeared()
+            if not CorpseState.Active or CorpseState.EscapeDone then return end
+            Notify("🛡️ Saint picked up! Escape sequence...", 3)
+            CorpseState.BaseInventory = getCurrentInventory()
+            enableCorpseNoClip()
+            startUndergroundEscape()
+            listenForConnectionSound()
+            startStandCheck()
+            task.delay(20, function()
+                if CorpseState.Active and not CorpseState.EscapeDone then
+                    Notify("⏱️ Timeout — stopping Auto Corpse", 3)
+                    onSaintEscapeDone()
+                end
+            end)
+        end
+
         local function holdPrompt(p, targetPart)
-            if not p then return end
+            if not p then return false end
             local char = player.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if not hrp then return end
-
+            if not hrp then return false end
             for _ = 1, 3 do
-                -- Face the prompt
                 if targetPart and targetPart.Parent then
                     local promptPos = targetPart.Position
                     local lookCFrame = CFrame.lookAt(hrp.Position, Vector3.new(promptPos.X, hrp.Position.Y, promptPos.Z))
                     hrp.CFrame = lookCFrame
                 end
-
                 pcall(function() p:InputHoldBegin() end) task.wait(6)
                 pcall(function() p:InputHoldEnd() end) task.wait(0.5)
-                if not p.Parent then return true end
+                if not p.Parent then
+                    onPromptDisappeared()
+                    return true
+                end
             end
+            return false
         end
+
+        -- Main execution
         local ch = wfc()
         local rt = ch:WaitForChild("HumanoidRootPart")
         equipRandom() task.wait(2)
@@ -1506,38 +1669,54 @@ if ok and src and #src > 100 then loadstring(src)() else warn("[Nezur] AutoExec 
         if nb then
             tapWA() task.wait(0.5)
             rt.CFrame = nb.CFrame + Vector3.new(0, 3, 0) task.wait(0.6)
-            holdPrompt(nb:FindFirstChildOfClass("ProximityPrompt") or nb.Parent:FindFirstChildOfClass("ProximityPrompt"), nb)
+            local ok = holdPrompt(nb:FindFirstChildOfClass("ProximityPrompt") or nb.Parent:FindFirstChildOfClass("ProximityPrompt"), nb)
+            if not ok then
+                Notify("⚠️ Immediate pickup failed, starting retry loop", 3)
+            else
+                return
+            end
         else
             rt.CFrame = SAFE task.wait(1.5)
-            Features.Corpse.C = RunService.Heartbeat:Connect(function()
-                if processing then return end
-                local s = findSaint()
-                if s then
-                    processing = true
-                    local cc = wfc()
-                    local cr = cc:WaitForChild("HumanoidRootPart")
-                    cr.CFrame = s.CFrame + Vector3.new(0, 4, 0)
-                    cr.Velocity = Vector3.new(0, 0, 0) task.wait(1.2)
-                    rejoin()
-                end
-            end)
         end
-        task.spawn(function()
-            repeat task.wait() until game:IsLoaded() task.wait(1.5)
-            local nc = wfc()
-            local nr = nc:WaitForChild("HumanoidRootPart") task.wait(1)
-            local ns = nearSaint()
-            if ns then
-                tapWA() task.wait(0.5)
-                nr.CFrame = ns.CFrame + Vector3.new(0, 3, 0) task.wait(0.6)
-                holdPrompt(ns:FindFirstChildOfClass("ProximityPrompt") or ns.Parent:FindFirstChildOfClass("ProximityPrompt"), ns)
+
+        -- Heartbeat retry loop
+        Features.Corpse.C = RunService.Heartbeat:Connect(function()
+            if processing or not CorpseState.Active or CorpseState.EscapeDone then return end
+            local s = findSaint()
+            if s then
+                processing = true
+                local cc = wfc()
+                local cr = cc:WaitForChild("HumanoidRootPart")
+                cr.CFrame = s.CFrame + Vector3.new(0, 4, 0)
+                cr.Velocity = Vector3.new(0, 0, 0) task.wait(1.2)
+                local prompt = s:FindFirstChildOfClass("ProximityPrompt") or s.Parent:FindFirstChildOfClass("ProximityPrompt")
+                if prompt then
+                    local ok = holdPrompt(prompt, s)
+                    if not ok then
+                        processing = false
+                    end
+                else
+                    onPromptDisappeared()
+                end
             end
         end)
+
+        -- Cleanup hook for StopCorpse
+        Features.Corpse.Cleanup = function()
+            CorpseState.Active = false
+            CorpseState.EscapeDone = true
+            disableCorpseNoClip()
+            if CorpseState.SoundConn then CorpseState.SoundConn:Disconnect() CorpseState.SoundConn = nil end
+        end
     end
 
     function farm.StopCorpse()
         Notify("⚫ Auto Corpse disabled")
         if Features.Corpse.C then Features.Corpse.C:Disconnect() Features.Corpse.C = nil end
+        if Features.Corpse.Cleanup then
+            Features.Corpse.Cleanup()
+            Features.Corpse.Cleanup = nil
+        end
     end
 
     -- ==========================================
