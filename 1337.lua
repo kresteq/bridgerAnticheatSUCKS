@@ -3,7 +3,7 @@ repeat task.wait() until game:IsLoaded()
 if type(clearteleportqueue) == "function" then pcall(clearteleportqueue)
 elseif type(clearteleport_queue) == "function" then pcall(clearteleport_queue) end
 
-if getgenv().NezurHubLoaded then print("[Nezur] Already loaded, skipping...") return end
+if getgenv().NezurHubLoaded then return end
 getgenv().NezurHubLoaded = true
 
 local Players = game:GetService("Players")
@@ -41,6 +41,7 @@ local ServerHopRunning = false
 
 local Features = {
     Corpse={E=false,C=nil}, Bank={E=false,C=nil}, Chest={E=false,C=nil}, Tree={E=false,C=nil},
+    Fish={E=false,C=nil}, Chams={E=false,C=nil,PlayerAdded=nil}, SaintESP={E=false,C=nil}, PosTracker={E=false,C=nil},
     SaintScanner={E=false,C=nil}, ESP={E=false,C=nil,PlayerAdded=nil,PlayerRemoving=nil},
     ClickTp={E=false,C=nil}, Fly={E=false,C=nil,KC=nil},
     RaknetDesync={E=false,C=nil}, HideName={E=false,C=nil},
@@ -327,7 +328,7 @@ local UI = (function()
             elseif name=="Players & NPCs" then ts = UDim2.new(0,520,0,520)
             elseif name=="Misc" then ts = UDim2.new(0,520,0,560)
             elseif name=="Server" then ts = UDim2.new(0,520,0,540)
-            elseif name=="Settings" then ts = UDim2.new(0,520,0,640) end
+            elseif name=="Settings" then ts = UDim2.new(0,520,0,520) end
             TweenService:Create(MainFrame,TweenInfo.new(0.3),{Size=ts}):Play()
         end)
     end
@@ -557,7 +558,7 @@ local UI = (function()
         -- Overlay frame parented to ScreenGui
         local ListFrame = Instance.new("ScrollingFrame")
         ListFrame.Name = featureName.."List"
-        ListFrame.Size = UDim2.new(0, DropBtn.AbsoluteSize.X, 0, 0)
+        ListFrame.Size = UDim2.new(0, 200, 0, 0)
         ListFrame.Position = UDim2.new(0, 0, 0, 0)
         ListFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
         ListFrame.BorderSizePixel = 0
@@ -581,12 +582,24 @@ local UI = (function()
 
         local selected = {}
         local optionButtons = {}
+        local open = false
+        local FIXED_LIST_WIDTH = 200
+        local MAX_LIST_HEIGHT = 200
+        local ROW_HEIGHT = 26
 
         local function updateListPosition()
-            local absPos = DropBtn.AbsolutePosition
-            local absSize = DropBtn.AbsoluteSize
-            ListFrame.Position = UDim2.new(0, absPos.X, 0, absPos.Y + absSize.Y + 4)
-            ListFrame.Size = UDim2.new(0, absSize.X, 0, math.min(#optionsTable * 26 + 4, 140))
+            task.defer(function()
+                if not DropBtn or not DropBtn.Parent then return end
+                local absPos = DropBtn.AbsolutePosition
+                local absSize = DropBtn.AbsoluteSize
+                if absSize.X > 0 then
+                    FIXED_LIST_WIDTH = absSize.X
+                end
+                ListFrame.Position = UDim2.new(0, absPos.X, 0, absPos.Y + absSize.Y + 4)
+                local count = #optionsTable
+                local h = math.min(count * ROW_HEIGHT + 4, MAX_LIST_HEIGHT)
+                ListFrame.Size = UDim2.new(0, FIXED_LIST_WIDTH, 0, h)
+            end)
         end
 
         for _, opt in ipairs(optionsTable) do
@@ -625,11 +638,11 @@ local UI = (function()
             optionButtons[opt] = optBtn
         end
 
-        local listHeight = math.min(#optionsTable * 26 + 4, 140)
-        ListFrame.Size = UDim2.new(0, DropBtn.AbsoluteSize.X, 0, listHeight)
-        ListFrame.CanvasSize = UDim2.new(0, 0, 0, #optionsTable * 26 + 8)
+        local count = #optionsTable
+        local h = math.min(count * ROW_HEIGHT + 4, MAX_LIST_HEIGHT)
+        ListFrame.Size = UDim2.new(0, FIXED_LIST_WIDTH, 0, h)
+        ListFrame.CanvasSize = UDim2.new(0, 0, 0, count * ROW_HEIGHT + 8)
 
-        local open = false
         DropBtn.MouseButton1Click:Connect(function()
             open = not open
             if open then
@@ -661,8 +674,20 @@ local UI = (function()
             end
         end)
 
+        -- Auto-hide when parent tab becomes invisible
+        local tabHideConn = nil
+        tabHideConn = RunService.Heartbeat:Connect(function()
+            if open and Container and Container.Parent then
+                if not Container.Parent.Visible then
+                    open = false
+                    ListFrame.Visible = false
+                end
+            end
+        end)
+
         Container.Destroying:Connect(function()
             if clickAwayConn then clickAwayConn:Disconnect() end
+            if tabHideConn then tabHideConn:Disconnect() end
             if ListFrame then ListFrame:Destroy() end
         end)
 
@@ -729,7 +754,7 @@ local UI = (function()
         -- Overlay frame parented to ScreenGui for proper rendering above all
         local ListFrame = Instance.new("ScrollingFrame")
         ListFrame.Name = featureName.."List"
-        ListFrame.Size = UDim2.new(0, DropBtn.AbsoluteSize.X, 0, 0)
+        ListFrame.Size = UDim2.new(0, 200, 0, 0)
         ListFrame.Position = UDim2.new(0, 0, 0, 0)
         ListFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
         ListFrame.BorderSizePixel = 0
@@ -754,12 +779,25 @@ local UI = (function()
         local currentSelection = nil
         local optionButtons = {}
         local open = false
+        local FIXED_LIST_WIDTH = 200
+        local MAX_LIST_HEIGHT = 200
+        local ROW_HEIGHT = 26
 
         local function updateListPosition()
-            local absPos = DropBtn.AbsolutePosition
-            local absSize = DropBtn.AbsoluteSize
-            ListFrame.Position = UDim2.new(0, absPos.X, 0, absPos.Y + absSize.Y + 4)
-            ListFrame.Size = UDim2.new(0, absSize.X, 0, math.min(#optionButtons * 26 + 4, 160))
+            -- Wait one frame for AbsolutePosition to be valid
+            task.defer(function()
+                if not DropBtn or not DropBtn.Parent then return end
+                local absPos = DropBtn.AbsolutePosition
+                local absSize = DropBtn.AbsoluteSize
+                if absSize.X > 0 then
+                    FIXED_LIST_WIDTH = absSize.X
+                end
+                ListFrame.Position = UDim2.new(0, absPos.X, 0, absPos.Y + absSize.Y + 4)
+                local count = 0
+                for _ in pairs(optionButtons) do count = count + 1 end
+                local h = math.min(count * ROW_HEIGHT + 4, MAX_LIST_HEIGHT)
+                ListFrame.Size = UDim2.new(0, FIXED_LIST_WIDTH, 0, h)
+            end)
         end
 
         local function rebuildList(options)
@@ -787,9 +825,10 @@ local UI = (function()
                 end)
                 optionButtons[opt] = optBtn
             end
-            local listHeight = math.min(#options * 26 + 4, 160)
-            ListFrame.Size = UDim2.new(0, DropBtn.AbsoluteSize.X, 0, listHeight)
-            ListFrame.CanvasSize = UDim2.new(0, 0, 0, #options * 26 + 8)
+            local count = #options
+            local h = math.min(count * ROW_HEIGHT + 4, MAX_LIST_HEIGHT)
+            ListFrame.Size = UDim2.new(0, FIXED_LIST_WIDTH, 0, h)
+            ListFrame.CanvasSize = UDim2.new(0, 0, 0, count * ROW_HEIGHT + 8)
         end
 
         DropBtn.MouseButton1Click:Connect(function()
@@ -823,9 +862,21 @@ local UI = (function()
             end
         end)
 
+        -- Auto-hide when parent tab becomes invisible
+        local tabHideConn = nil
+        tabHideConn = RunService.Heartbeat:Connect(function()
+            if open and Container and Container.Parent then
+                if not Container.Parent.Visible then
+                    open = false
+                    ListFrame.Visible = false
+                end
+            end
+        end)
+
         -- Cleanup on destroy
         Container.Destroying:Connect(function()
             if clickAwayConn then clickAwayConn:Disconnect() end
+            if tabHideConn then tabHideConn:Disconnect() end
             if ListFrame then ListFrame:Destroy() end
         end)
 
@@ -902,6 +953,9 @@ local UI = (function()
     ui.TeleportBtn.TextColor3 = Color3.fromRGB(139,123,184)
     ui.TeleportBtn.Visible = false
 
+    fy = CreateSection(FarmC,"Auto Fish",fy+5)
+    ui.FishT, ui.FishC, ui.FishS, fy = CreateToggle(FarmC,"Auto Fish",fy,"Fish")
+
     -- ESP Tab
     local EspC = TabContents["ESP"]
     local ey = 0
@@ -909,6 +963,56 @@ local UI = (function()
     ui.EspT, ui.EspCir, ui.EspS, ey = CreateToggle(EspC,"Player ESP",ey,"ESP")
 
     -- Movement Tab
+    ey = ey + 8
+    ey = CreateSection(EspC,"Chams",ey)
+    ui.ChamsT, ui.ChamsC, ui.ChamsS, ey = CreateToggle(EspC,"Player Chams",ey,"Chams")
+    local chamsRow = Instance.new("Frame", EspC)
+    chamsRow.Size = UDim2.new(1, 0, 0, 28)
+    chamsRow.Position = UDim2.new(0, 0, 0, ey)
+    chamsRow.BackgroundTransparency = 1
+    local chamsLbl = Instance.new("TextLabel", chamsRow)
+    chamsLbl.Size = UDim2.new(0.3, 0, 1, 0)
+    chamsLbl.BackgroundTransparency = 1
+    chamsLbl.Text = "Color"
+    chamsLbl.TextColor3 = Color3.fromRGB(192, 192, 192)
+    chamsLbl.TextSize = 12
+    chamsLbl.Font = Enum.Font.Gotham
+    chamsLbl.TextXAlignment = Enum.TextXAlignment.Left
+    chamsLbl.TextYAlignment = Enum.TextYAlignment.Center
+    ui.ChamsRBox = Instance.new("TextBox", chamsRow)
+    ui.ChamsRBox.Size = UDim2.new(0.2, -4, 1, -4)
+    ui.ChamsRBox.Position = UDim2.new(0.3, 2, 0, 2)
+    ui.ChamsRBox.BackgroundColor3 = Color3.fromRGB(42, 42, 53)
+    ui.ChamsRBox.TextColor3 = Color3.fromRGB(192, 192, 192)
+    ui.ChamsRBox.PlaceholderText = "R"
+    ui.ChamsRBox.Text = "255"
+    ui.ChamsRBox.TextSize = 11
+    ui.ChamsRBox.Font = Enum.Font.Gotham
+    Instance.new("UICorner", ui.ChamsRBox).CornerRadius = UDim.new(0, 4)
+    ui.ChamsGBox = Instance.new("TextBox", chamsRow)
+    ui.ChamsGBox.Size = UDim2.new(0.2, -4, 1, -4)
+    ui.ChamsGBox.Position = UDim2.new(0.5, 2, 0, 2)
+    ui.ChamsGBox.BackgroundColor3 = Color3.fromRGB(42, 42, 53)
+    ui.ChamsGBox.TextColor3 = Color3.fromRGB(192, 192, 192)
+    ui.ChamsGBox.PlaceholderText = "G"
+    ui.ChamsGBox.Text = "0"
+    ui.ChamsGBox.TextSize = 11
+    ui.ChamsGBox.Font = Enum.Font.Gotham
+    Instance.new("UICorner", ui.ChamsGBox).CornerRadius = UDim.new(0, 4)
+    ui.ChamsBBox = Instance.new("TextBox", chamsRow)
+    ui.ChamsBBox.Size = UDim2.new(0.2, -4, 1, -4)
+    ui.ChamsBBox.Position = UDim2.new(0.7, 2, 0, 2)
+    ui.ChamsBBox.BackgroundColor3 = Color3.fromRGB(42, 42, 53)
+    ui.ChamsBBox.TextColor3 = Color3.fromRGB(192, 192, 192)
+    ui.ChamsBBox.PlaceholderText = "B"
+    ui.ChamsBBox.Text = "0"
+    ui.ChamsBBox.TextSize = 11
+    ui.ChamsBBox.Font = Enum.Font.Gotham
+    Instance.new("UICorner", ui.ChamsBBox).CornerRadius = UDim.new(0, 4)
+    ey = ey + 32
+    ey = CreateSection(EspC,"Saint ESP",ey)
+    ui.SaintEspT, ui.SaintEspC, ui.SaintEspS, ey = CreateToggle(EspC,"Saint ESP",ey,"SaintESP")
+
     local MovC = TabContents["Movement"]
     local mvy = 0
     mvy = CreateSection(MovC,"Movement",mvy)
@@ -1019,6 +1123,47 @@ local UI = (function()
     ui.FullBrightT, ui.FullBrightC, ui.FullBrightS, qolY = CreateToggle(QoLC, "Full Brightness", qolY, "FullBright")
 
     -- Players & NPCs Tab
+    -- Position Tracker
+    qolY = qolY + 8
+    qolY = CreateSection(QoLC, "Position Tracker", qolY)
+    ui.PosTrackerT, ui.PosTrackerC, ui.PosTrackerS, qolY = CreateToggle(QoLC, "Position Tracker", qolY, "PosTracker")
+    ui.PosTrackerLbl = Instance.new("TextLabel", QoLC)
+    ui.PosTrackerLbl.Size = UDim2.new(1, 0, 0, 20)
+    ui.PosTrackerLbl.Position = UDim2.new(0, 0, 0, qolY)
+    ui.PosTrackerLbl.BackgroundTransparency = 1
+    ui.PosTrackerLbl.Text = "X: --  Y: --  Z: --"
+    ui.PosTrackerLbl.TextColor3 = Color3.fromRGB(192, 192, 192)
+    ui.PosTrackerLbl.TextSize = 12
+    ui.PosTrackerLbl.Font = Enum.Font.Gotham
+    ui.PosTrackerLbl.TextXAlignment = Enum.TextXAlignment.Left
+    qolY = qolY + 24
+
+    -- Copy button
+    ui.CopyPosBtn = Instance.new("TextButton", QoLC)
+    ui.CopyPosBtn.Size = UDim2.new(1, 0, 0, 32)
+    ui.CopyPosBtn.Position = UDim2.new(0, 0, 0, qolY)
+    ui.CopyPosBtn.BackgroundColor3 = Color3.fromRGB(58, 58, 69)
+    ui.CopyPosBtn.Text = "📋 Copy to Clipboard"
+    ui.CopyPosBtn.TextColor3 = Color3.fromRGB(192, 192, 192)
+    ui.CopyPosBtn.TextSize = 12
+    ui.CopyPosBtn.Font = Enum.Font.GothamMedium
+    ui.CopyPosBtn.AutoButtonColor = false
+    Instance.new("UICorner", ui.CopyPosBtn).CornerRadius = UDim.new(0, 6)
+
+    ui.CopyPosBtn.MouseEnter:Connect(function()
+        TweenService:Create(ui.CopyPosBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(107, 91, 149)}):Play()
+    end)
+    ui.CopyPosBtn.MouseLeave:Connect(function()
+        TweenService:Create(ui.CopyPosBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(58, 58, 69)}):Play()
+    end)
+    ui.CopyPosBtn.MouseButton1Click:Connect(function()
+        QoLExtras.CopyCoords()
+    end)
+
+    qolY = qolY + 40
+    
+
+
     local PnC = TabContents["Players & NPCs"]
     local pny = 0
     pny = CreateSection(PnC, "Players", pny)
@@ -1133,7 +1278,67 @@ local UI = (function()
     ui.SpectatorKbBtn.AutoButtonColor = false
     Instance.new("UICorner",ui.SpectatorKbBtn).CornerRadius = UDim.new(0,6)
     miy = miy + 30
-    miy = miy+8
+    miy = miy + 8
+    miy = CreateSection(MiscC, "Moola Spoof", miy)
+
+    -- Moola Spoof TextBox
+    ui.MoolaSpoofBox = Instance.new("TextBox", MiscC)
+    ui.MoolaSpoofBox.Size = UDim2.new(1, 0, 0, 28)
+    ui.MoolaSpoofBox.Position = UDim2.new(0, 0, 0, miy)
+    ui.MoolaSpoofBox.BackgroundColor3 = Color3.fromRGB(42, 42, 53)
+    ui.MoolaSpoofBox.Text = "discord.gg/nexonix"
+    ui.MoolaSpoofBox.PlaceholderText = "Enter text..."
+    ui.MoolaSpoofBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.MoolaSpoofBox.PlaceholderColor3 = Color3.fromRGB(139, 123, 184)
+    ui.MoolaSpoofBox.TextSize = 12
+    ui.MoolaSpoofBox.Font = Enum.Font.GothamMedium
+    ui.MoolaSpoofBox.ClearTextOnFocus = false
+    Instance.new("UICorner", ui.MoolaSpoofBox).CornerRadius = UDim.new(0, 6)
+    miy = miy + 32
+
+    -- Moola Spoof Buttons Row
+    local MoolaBtnRow = Instance.new("Frame", MiscC)
+    MoolaBtnRow.Size = UDim2.new(1, 0, 0, 32)
+    MoolaBtnRow.Position = UDim2.new(0, 0, 0, miy)
+    MoolaBtnRow.BackgroundTransparency = 1
+
+    ui.MoolaApplyBtn = Instance.new("TextButton", MoolaBtnRow)
+    ui.MoolaApplyBtn.Size = UDim2.new(0.48, -4, 1, 0)
+    ui.MoolaApplyBtn.Position = UDim2.new(0, 0, 0, 0)
+    ui.MoolaApplyBtn.BackgroundColor3 = Color3.fromRGB(58, 58, 69)
+    ui.MoolaApplyBtn.Text = "Apply"
+    ui.MoolaApplyBtn.TextColor3 = Color3.fromRGB(192, 192, 192)
+    ui.MoolaApplyBtn.TextSize = 12
+    ui.MoolaApplyBtn.Font = Enum.Font.GothamMedium
+    ui.MoolaApplyBtn.AutoButtonColor = false
+    Instance.new("UICorner", ui.MoolaApplyBtn).CornerRadius = UDim.new(0, 6)
+    ui.MoolaApplyBtn.MouseEnter:Connect(function()
+        TweenService:Create(ui.MoolaApplyBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(107, 91, 149)}):Play()
+    end)
+    ui.MoolaApplyBtn.MouseLeave:Connect(function()
+        TweenService:Create(ui.MoolaApplyBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(58, 58, 69)}):Play()
+    end)
+
+    ui.MoolaCancelBtn = Instance.new("TextButton", MoolaBtnRow)
+    ui.MoolaCancelBtn.Size = UDim2.new(0.48, -4, 1, 0)
+    ui.MoolaCancelBtn.Position = UDim2.new(0.52, 0, 0, 0)
+    ui.MoolaCancelBtn.BackgroundColor3 = Color3.fromRGB(107, 91, 149)
+    ui.MoolaCancelBtn.Text = "Cancel"
+    ui.MoolaCancelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.MoolaCancelBtn.TextSize = 12
+    ui.MoolaCancelBtn.Font = Enum.Font.GothamMedium
+    ui.MoolaCancelBtn.AutoButtonColor = false
+    Instance.new("UICorner", ui.MoolaCancelBtn).CornerRadius = UDim.new(0, 6)
+    ui.MoolaCancelBtn.MouseEnter:Connect(function()
+        TweenService:Create(ui.MoolaCancelBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(139, 123, 184)}):Play()
+    end)
+    ui.MoolaCancelBtn.MouseLeave:Connect(function()
+        TweenService:Create(ui.MoolaCancelBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(107, 91, 149)}):Play()
+    end)
+
+    miy = miy + 36
+
+    miy = miy + 8
     local KbLbl = Instance.new("TextLabel",MiscC)
     KbLbl.Size = UDim2.new(0.6,0,0,24)
     KbLbl.Position = UDim2.new(0,0,0,miy)
@@ -1190,18 +1395,22 @@ local UI = (function()
     sy = sy + 22
     sy = CreateSection(SetC,"Config Management",sy+5)
     ui.ConfigNameBox, sy = CreateTextBox(SetC,"Config Name",sy,"Enter name...")
-    sy = sy + 5
-    ui.ConfigListFrame = Instance.new("ScrollingFrame")
-    ui.ConfigListFrame.Size = UDim2.new(1,0,0,140)
-    ui.ConfigListFrame.Position = UDim2.new(0,0,0,sy)
-    ui.ConfigListFrame.BackgroundColor3 = Color3.fromRGB(30,30,40)
-    ui.ConfigListFrame.BorderSizePixel = 0
-    ui.ConfigListFrame.ScrollBarThickness = 4
-    ui.ConfigListFrame.Parent = SetC
-    Instance.new("UICorner", ui.ConfigListFrame).CornerRadius = UDim.new(0,6)
-    ui.listLayout = Instance.new("UIListLayout", ui.ConfigListFrame)
-    ui.listLayout.Padding = UDim.new(0,2)
-    sy = sy + 105
+    sy = sy + 8
+    ui.ConfigDropdown, sy = CreateDropdown(SetC, sy, "Config", "ConfigSelect", 9997)
+    -- Auto-fill config name when dropdown selection changes
+    task.spawn(function()
+        local lastSelection = nil
+        while ui.ConfigDropdown and ui.ConfigDropdown.GetSelected do
+            local current = ui.ConfigDropdown.GetSelected()
+            if current and current ~= "None" and current ~= lastSelection then
+                lastSelection = current
+                ui.ConfigNameBox.Text = current
+                CurrentConfigName = current
+            end
+            task.wait(0.5)
+        end
+    end)
+    sy = sy + 8
     ui.SaveCfgBtn, sy = CreateButton(SetC,"Save Config",sy,"SaveCfgBtn")
     ui.LoadCfgBtn, sy = CreateButton(SetC,"Load Config",sy,"LoadCfgBtn")
     ui.DelCfgBtn, sy = CreateButton(SetC,"Delete Config",sy,"DelCfgBtn")
@@ -1241,6 +1450,50 @@ local function getNPCList()
     end
     return list
 end
+
+
+local function SafeTeleport(target, instant)
+    instant = instant or false
+    local char = player.Character
+    if not char then return false end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then return false end
+    if hum.Health <= 0 then return false end
+    if char:FindFirstChildOfClass("ForceField") then
+        task.wait(0.6)
+        if char:FindFirstChildOfClass("ForceField") then return false end
+    end
+    local spawnTime = char:GetAttribute("NezurSpawn")
+    if not spawnTime then
+        spawnTime = tick()
+        char:SetAttribute("NezurSpawn", spawnTime)
+    end
+    local age = tick() - spawnTime
+    if age < 3.5 then
+        task.wait(3.5 - age + 0.1)
+    end
+    hrp.Velocity = Vector3.new(0, 0, 0)
+    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+    hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    task.wait(0.05)
+    if typeof(target) == "CFrame" then
+        hrp.CFrame = target
+    elseif typeof(target) == "Vector3" then
+        hrp.CFrame = CFrame.new(target)
+    end
+    if not instant then
+        task.wait(0.1)
+        hrp.Velocity = Vector3.new(0, 0, 0)
+        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    end
+    return true
+end
+
+player.CharacterAdded:Connect(function(char)
+    char:SetAttribute("NezurSpawn", tick())
+end)
 
 -- ==========================================
 -- QoL FUNCTIONS (IIFE)
@@ -1434,19 +1687,6 @@ local FarmFuncs = (function()
         local VIM = game:GetService("VirtualInputManager")
         local SAFE = CFrame.new(-4387.25,217.5,-4482.04)
         local processing = false
-
-        local CorpseState = {
-            Active = true,
-            NoClipConn = nil,
-            MovementThread = nil,
-            SoundConn = nil,
-            StandCheckThread = nil,
-            BaseInventory = {},
-            BaseSounds = {},
-            Connected = false,
-            EscapeDone = false
-        }
-
         local function wfc()
             if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then return player.Character end
             return player.CharacterAdded:Wait()
@@ -1477,191 +1717,41 @@ local FarmFuncs = (function()
             VIM:SendKeyEvent(true, Enum.KeyCode.A, false, game) task.wait(0.12)
             VIM:SendKeyEvent(false, Enum.KeyCode.A, false, game) task.wait(0.3)
         end
-
-        -- Post-pickup helpers
-        local function getCurrentInventory()
-            local items = {}
-            local bp = player:FindFirstChild("Backpack")
-            if bp then
-                for _, item in ipairs(bp:GetChildren()) do
-                    if item:IsA("Tool") then items[item.Name] = true end
-                end
-            end
-            local char = player.Character
-            if char then
-                for _, item in ipairs(char:GetChildren()) do
-                    if item:IsA("Tool") then items[item.Name] = true end
-                end
-            end
-            return items
+        local function rejoin()
+            local r = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if r then r.Anchored = true end
+            -- Rejoin same server instead of ServerHop
+            local loaderTemplate = [[
+repeat task.wait() until game:IsLoaded()
+task.wait(1.5)
+local url = "%s" .. "?nocache=" .. tostring(tick())
+local ok, src = pcall(function() return game:HttpGet(url) end)
+if ok and src and #src > 100 then loadstring(src)() else end
+]]
+            local loader = string.format(loaderTemplate, SCRIPT_URL)
+            if type(queue_on_teleport) == "function" then pcall(queue_on_teleport, loader)
+            elseif type(queueonteleport) == "function" then pcall(queueonteleport, loader) end
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
         end
-
-        local function enableCorpseNoClip()
-            local char = player.Character
-            if not char then return end
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
-            end
-            CorpseState.NoClipConn = RunService.Stepped:Connect(function()
-                if not CorpseState.Active then return end
-                local c = player.Character
-                if not c then return end
-                for _, part in ipairs(c:GetDescendants()) do
-                    if part:IsA("BasePart") then part.CanCollide = false end
-                end
-            end)
-        end
-
-        local function disableCorpseNoClip()
-            if CorpseState.NoClipConn then CorpseState.NoClipConn:Disconnect() CorpseState.NoClipConn = nil end
-            local c = player.Character
-            if c then
-                for _, part in ipairs(c:GetDescendants()) do
-                    if part:IsA("BasePart") then part.CanCollide = true end
-                end
-            end
-        end
-
-        local function startUndergroundEscape()
-            local char = player.Character
-            if not char then return end
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            if not hrp then return end
-            local downPos = hrp.Position - Vector3.new(0, 50, 0)
-            hrp.CFrame = CFrame.new(downPos)
-            hrp.Velocity = Vector3.new(0, 0, 0)
-            hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-            task.wait(0.1)
-            CorpseState.MovementThread = task.spawn(function()
-                while CorpseState.Active and not CorpseState.EscapeDone do
-                    local currentPos = hrp.Position
-                    local angle = math.random() * 2 * math.pi
-                    local radius = math.random(10, 100)
-                    local offsetX = math.cos(angle) * radius
-                    local offsetZ = math.sin(angle) * radius
-                    local newPos = Vector3.new(currentPos.X + offsetX, downPos.Y, currentPos.Z + offsetZ)
-                    hrp.CFrame = CFrame.new(newPos)
-                    hrp.Velocity = Vector3.new(0, 0, 0)
-                    hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                    task.wait(0.3)
-                end
-            end)
-        end
-
-        local function onSaintEscapeDone()
-            if CorpseState.EscapeDone then return end
-            CorpseState.EscapeDone = true
-            CorpseState.Active = false
-            disableCorpseNoClip()
-            if Features.Corpse.C then Features.Corpse.C:Disconnect() Features.Corpse.C = nil end
-            if not Features.Corpse.E then return end
-            Features.Corpse.E = false
-            AnimToggle(UI.CorpseT, UI.CorpseC, UI.CorpseS, false)
-            Notify("✅ Saint secured! Auto Corpse stopped.", 3)
-        end
-
-        local function listenForConnectionSound()
-            CorpseState.BaseSounds = {}
-            local char = player.Character
-            if not char then return end
-            for _, sound in ipairs(char:GetDescendants()) do
-                if sound:IsA("Sound") then
-                    CorpseState.BaseSounds[sound] = true
-                    local conn = nil
-                    conn = sound:GetPropertyChangedSignal("Playing"):Connect(function()
-                        if not CorpseState.Active or CorpseState.EscapeDone then
-                            if conn then conn:Disconnect() end
-                            return
-                        end
-                        if sound.Playing then
-                            Notify("🔊 Saint connection detected (sound)", 3)
-                            onSaintEscapeDone()
-                            if conn then conn:Disconnect() end
-                        end
-                    end)
-                end
-            end
-            CorpseState.SoundConn = char.DescendantAdded:Connect(function(desc)
-                if not CorpseState.Active or CorpseState.EscapeDone then return end
-                if desc:IsA("Sound") then
-                    CorpseState.BaseSounds[desc] = true
-                    if desc.Playing then
-                        Notify("🔊 Saint connection detected (new sound)", 3)
-                        onSaintEscapeDone()
-                        return
-                    end
-                    local conn = nil
-                    conn = desc:GetPropertyChangedSignal("Playing"):Connect(function()
-                        if not CorpseState.Active or CorpseState.EscapeDone then
-                            if conn then conn:Disconnect() end
-                            return
-                        end
-                        if desc.Playing then
-                            Notify("🔊 Saint connection detected (new sound)", 3)
-                            onSaintEscapeDone()
-                            if conn then conn:Disconnect() end
-                        end
-                    end)
-                end
-            end)
-        end
-
-        local function startStandCheck()
-            CorpseState.StandCheckThread = task.spawn(function()
-                while CorpseState.Active and not CorpseState.EscapeDone do
-                    local current = getCurrentInventory()
-                    for itemName, _ in pairs(current) do
-                        if not CorpseState.BaseInventory[itemName] then
-                            if itemName:find("Stand") or itemName:find("Saint") then
-                                Notify("📦 Saint connection detected (Stand item)", 3)
-                                onSaintEscapeDone()
-                                return
-                            end
-                        end
-                    end
-                    task.wait(0.5)
-                end
-            end)
-        end
-
-        local function onPromptDisappeared()
-            if not CorpseState.Active or CorpseState.EscapeDone then return end
-            Notify("🛡️ Saint picked up! Escape sequence...", 3)
-            CorpseState.BaseInventory = getCurrentInventory()
-            enableCorpseNoClip()
-            startUndergroundEscape()
-            listenForConnectionSound()
-            startStandCheck()
-            task.delay(20, function()
-                if CorpseState.Active and not CorpseState.EscapeDone then
-                    Notify("⏱️ Timeout — stopping Auto Corpse", 3)
-                    onSaintEscapeDone()
-                end
-            end)
-        end
-
         local function holdPrompt(p, targetPart)
-            if not p then return false end
+            if not p then return end
             local char = player.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if not hrp then return false end
+            if not hrp then return end
+
             for _ = 1, 3 do
+                -- Face the prompt
                 if targetPart and targetPart.Parent then
                     local promptPos = targetPart.Position
                     local lookCFrame = CFrame.lookAt(hrp.Position, Vector3.new(promptPos.X, hrp.Position.Y, promptPos.Z))
                     hrp.CFrame = lookCFrame
                 end
+
                 pcall(function() p:InputHoldBegin() end) task.wait(6)
                 pcall(function() p:InputHoldEnd() end) task.wait(0.5)
-                if not p.Parent then
-                    onPromptDisappeared()
-                    return true
-                end
+                if not p.Parent then return true end
             end
-            return false
         end
-
-        -- Main execution
         local ch = wfc()
         local rt = ch:WaitForChild("HumanoidRootPart")
         equipRandom() task.wait(2)
@@ -1669,54 +1759,38 @@ local FarmFuncs = (function()
         if nb then
             tapWA() task.wait(0.5)
             rt.CFrame = nb.CFrame + Vector3.new(0, 3, 0) task.wait(0.6)
-            local ok = holdPrompt(nb:FindFirstChildOfClass("ProximityPrompt") or nb.Parent:FindFirstChildOfClass("ProximityPrompt"), nb)
-            if not ok then
-                Notify("⚠️ Immediate pickup failed, starting retry loop", 3)
-            else
-                return
-            end
+            holdPrompt(nb:FindFirstChildOfClass("ProximityPrompt") or nb.Parent:FindFirstChildOfClass("ProximityPrompt"), nb)
         else
             rt.CFrame = SAFE task.wait(1.5)
-        end
-
-        -- Heartbeat retry loop
-        Features.Corpse.C = RunService.Heartbeat:Connect(function()
-            if processing or not CorpseState.Active or CorpseState.EscapeDone then return end
-            local s = findSaint()
-            if s then
-                processing = true
-                local cc = wfc()
-                local cr = cc:WaitForChild("HumanoidRootPart")
-                cr.CFrame = s.CFrame + Vector3.new(0, 4, 0)
-                cr.Velocity = Vector3.new(0, 0, 0) task.wait(1.2)
-                local prompt = s:FindFirstChildOfClass("ProximityPrompt") or s.Parent:FindFirstChildOfClass("ProximityPrompt")
-                if prompt then
-                    local ok = holdPrompt(prompt, s)
-                    if not ok then
-                        processing = false
-                    end
-                else
-                    onPromptDisappeared()
+            Features.Corpse.C = RunService.Heartbeat:Connect(function()
+                if processing then return end
+                local s = findSaint()
+                if s then
+                    processing = true
+                    local cc = wfc()
+                    local cr = cc:WaitForChild("HumanoidRootPart")
+                    cr.CFrame = s.CFrame + Vector3.new(0, 4, 0)
+                    cr.Velocity = Vector3.new(0, 0, 0) task.wait(1.2)
+                    rejoin()
                 end
+            end)
+        end
+        task.spawn(function()
+            repeat task.wait() until game:IsLoaded() task.wait(1.5)
+            local nc = wfc()
+            local nr = nc:WaitForChild("HumanoidRootPart") task.wait(1)
+            local ns = nearSaint()
+            if ns then
+                tapWA() task.wait(0.5)
+                nr.CFrame = ns.CFrame + Vector3.new(0, 3, 0) task.wait(0.6)
+                holdPrompt(ns:FindFirstChildOfClass("ProximityPrompt") or ns.Parent:FindFirstChildOfClass("ProximityPrompt"), ns)
             end
         end)
-
-        -- Cleanup hook for StopCorpse
-        Features.Corpse.Cleanup = function()
-            CorpseState.Active = false
-            CorpseState.EscapeDone = true
-            disableCorpseNoClip()
-            if CorpseState.SoundConn then CorpseState.SoundConn:Disconnect() CorpseState.SoundConn = nil end
-        end
     end
 
     function farm.StopCorpse()
         Notify("⚫ Auto Corpse disabled")
         if Features.Corpse.C then Features.Corpse.C:Disconnect() Features.Corpse.C = nil end
-        if Features.Corpse.Cleanup then
-            Features.Corpse.Cleanup()
-            Features.Corpse.Cleanup = nil
-        end
     end
 
     -- ==========================================
@@ -1782,17 +1856,8 @@ local FarmFuncs = (function()
                     local m = d:FindFirstChild("MainFrame") if not m then return false end
                     local cl = m:FindFirstChild("ChoiceList") if not cl then return false end
                     local b = cl:FindFirstChild("Choice_"..n) if not b then return false end
-                    pcall(function() if b:IsA("GuiButton") then b.MouseButton1Click:Fire() end end)
-                    pcall(function() for _, c in ipairs(getconnections(b.MouseButton1Click)) do c:Fire() end end)
+                    -- Same method as LumberAxe purchase (Choice_1 click)
                     pcall(function() firesignal(b.MouseButton1Click) end)
-                    pcall(function()
-                        if b.AbsolutePosition and b.AbsoluteSize then
-                            local x = b.AbsolutePosition.X + b.AbsoluteSize.X / 2
-                            local y = b.AbsolutePosition.Y + b.AbsoluteSize.Y / 2
-                            VIM:SendMouseButtonEvent(x, y, 0, true, game, 0) task.wait(0.03)
-                            VIM:SendMouseButtonEvent(x, y, 0, false, game, 0)
-                        end
-                    end)
                     return true
                 end
                 local function waitDialog(t)
@@ -2120,6 +2185,130 @@ local ESPFuncs = (function()
     end
 
     return esp
+end)()
+
+-- ==========================================
+-- CHAMS & SAINT ESP (IIFE)
+-- ==========================================
+local ChamFuncs = (function()
+    local cf = {}
+    local Highlights = {}
+    local ChamConn = nil
+    local SaintEspConn = nil
+    local SaintHighlights = {}
+
+    local function getChamsColor()
+        local r = tonumber(UI.ChamsRBox.Text) or 255
+        local g = tonumber(UI.ChamsGBox.Text) or 0
+        local b = tonumber(UI.ChamsBBox.Text) or 0
+        return Color3.fromRGB(math.clamp(r, 0, 255), math.clamp(g, 0, 255), math.clamp(b, 0, 255))
+    end
+
+    local function createHighlight(model)
+        if not model or Highlights[model] then return end
+        local hl = Instance.new("Highlight")
+        hl.Name = "NezurChams"
+        hl.FillColor = getChamsColor()
+        hl.OutlineColor = Color3.new(1, 1, 1)
+        hl.FillTransparency = 0.5
+        hl.OutlineTransparency = 0
+        hl.Adornee = model
+        hl.Parent = model
+        Highlights[model] = hl
+    end
+
+    local function removeHighlight(model)
+        local hl = Highlights[model]
+        if hl then hl:Destroy() Highlights[model] = nil end
+    end
+
+    function cf.StartChams()
+        Notify("👁️ Player Chams active")
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= player and p.Character then
+                createHighlight(p.Character)
+            end
+        end
+        ChamConn = RunService.Heartbeat:Connect(function()
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= player and p.Character then
+                    if not Highlights[p.Character] then
+                        createHighlight(p.Character)
+                    else
+                        Highlights[p.Character].FillColor = getChamsColor()
+                    end
+                end
+            end
+            for model, hl in pairs(Highlights) do
+                if not model.Parent then
+                    hl:Destroy()
+                    Highlights[model] = nil
+                end
+            end
+        end)
+        Features.Chams.PlayerAdded = Players.PlayerAdded:Connect(function(p)
+            p.CharacterAdded:Connect(function(char)
+                if Features.Chams.E then
+                    createHighlight(char)
+                end
+            end)
+        end)
+    end
+
+    function cf.StopChams()
+        Notify("⚫ Player Chams disabled")
+        if ChamConn then ChamConn:Disconnect() ChamConn = nil end
+        if Features.Chams.PlayerAdded then Features.Chams.PlayerAdded:Disconnect() Features.Chams.PlayerAdded = nil end
+        for _, hl in pairs(Highlights) do hl:Destroy() end
+        Highlights = {}
+    end
+
+    function cf.StartSaintESP()
+        Notify("🔮 Saint ESP active")
+        SaintEspConn = RunService.Heartbeat:Connect(function()
+            for _, hl in pairs(SaintHighlights) do
+                if hl and hl.Parent then hl:Destroy() end
+            end
+            SaintHighlights = {}
+
+            if not Features.SaintESP.E then return end
+
+            for _, obj in ipairs(Workspace:GetChildren()) do
+                if table.find(saintsPartNames, obj.Name) and obj:IsA("BasePart") then
+                    local isReal = false
+                    for _, coord in ipairs(SAINT_COORDS) do
+                        if (obj.Position - coord).Magnitude <= 60 then
+                            isReal = true
+                            break
+                        end
+                    end
+                    if isReal then
+                        local hl = Instance.new("Highlight")
+                        hl.Name = "NezurSaintESP"
+                        hl.FillColor = Color3.fromRGB(255, 215, 0)
+                        hl.OutlineColor = Color3.fromRGB(255, 255, 0)
+                        hl.FillTransparency = 0.3
+                        hl.OutlineTransparency = 0
+                        hl.Adornee = obj
+                        hl.Parent = obj
+                        table.insert(SaintHighlights, hl)
+                    end
+                end
+            end
+            task.wait(2)
+        end)
+    end
+
+    function cf.StopSaintESP()
+        Notify("⚫ Saint ESP disabled")
+        if SaintEspConn then SaintEspConn:Disconnect() SaintEspConn = nil end
+        for _, hl in pairs(SaintHighlights) do
+            if hl and hl.Parent then hl:Destroy() end
+        end
+        SaintHighlights = {}
+    end
+
+    return cf
 end)()
 
 -- ==========================================
@@ -2707,6 +2896,275 @@ local VisualFuncs = (function()
 end)()
 
 -- ==========================================
+-- POSITION TRACKER & CUSTOM MOOLA (IIFE)
+-- ==========================================
+local QoLExtras = (function()
+    local qe = {}
+    local posConn = nil
+    local moolaConn = nil
+    local originalMoolaText = nil
+    local currentPos = nil
+
+    function qe.StartPosTracker()
+        posConn = RunService.Heartbeat:Connect(function()
+            local char = player.Character
+            if not char then
+                currentPos = nil
+                if UI.PosTrackerLbl then
+                    UI.PosTrackerLbl.Text = "X: --  Y: --  Z: --"
+                end
+                return
+            end
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if not hrp then
+                currentPos = nil
+                if UI.PosTrackerLbl then
+                    UI.PosTrackerLbl.Text = "X: --  Y: --  Z: --"
+                end
+                return
+            end
+            local pos = hrp.Position
+            currentPos = pos
+            if UI.PosTrackerLbl then
+                UI.PosTrackerLbl.Text = string.format("X: %.2f  Y: %.2f  Z: %.2f", pos.X, pos.Y, pos.Z)
+            end
+        end)
+    end
+
+    function qe.StopPosTracker()
+        if posConn then
+            posConn:Disconnect()
+            posConn = nil
+        end
+        currentPos = nil
+        if UI.PosTrackerLbl then
+            UI.PosTrackerLbl.Text = "X: --  Y: --  Z: --"
+        end
+    end
+
+    function qe.CopyCoords()
+        if not currentPos then
+            Notify("❌ No character!", 2)
+            return
+        end
+        -- Raw coordinates only, no wrapper
+        local text = string.format("%.2f, %.2f, %.2f", currentPos.X, currentPos.Y, currentPos.Z)
+        local copied = false
+
+        -- Try setclipboard (Potassium/Volt)
+        if type(setclipboard) == "function" then
+            local s, e = pcall(setclipboard, text)
+            if s then copied = true end
+        end
+
+        -- Fallback to toclipboard
+        if not copied and type(toclipboard) == "function" then
+            local s, e = pcall(toclipboard, text)
+            if s then copied = true end
+        end
+
+        -- Fallback: use VIM to select all + copy (Ctrl+C)
+        if not copied then
+            pcall(function()
+                -- Focus the label and select text via VIM
+                VIM:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game)
+                task.wait(0.05)
+                VIM:SendKeyEvent(true, Enum.KeyCode.C, false, game)
+                task.wait(0.05)
+                VIM:SendKeyEvent(false, Enum.KeyCode.C, false, game)
+                task.wait(0.05)
+                VIM:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game)
+            end)
+        end
+
+        if copied then
+            Notify("✅ Coords copied", 2)
+            if UI.PosTrackerLbl then
+                UI.PosTrackerLbl.Text = "✅ Copied!"
+                task.delay(1.5, function()
+                    if currentPos and UI.PosTrackerLbl then
+                        UI.PosTrackerLbl.Text = string.format("X: %.2f  Y: %.2f  Z: %.2f", currentPos.X, currentPos.Y, currentPos.Z)
+                    end
+                end)
+            end
+        else
+            Notify("❌ Copy failed - check executor API", 3)
+        end
+    end
+
+    -- ==========================================
+    -- MOOLA SPOOFER V2 LOGIC
+    -- ==========================================
+    local moolaTargetElement = nil
+    local moolaTargetType = nil
+    local moolaHeartbeatConn = nil
+    local moolaPropertyConn = nil
+    local moolaChangedConn = nil
+    local moolaActive = false
+    local moolaCustomText = "discord.gg/nexonix"
+
+    local function findMoolaElementV2()
+        local moolaGui = playerGui:FindFirstChild("MoolaCount")
+        if not moolaGui then
+            return nil, nil, "MoolaCount not found"
+        end
+
+        local function findTextElements(container, depth, results)
+            if depth > 5 then return end
+            for _, child in ipairs(container:GetChildren()) do
+                if child:IsA("TextLabel") or child:IsA("TextButton") then
+                    table.insert(results, {element = child, type = child.ClassName})
+                elseif child:IsA("TextBox") then
+                    table.insert(results, {element = child, type = "TextBox"})
+                end
+                findTextElements(child, depth + 1, results)
+            end
+        end
+
+        local found = {}
+        findTextElements(moolaGui, 0, found)
+
+        if #found == 0 then
+            return nil, nil, "No text elements inside MoolaCount"
+        end
+
+        -- Priority: TextLabel > TextBox > TextButton
+        for _, item in ipairs(found) do
+            if item.type == "TextLabel" then
+                return item.element, item.type, "Found TextLabel: " .. item.element.Name
+            end
+        end
+        for _, item in ipairs(found) do
+            if item.type == "TextBox" then
+                return item.element, item.type, "Found TextBox: " .. item.element.Name
+            end
+        end
+        return found[1].element, found[1].type, "Found " .. found[1].type .. ": " .. found[1].element.Name
+    end
+
+    local function applyMoolaSpoofV2()
+        if not moolaTargetElement or not moolaActive then return end
+        local text = moolaCustomText
+        local success = false
+
+        -- Method 1: Direct Text assignment
+        pcall(function()
+            if moolaTargetElement.Text ~= text then
+                moolaTargetElement.Text = text
+                success = true
+            end
+        end)
+
+        -- Method 2: For TextBox -- also spoof PlaceholderText
+        if moolaTargetType == "TextBox" then
+            pcall(function()
+                if moolaTargetElement.PlaceholderText ~= text then
+                    moolaTargetElement.PlaceholderText = text
+                end
+            end)
+        end
+
+        -- Method 3: RichText ContentText is read-only, force overwrite Text
+        pcall(function()
+            if moolaTargetElement.RichText and moolaTargetElement.ContentText ~= text then
+                moolaTargetElement.Text = text
+            end
+        end)
+
+        return success
+    end
+
+    function qe.StartMoolaSpoof(text)
+        if moolaActive then return end
+        moolaCustomText = text
+        if not moolaCustomText or moolaCustomText == "" then
+            moolaCustomText = "discord.gg/nexonix"
+        end
+
+        local element, elType, msg = findMoolaElementV2()
+        if not element then
+            Notify("MoolaCount not found", 2)
+            
+            return
+        end
+
+        moolaTargetElement = element
+        moolaTargetType = elType
+        moolaActive = true
+
+        -- Apply immediately
+        applyMoolaSpoofV2()
+
+        -- Method 1: PropertyChangedSignal (catches most changes)
+        moolaPropertyConn = element:GetPropertyChangedSignal("Text"):Connect(function()
+            if moolaActive and moolaTargetElement then
+                task.defer(function()
+                    if moolaActive then applyMoolaSpoofV2() end
+                end)
+            end
+        end)
+
+        -- Method 2: Changed event (backup)
+        moolaChangedConn = element.Changed:Connect(function(prop)
+            if prop == "Text" and moolaActive and moolaTargetElement then
+                task.defer(function()
+                    if moolaActive then applyMoolaSpoofV2() end
+                end)
+            end
+        end)
+
+        -- Method 3: Aggressive Heartbeat (frame-by-frame backup)
+        moolaHeartbeatConn = RunService.Heartbeat:Connect(function()
+            if moolaActive and moolaTargetElement and moolaTargetElement.Text ~= moolaCustomText then
+                applyMoolaSpoofV2()
+            end
+        end)
+
+        Notify("Moola spoof active", 2)
+    end
+
+    function qe.StopMoolaSpoof()
+        moolaActive = false
+        if moolaHeartbeatConn then moolaHeartbeatConn:Disconnect() moolaHeartbeatConn = nil end
+        if moolaPropertyConn then moolaPropertyConn:Disconnect() moolaPropertyConn = nil end
+        if moolaChangedConn then moolaChangedConn:Disconnect() moolaChangedConn = nil end
+        moolaTargetElement = nil
+        moolaTargetType = nil
+        Notify("Moola spoof stopped", 2)
+    end
+    -- Legacy aliases for compatibility
+    function qe.ApplyCustomMoola(text)
+        qe.StartMoolaSpoof(text)
+    end
+    function qe.ResetMoola()
+        qe.StopMoolaSpoof()
+    end
+
+    -- Global exports for button access
+    _G.QoLExtras = qe
+    _G.NezurMoolaStart = qe.StartMoolaSpoof
+    _G.NezurMoolaStop = qe.StopMoolaSpoof
+
+    -- Connect Moola buttons inside IIFE to ensure access
+    task.delay(1, function()
+        if UI.MoolaApplyBtn then
+            UI.MoolaApplyBtn.MouseButton1Click:Connect(function()
+                local text = UI.MoolaSpoofBox.Text
+                if not text or text == "" then text = "discord.gg/nexonix" end
+                qe.StartMoolaSpoof(text)
+            end)
+        end
+        if UI.MoolaCancelBtn then
+            UI.MoolaCancelBtn.MouseButton1Click:Connect(function()
+                qe.StopMoolaSpoof()
+            end)
+        end
+    end)
+
+    return qe
+end)()
+
+-- ==========================================
 -- SERVER HOP (IIFE)
 -- ==========================================
 ServerHop = (function()
@@ -2716,8 +3174,7 @@ repeat task.wait() until game:IsLoaded()
 task.wait(1.5)
 local url = "%s" .. "?nocache=" .. tostring(tick())
 local ok, src = pcall(function() return game:HttpGet(url) end)
-if ok and src and #src > 100 then loadstring(src)()
-else warn("[Nezur] AutoExec failed") end
+if ok and src and #src > 100 then loadstring(src)() else end
 ]]
         local loader = string.format(loaderTemplate, SCRIPT_URL)
         if type(queue_on_teleport) == "function" then pcall(queue_on_teleport, loader)
@@ -2733,12 +3190,12 @@ else warn("[Nezur] AutoExec failed") end
         local startJobId = game.JobId
         SetupAutoExec()
 
-        task.delay(7, function()
+        task.delay(10, function()
             if not ServerHopRunning then return end
             if game.JobId == startJobId then
                 Notify("🔄 Teleport failed, retrying...", 3)
                 ServerHopRunning = false
-                task.wait(1)
+                task.wait(1.5)
                 ServerHop()
             end
         end)
@@ -2763,13 +3220,15 @@ else warn("[Nezur] AutoExec failed") end
 
                 local orders = {"Desc", "Asc"}
                 local found = false
+                local baseDelay = 0.3
+                local failCount = 0
 
                 for _, order in ipairs(orders) do
                     if found then break end
                     local fa = ""
                     local emptyCount = 0
 
-                    for attempt = 1, 100 do
+                    for attempt = 1, 120 do
                         if found then break end
 
                         local url = 'https://games.roblox.com/v1/games/'..PID..'/servers/Public?sortOrder='..order..'&limit=100'..'&_nc='..tostring(tick())
@@ -2781,12 +3240,12 @@ else warn("[Nezur] AutoExec failed") end
                         local httpOk, httpErr = pcall(function() response = game:HttpGet(url) end)
 
                         if not httpOk then
-                            Notify("HTTP Error: " .. tostring(httpErr):sub(1, 40), 3)
-                            task.wait(0.5)
+                            failCount = failCount + 1
+                            local backoff = math.min(failCount * 0.5, 3)
+                            task.wait(backoff)
                         elseif not response or response == "" then
                             emptyCount = emptyCount + 1
                             if emptyCount >= 3 then
-                                Notify("API empty, retrying...", 3)
                                 task.wait(2)
                                 emptyCount = 0
                             else
@@ -2794,13 +3253,10 @@ else warn("[Nezur] AutoExec failed") end
                             end
                         else
                             local decodeOk, S = pcall(function() return HttpService:JSONDecode(response) end)
-                            if not decodeOk then
-                                Notify("JSON Error", 2)
-                                task.wait(0.5)
-                            elseif not S or not S.data then
-                                Notify("No server data", 2)
+                            if not decodeOk or not S or not S.data then
                                 task.wait(0.5)
                             else
+                                failCount = 0
                                 if S.nextPageCursor and S.nextPageCursor ~= "null" and S.nextPageCursor ~= "" then
                                     fa = tostring(S.nextPageCursor)
                                 else
@@ -2823,7 +3279,7 @@ else warn("[Nezur] AutoExec failed") end
                                     end
                                 end
                                 if fa == "" then break end
-                                task.wait(0.3)
+                                task.wait(baseDelay)
                             end
                         end
                     end
@@ -2832,7 +3288,7 @@ else warn("[Nezur] AutoExec failed") end
             end)
             if not ok then
                 Notify("Hop Error: " .. tostring(err):sub(1, 50), 5)
-                warn("ServerHop Error:", err)
+                
             end
             ServerHopRunning = false
         end)
@@ -2893,30 +3349,20 @@ local ConfigFuncs = (function()
         c.Invisible = Features.Invisible.E
         c.Spectator = Features.Spectator.E
         c.FullBright = Features.FullBright.E
-        return c
+        c.Fish = Features.Fish.E
+c.Chams = Features.Chams.E
+c.ChamsR = tonumber(UI.ChamsRBox.Text) or 255
+c.ChamsG = tonumber(UI.ChamsGBox.Text) or 0
+c.ChamsB = tonumber(UI.ChamsBBox.Text) or 0
+c.SaintESP = Features.SaintESP.E
+c.PosTracker = Features.PosTracker.E
+c.CustomMoola = UI.MoolaSpoofBox.Text or ""
+return c
     end
 
     function cfg.RefreshConfigListUI()
-        for _, child in ipairs(UI.ConfigListFrame:GetChildren()) do
-            if child:IsA("TextButton") then child:Destroy() end
-        end
         local configs = GetConfigList()
-        for _, name in ipairs(configs) do
-            local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, -4, 0, 24)
-            btn.BackgroundColor3 = Color3.fromRGB(42, 42, 53)
-            btn.Text = name
-            btn.TextColor3 = Color3.fromRGB(192, 192, 192)
-            btn.TextSize = 11
-            btn.Font = Enum.Font.Gotham
-            btn.Parent = UI.ConfigListFrame
-            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
-            btn.MouseButton1Click:Connect(function()
-                UI.ConfigNameBox.Text = name
-                CurrentConfigName = name
-            end)
-        end
-        UI.ConfigListFrame.CanvasSize = UDim2.new(0, 0, 0, UI.listLayout.AbsoluteContentSize.Y + 4)
+        UI.ConfigDropdown.Rebuild(configs)
     end
 
     function cfg.SaveCurrentConfig()
@@ -2987,6 +3433,13 @@ local ConfigFuncs = (function()
             if ok2 and kc2 then TreeKeybind=kc2 UI.TreeKbBtn.Text=data.TreeKeybind end
         end
         if data.TreeType then
+        if data.ChamsR then UI.ChamsRBox.Text = tostring(data.ChamsR) end
+        if data.ChamsG then UI.ChamsGBox.Text = tostring(data.ChamsG) end
+        if data.ChamsB then UI.ChamsBBox.Text = tostring(data.ChamsB) end
+        if data.CustomMoola and data.CustomMoola ~= "" then 
+            UI.MoolaSpoofBox.Text = data.CustomMoola
+            QoLExtras.StartMoolaSpoof(data.CustomMoola)
+        end
             UI.TreeTypeBtn.Text = data.TreeType
             _G.NezurTreeSelection = data.TreeType
         end
@@ -3012,6 +3465,9 @@ local ConfigFuncs = (function()
                 if featName == "Invisible" then AnimToggle(UI.InvisT, UI.InvisC, UI.InvisS, true) end
                 if featName == "Spectator" then AnimToggle(UI.SpectatorT, UI.SpectatorC, UI.SpectatorS, true) end
                 if featName == "FullBright" then AnimToggle(UI.FullBrightT, UI.FullBrightC, UI.FullBrightS, true) end
+                if featName == "Fish" then AnimToggle(UI.FishT, UI.FishC, UI.FishS, true) end
+                if featName == "Chams" then AnimToggle(UI.ChamsT, UI.ChamsC, UI.ChamsS, true) end
+                if featName == "SaintESP" then AnimToggle(UI.SaintEspT, UI.SaintEspC, UI.SaintEspS, true) end
 
                 if not Features[featName].E then
                     Features[featName].E = true
@@ -3086,6 +3542,20 @@ local TreeFuncs = (function()
     local lastChop = 0
     local vim = game:GetService("VirtualInputManager")
 
+    local userClicking = false
+    UserInputService.InputBegan:Connect(function(input, gpe)
+        if gpe then return end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            userClicking = true
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input, gpe)
+        if gpe then return end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            userClicking = false
+        end
+    end)
+
     local function equipaxe()
         local axe = player.Backpack:FindFirstChild("LumberAxe")
         if axe then
@@ -3140,7 +3610,7 @@ local TreeFuncs = (function()
                 for _, child in pairs(mainFrame:GetDescendants()) do
                     if child:IsA("TextLabel") and child.Text:find("Storage is full") then
                         bankFull = true
-                        print("[AutoTree] Bank is full. Skipping seed deposit.")
+                        
                         local closeBtn = mainFrame:FindFirstChild("CloseButton") or mainFrame:FindFirstChild("X")
                         if closeBtn then
                             pcall(function() firesignal(closeBtn.MouseButton1Click) end)
@@ -3163,7 +3633,7 @@ local TreeFuncs = (function()
             for _, child in pairs(storage:GetDescendants()) do
                 if child:IsA("TextLabel") and child.Text:find("full") then
                     bankFull = true
-                    print("[AutoTree] Bank is full. Skipping seed deposit.")
+                    
                     return
                 end
             end
@@ -3214,6 +3684,7 @@ local TreeFuncs = (function()
 
     local function chop()
         if autoclick then return end
+        if userClicking then return end
         local now = tick()
         if now - lastChop < CLICK_COOLDOWN then return end
         local axe = player.Character and (player.Character:FindFirstChild("LumberAxe") or player.Backpack:FindFirstChild("LumberAxe"))
@@ -3338,7 +3809,7 @@ local TreeFuncs = (function()
             if _G.NezurTreeSelection and _G.NezurTreeSelection ~= selection then
                 selection = _G.NezurTreeSelection
                 tree = nil
-                print("[AutoTree] Selection updated via GUI to:", selection)
+                
                 _G.NezurTreeSelection = nil
             end
             local char = player.Character
@@ -3479,7 +3950,7 @@ local TreeFuncs = (function()
         selection = sel
         tree = nil
         if sel == "SwampTrees" then swamp = true else swamp = false end
-        print("[AutoTree] Selection changed to:", sel, "swamp =", swamp)
+        
     end
 
     function tf.GetSelection() return selection end
@@ -3494,9 +3965,9 @@ local TreeFuncs = (function()
             return
         end
         task.spawn(function()
-            print("[AutoTree] Death detected. Farm was active. Starting auto-recovery...")
+            
             task.wait(2)
-            print("[AutoTree] Getting axe from ChuckB...")
+            
             local chuck = workspace.NPC:FindFirstChild("ChuckB")
             if chuck then
                 local cd = chuck:FindFirstChildWhichIsA("ClickDetector", true)
@@ -3518,9 +3989,9 @@ local TreeFuncs = (function()
                     end
                 end
             end
-            print("[AutoTree] Waiting 5 seconds before resuming farm...")
+            
             task.wait(5)
-            print("[AutoTree] Auto-resuming farm...")
+            
             active = true
             wasActiveBeforeDeath = true
             autoclick = false
@@ -3531,6 +4002,307 @@ local TreeFuncs = (function()
     end)
 
     return tf
+end)()
+
+-- ==========================================
+-- AUTO FISH (IIFE)
+-- ==========================================
+local FishFuncs = (function()
+    local ff = {}
+    local active = false
+    local fishThread = nil
+    local spotTimer = 0
+    local currentSpotIdx = 1
+    local FISH_SPOTS = {
+        Vector3.new(-5000, 45, -3000),
+        Vector3.new(-5200, 45, -3100),
+        Vector3.new(-4800, 45, -2900),
+        Vector3.new(-5100, 45, -2800),
+        Vector3.new(-4900, 45, -3200),
+    }
+    local SPOT_SWITCH_INTERVAL = 480
+    local FISH_TYPES = {"Cod", "Bass", "Snapper", "Rusty Mares Leg"}
+
+    local function getRod()
+        local bp = player:FindFirstChild("Backpack")
+        if bp then
+            local rod = bp:FindFirstChild("FishingRod")
+            if rod then return rod end
+        end
+        local char = player.Character
+        if char then
+            local rod = char:FindFirstChild("FishingRod")
+            if rod then return rod end
+        end
+        return nil
+    end
+
+    local function buyRod()
+        local daniel = Workspace:FindFirstChild("NPC") and Workspace.NPC:FindFirstChild("Daniel")
+        if not daniel then return false end
+        local char = player.Character
+        if not char then return false end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return false end
+        hrp.CFrame = CFrame.new(daniel:GetPivot().Position + Vector3.new(0, 5, 0))
+        task.wait(0.5)
+        local cd = daniel:FindFirstChildOfClass("ClickDetector")
+        if cd then
+            fireclickdetector(cd)
+            task.wait(1)
+            local gui = playerGui:WaitForChild("DialogueGui", 3)
+            if gui then
+                local list = gui.MainFrame.ChoiceList
+                for i = 1, 3 do
+                    local btn = list:FindFirstChild("Choice_" .. i)
+                    if btn and (btn.Text:find("FishingRod") or btn.Text:find("Rod")) then
+                        pcall(function() firesignal(btn.MouseButton1Click) end)
+                        task.wait(0.5)
+                        return getRod() ~= nil
+                    end
+                end
+            end
+        end
+        return false
+    end
+
+    local function equipRod()
+        local rod = getRod()
+        if not rod then return false end
+        local char = player.Character
+        if not char then return false end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hum then return false end
+        if rod.Parent ~= char then
+            hum:EquipTool(rod)
+            task.wait(0.3)
+        end
+        return true
+    end
+
+    local function freezeHRP()
+        local char = player.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        hrp.Anchored = true
+    end
+
+    local function unfreezeHRP()
+        local char = player.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        hrp.Anchored = false
+    end
+
+    local function tpToSpot(idx)
+        local char = player.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        local spot = FISH_SPOTS[idx]
+        if not spot then return end
+        hrp.CFrame = CFrame.new(spot + Vector3.new(0, 5, 0))
+        hrp.Velocity = Vector3.new(0, 0, 0)
+        hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    end
+
+    local function castLine()
+        local VIM = game:GetService("VirtualInputManager")
+        VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+        task.wait(0.1)
+        VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+        task.wait(2)
+    end
+
+    local function waitForBite()
+        local start = tick()
+        while active do
+            local char = player.Character
+            if char then
+                local fishGui = playerGui:FindFirstChild("FishingGui") or playerGui:FindFirstChild("FishGui")
+                if fishGui then return true end
+                for _, sound in ipairs(char:GetDescendants()) do
+                    if sound:IsA("Sound") and sound.Playing and (sound.Name:find("Splash") or sound.Name:find("Bite")) then
+                        return true
+                    end
+                end
+            end
+            if tick() - start > 30 then return false end
+            task.wait(0.2)
+        end
+        return false
+    end
+
+    local function reelIn()
+        local VIM = game:GetService("VirtualInputManager")
+        VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+        task.wait(3)
+        VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+        task.wait(1)
+    end
+
+    local function handleQTE()
+        local qteGui = playerGui:FindFirstChild("QTEGui") or playerGui:FindFirstChild("QuickTimeEvent")
+        if not qteGui then
+            for _, gui in ipairs(playerGui:GetChildren()) do
+                if gui:IsA("ScreenGui") and (gui.Name:find("QTE") or gui.Name:find("Timing") or gui.Name:find("Fish")) then
+                    qteGui = gui
+                    break
+                end
+            end
+        end
+        if qteGui then
+            local start = tick()
+            while tick() - start < 5 do
+                for _, btn in ipairs(qteGui:GetDescendants()) do
+                    if btn:IsA("GuiButton") or btn:IsA("TextButton") then
+                        pcall(function() firesignal(btn.MouseButton1Click) end)
+                        pcall(function()
+                            if btn.AbsolutePosition and btn.AbsoluteSize then
+                                local x = btn.AbsolutePosition.X + btn.AbsoluteSize.X / 2
+                                local y = btn.AbsolutePosition.Y + btn.AbsoluteSize.Y / 2
+                                VIM:SendMouseButtonEvent(x, y, 0, true, game, 0)
+                                task.wait(0.05)
+                                VIM:SendMouseButtonEvent(x, y, 0, false, game, 0)
+                            end
+                        end)
+                    end
+                end
+                task.wait(0.1)
+            end
+        end
+    end
+
+    local function openChestIfAny()
+        local char = player.Character
+        if not char then return end
+        for _, item in ipairs(char:GetChildren()) do
+            if item:IsA("Tool") and item.Name:find("Chest") then
+                for _, desc in ipairs(item:GetDescendants()) do
+                    if desc:IsA("ProximityPrompt") then
+                        pcall(function() fireproximityprompt(desc) end)
+                    end
+                end
+                task.wait(0.5)
+            end
+        end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            for _, obj in ipairs(Workspace:GetChildren()) do
+                if obj.Name:find("Chest") and obj:IsA("Model") then
+                    local part = obj:FindFirstChildWhichIsA("BasePart")
+                    if part and (part.Position - hrp.Position).Magnitude < 10 then
+                        for _, desc in ipairs(obj:GetDescendants()) do
+                            if desc:IsA("ProximityPrompt") then
+                                pcall(function() fireproximityprompt(desc) end)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    local function sellFish()
+        local daniel = Workspace:FindFirstChild("NPC") and Workspace.NPC:FindFirstChild("Daniel")
+        if not daniel then return end
+        local char = player.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        hrp.CFrame = CFrame.new(daniel:GetPivot().Position + Vector3.new(0, 5, 0))
+        task.wait(0.5)
+        local cd = daniel:FindFirstChildOfClass("ClickDetector")
+        if cd then
+            fireclickdetector(cd)
+            task.wait(1)
+            local gui = playerGui:WaitForChild("DialogueGui", 3)
+            if gui then
+                local list = gui.MainFrame.ChoiceList
+                for i = 1, 5 do
+                    local btn = list:FindFirstChild("Choice_" .. i)
+                    if btn and (btn.Text:find("Sell") or btn.Text:find("sell")) then
+                        pcall(function() firesignal(btn.MouseButton1Click) end)
+                        task.wait(0.5)
+                        break
+                    end
+                end
+            end
+        end
+    end
+
+    function ff.StartFish()
+        if active then return end
+        active = true
+        spotTimer = 0
+        currentSpotIdx = 1
+        Notify("🎣 Auto Fish active")
+
+        fishThread = task.spawn(function()
+            while active do
+                local char = player.Character
+                if not char then
+                    player.CharacterAdded:Wait()
+                    task.wait(2)
+                    char = player.Character
+                end
+
+                if not getRod() then
+                    Notify("Buying FishingRod...", 2)
+                    if not buyRod() then
+                        Notify("Failed to buy rod", 3)
+                        task.wait(5)
+                        continue
+                    end
+                end
+
+                if not equipRod() then
+                    task.wait(1)
+                    continue
+                end
+
+                tpToSpot(currentSpotIdx)
+                task.wait(1)
+                freezeHRP()
+
+                local spotStart = tick()
+                while active and (tick() - spotStart) < SPOT_SWITCH_INTERVAL do
+                    castLine()
+                    if waitForBite() then
+                        reelIn()
+                        handleQTE()
+                        openChestIfAny()
+                        task.wait(1)
+                    else
+                        task.wait(2)
+                    end
+                end
+
+                unfreezeHRP()
+                currentSpotIdx = currentSpotIdx % #FISH_SPOTS + 1
+                spotTimer = 0
+                Notify("Switching fishing spot...", 2)
+                task.wait(2)
+            end
+
+            unfreezeHRP()
+            Notify("⚫ Auto Fish stopped", 3)
+        end)
+    end
+
+    function ff.StopFish()
+        active = false
+        if fishThread then
+            pcall(function() coroutine.close(fishThread) end)
+            fishThread = nil
+        end
+        unfreezeHRP()
+        Notify("⚫ Auto Fish disabled")
+    end
+
+    return ff
 end)()
 
 _G.NezurStarters = {
@@ -3548,7 +4320,11 @@ _G.NezurStarters = {
     AttachPlayer = QoLFuncs.startAttach,
     NoClip = NoClipFuncs.StartNoClip,
     Invisible = NoClipFuncs.StartInvisible,
-    FullBright = VisualFuncs.StartFullBright
+    FullBright = VisualFuncs.StartFullBright,
+    Fish = FishFuncs.StartFish,
+    Chams = ChamFuncs.StartChams,
+    SaintESP = ChamFuncs.StartSaintESP,
+    PosTracker = QoLExtras.StartPosTracker
 }
 _G.NezurStoppers = {
     Corpse = FarmFuncs.StopCorpse,
@@ -3565,7 +4341,11 @@ _G.NezurStoppers = {
     AttachPlayer = QoLFuncs.stopAttach,
     NoClip = NoClipFuncs.StopNoClip,
     Invisible = NoClipFuncs.StopInvisible,
-    FullBright = VisualFuncs.StopFullBright
+    FullBright = VisualFuncs.StopFullBright,
+    Fish = FishFuncs.StopFish,
+    Chams = ChamFuncs.StopChams,
+    SaintESP = ChamFuncs.StopSaintESP,
+    PosTracker = QoLExtras.StopPosTracker
 }
 
 -- ==========================================
@@ -3595,6 +4375,10 @@ ST(UI.NoClipT, UI.NoClipC, UI.NoClipS, "NoClip", NoClipFuncs.StartNoClip, NoClip
 ST(UI.InvisT, UI.InvisC, UI.InvisS, "Invisible", NoClipFuncs.StartInvisible, NoClipFuncs.StopInvisible)
 ST(UI.SpectatorT, UI.SpectatorC, UI.SpectatorS, "Spectator", SpectatorFuncs.StartSpectator, SpectatorFuncs.StopSpectator)
 ST(UI.FullBrightT, UI.FullBrightC, UI.FullBrightS, "FullBright", VisualFuncs.StartFullBright, VisualFuncs.StopFullBright)
+ST(UI.FishT, UI.FishC, UI.FishS, "Fish", FishFuncs.StartFish, FishFuncs.StopFish)
+ST(UI.ChamsT, UI.ChamsC, UI.ChamsS, "Chams", ChamFuncs.StartChams, ChamFuncs.StopChams)
+ST(UI.SaintEspT, UI.SaintEspC, UI.SaintEspS, "SaintESP", ChamFuncs.StartSaintESP, ChamFuncs.StopSaintESP)
+ST(UI.PosTrackerT, UI.PosTrackerC, UI.PosTrackerS, "PosTracker", QoLExtras.StartPosTracker, QoLExtras.StopPosTracker)
 
 -- ==========================================
 -- KEYBINDS
@@ -3727,7 +4511,7 @@ UserInputService.InputBegan:Connect(function(i, g)
             elseif at == "QoL" then ts = UDim2.new(0, 400, 0, 420)
             elseif at == "Misc" then ts = UDim2.new(0, 400, 0, 420)
             elseif at == "Server" then ts = UDim2.new(0, 400, 0, 460)
-            elseif at == "Settings" then ts = UDim2.new(0, 400, 0, 560) end
+            elseif at == "Settings" then ts = UDim2.new(0, 400, 0, 420) end
             UI.MainFrame.Size = ts
         end
     end
@@ -3784,7 +4568,7 @@ repeat task.wait() until game:IsLoaded()
 task.wait(1.5)
 local url = "%s" .. "?nocache=" .. tostring(tick())
 local ok, src = pcall(function() return game:HttpGet(url) end)
-if ok and src and #src > 100 then loadstring(src)() else warn("[Nezur] AutoExec failed") end
+if ok and src and #src > 100 then loadstring(src)() else end
 ]]
     local loader = string.format(loaderTemplate, SCRIPT_URL)
     if type(queue_on_teleport) == "function" then pcall(queue_on_teleport, loader)
@@ -4013,6 +4797,13 @@ task.delay(3, function()
                         if ok2 and kc2 then TreeKeybind=kc2 UI.TreeKbBtn.Text=data.TreeKeybind end
                     end
                     if data.TreeType then
+                    if data.ChamsR then UI.ChamsRBox.Text = tostring(data.ChamsR) end
+                    if data.ChamsG then UI.ChamsGBox.Text = tostring(data.ChamsG) end
+                    if data.ChamsB then UI.ChamsBBox.Text = tostring(data.ChamsB) end
+                    if data.CustomMoola and data.CustomMoola ~= "" then 
+                        UI.MoolaSpoofBox.Text = data.CustomMoola
+                        QoLExtras.StartMoolaSpoof(data.CustomMoola)
+                    end
                         UI.TreeTypeBtn.Text = data.TreeType
                         _G.NezurTreeSelection = data.TreeType
                     end
@@ -4038,6 +4829,9 @@ task.delay(3, function()
                             if featName == "Invisible" then AnimToggle(UI.InvisT, UI.InvisC, UI.InvisS, true) end
                             if featName == "Spectator" then AnimToggle(UI.SpectatorT, UI.SpectatorC, UI.SpectatorS, true) end
                             if featName == "FullBright" then AnimToggle(UI.FullBrightT, UI.FullBrightC, UI.FullBrightS, true) end
+                            if featName == "Fish" then AnimToggle(UI.FishT, UI.FishC, UI.FishS, true) end
+                            if featName == "Chams" then AnimToggle(UI.ChamsT, UI.ChamsC, UI.ChamsS, true) end
+                            if featName == "SaintESP" then AnimToggle(UI.SaintEspT, UI.SaintEspC, UI.SaintEspS, true) end
                             if not Features[featName].E then
                                 Features[featName].E = true
                                 local starterFunc = starters[featName]
@@ -4096,10 +4890,323 @@ task.spawn(function()
     end
 end)
 
+
+-- ==========================================
+-- Nezur KickDetector
+-- Triggers on ANY message containing "detected"
+-- No file logging, instant reaction
+-- Compatible: Potassium, Volt
+-- Game: Bridger: Western (Roblox)
+-- ==========================================
+
+repeat task.wait() until game:IsLoaded()
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local LogService = game:GetService("LogService")
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- ==========================================
+-- CONFIG
+-- ==========================================
+local CONFIG = {
+    AutoServerHop = true,
+    DelayBeforeHop = 0,
+    MaxHopRetries = 5,
+    HopRetryDelay = 0.5,
+    NotifyOnKick = true,
+    NotifyOnHop = true,
+    -- Universal trigger: ANY message with "detected"
+    UniversalPattern = "detected",
+    -- Additional specific patterns for faster matching
+    FastPatterns = {
+        "SERVER KICK MESSAGE",
+        "Error Code: 267",
+        "PLAYER DISCONNECTED",
+        "KICKED",
+        "DUMPING",
+        "Clearing environment",
+        "Destroy script",
+    },
+    ConsolePollRate = 0.02,  -- 20ms = maximum aggressive
+}
+
+-- ==========================================
+-- STATE
+-- ==========================================
+local State = {
+    isKicked = false,
+    kickReason = nil,
+    detectorActive = false,
+    connections = {},
+    hopInProgress = false,
+    lastConsoleIndex = 0,
+    guiCheckActive = false,
+}
+
+-- ==========================================
+-- UTILS
+-- ==========================================
+local function Notify(text, duration)
+    duration = duration or 3
+    pcall(function()
+        local StarterGui = game:GetService("StarterGui")
+        StarterGui:SetCore("SendNotification", {
+            Title = "Nezur KickDetector",
+            Text = text,
+            Duration = duration,
+        })
+    end)
+    
+end
+
+-- ==========================================
+-- EMERGENCY HOP (zero delay)
+-- ==========================================
+local function EmergencyHop()
+    if State.hopInProgress then return end
+    State.hopInProgress = true
+
+    local PID = game.PlaceId
+    local CJID = game.JobId
+
+    -- Setup auto-exec for rejoin
+    local SCRIPT_URL = "https://raw.githubusercontent.com/kresteq/bridgerAnticheatSUCKS/refs/heads/main/1337.lua"
+    local loaderTemplate = [[
+repeat task.wait() until game:IsLoaded()
+task.wait(1.5)
+local url = "%s" .. "?nocache=" .. tostring(tick())
+local ok, src = pcall(function() return game:HttpGet(url) end)
+if ok and src and #src > 100 then loadstring(src)() else warn("[Nezur] AutoExec failed") end
+]]
+    local loader = string.format(loaderTemplate, SCRIPT_URL)
+    if type(queue_on_teleport) == "function" then pcall(queue_on_teleport, loader)
+    elseif type(queueonteleport) == "function" then pcall(queueonteleport, loader) end
+
+    -- Try server list
+    local AIDs = {}
+    pcall(function()
+        local data = readfile("NotSameServers.json")
+        AIDs = HttpService:JSONDecode(data)
+    end)
+    if #AIDs == 0 then
+        table.insert(AIDs, os.date("!*t").hour)
+        pcall(function() writefile("NotSameServers.json", HttpService:JSONEncode(AIDs)) end)
+    end
+
+    -- Fast single request
+    local url = 'https://games.roblox.com/v1/games/'..PID..'/servers/Public?sortOrder=Desc&limit=100'..'&_nc='..tostring(tick())
+    local response
+    local httpOk = pcall(function() response = game:HttpGet(url) end)
+
+    if httpOk and response then
+        local decodeOk, S = pcall(function() return HttpService:JSONDecode(response) end)
+        if decodeOk and S and S.data then
+            for _, v in ipairs(S.data) do
+                local pl = tonumber(v.playing)
+                local mp = tonumber(v.maxPlayers)
+                local sid = tostring(v.id)
+                if pl and mp and sid and pl >= 1 and pl <= 25 and sid ~= CJID and pl < mp then
+                    if not table.find(AIDs, sid) then
+                        table.insert(AIDs, sid)
+                        pcall(function() writefile("NotSameServers.json", HttpService:JSONEncode(AIDs)) end)
+                        if CONFIG.NotifyOnHop then
+                            Notify("🚀 HOPPING!", 2)
+                        end
+                        pcall(function() TeleportService:TeleportToPlaceInstance(PID, sid, player) end)
+                        return true
+                    end
+                end
+            end
+        end
+    end
+
+    -- Fallback
+    pcall(function() TeleportService:Teleport(PID, player) end)
+    return false
+end
+
+-- ==========================================
+-- TRIGGER
+-- ==========================================
+local function TriggerHop(reason, method)
+    if State.isKicked then return end
+    State.isKicked = true
+    State.kickReason = reason
+
+    if CONFIG.NotifyOnKick then
+        Notify("⚠️ " .. tostring(reason):sub(1, 80), 5)
+    end
+
+    if CONFIG.AutoServerHop then
+        EmergencyHop()
+    end
+end
+
+-- ==========================================
+-- DETECTION METHODS
+-- ==========================================
+
+-- Method 1: AGGRESSIVE console scanning with universal "detected" trigger
+local function MonitorConsole()
+    State.lastConsoleIndex = 0
+    task.spawn(function()
+        while State.detectorActive do
+            local success, logs = pcall(function()
+                return LogService:GetLogHistory()
+            end)
+            if success and logs then
+                local newLogs = #logs
+                if newLogs > State.lastConsoleIndex then
+                    -- Check newest first (backwards)
+                    for i = newLogs, State.lastConsoleIndex + 1, -1 do
+                        local log = logs[i]
+                        if log and log.message then
+                            local msg = tostring(log.message)
+                            local msgLower = msg:lower()
+
+                            --: ANY message containing "detected"
+                            if msgLower:find(CONFIG.UniversalPattern, 1, true) then
+                                TriggerHop("Detected: " .. msg:sub(1, 100), "Universal:detected")
+                                return
+                            end
+
+                            -- Fast patterns for immediate known kicks
+                            for _, pattern in ipairs(CONFIG.FastPatterns) do
+                                if msg:find(pattern, 1, true) then
+                                    TriggerHop("Fast: " .. msg:sub(1, 80), "Fast:" .. pattern)
+                                    return
+                                end
+                            end
+                        end
+                    end
+                    State.lastConsoleIndex = newLogs
+                end
+            end
+            task.wait(CONFIG.ConsolePollRate)
+        end
+    end)
+end
+
+-- Method 2: GUI Detection (Disconnected screen)
+local function MonitorGui()
+    State.guiCheckActive = true
+    task.spawn(function()
+        while State.guiCheckActive do
+            for _, child in ipairs(playerGui:GetChildren()) do
+                if child:IsA("ScreenGui") then
+                    local name = child.Name:lower()
+                    if name:find("error") or name:find("disconnect") or name:find("leave") then
+                        for _, desc in ipairs(child:GetDescendants()) do
+                            if desc:IsA("TextLabel") or desc:IsA("TextButton") then
+                                local text = desc.Text:lower()
+                                if text:find("kicked") or text:find("disconnected") 
+                                   or text:find("moderation") or text:find("error") then
+                                    TriggerHop("GUI: " .. desc.Text:sub(1, 50), "GUI")
+                                    State.guiCheckActive = false
+                                    return
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            task.wait(0.1)
+        end
+    end)
+end
+
+-- Method 3: Player.Parent (removed from game)
+local function MonitorParent()
+    local conn = player:GetPropertyChangedSignal("Parent"):Connect(function()
+        if not State.detectorActive then return end
+        if player.Parent ~= Players then
+            TriggerHop("Player removed", "Parent")
+        end
+    end)
+    table.insert(State.connections, conn)
+end
+
+-- Method 4: CharacterRemoving
+local function MonitorCharacter()
+    local conn = player.CharacterRemoving:Connect(function()
+        if not State.detectorActive then return end
+        task.delay(1, function()
+            if not player.Character and player.Parent == Players and State.detectorActive and not State.isKicked then
+                TriggerHop("Character removed", "Character")
+            end
+        end)
+    end)
+    table.insert(State.connections, conn)
+end
+
+-- Method 5: Heartbeat freeze
+local function MonitorHeartbeat()
+    local lastTick = tick()
+    local conn = RunService.Heartbeat:Connect(function()
+        if not State.detectorActive then return end
+        if tick() - lastTick > 3 then
+            TriggerHop("Connection frozen", "Heartbeat")
+        end
+        lastTick = tick()
+    end)
+    table.insert(State.connections, conn)
+end
+
+-- ==========================================
+-- PUBLIC API
+-- ==========================================
+local KickDetector = {}
+
+function KickDetector.Start()
+    if State.detectorActive then return end
+
+    State.detectorActive = true
+    State.isKicked = false
+    State.kickReason = nil
+    State.hopInProgress = false
+    State.lastConsoleIndex = 0
+    State.guiCheckActive = false
+
+    pcall(MonitorConsole)
+    pcall(MonitorGui)
+    pcall(MonitorParent)
+    pcall(MonitorCharacter)
+    pcall(MonitorHeartbeat)
+
+    Notify("🛡️ KickDetector active", 2)
+end
+
+function KickDetector.Stop()
+    State.detectorActive = false
+    State.guiCheckActive = false
+    for _, conn in ipairs(State.connections) do
+        if conn then pcall(function() conn:Disconnect() end) end
+    end
+    State.connections = {}
+    Notify("🛑 KickDetector stopped", 2)
+end
+
+function KickDetector.IsKicked() return State.isKicked end
+function KickDetector.GetReason() return State.kickReason end
+
+function KickDetector.ForceHop()
+    State.isKicked = true
+    State.hopInProgress = false
+    EmergencyHop()
+end
+
 -- ==========================================
 -- INIT
 -- ==========================================
 ConfigFuncs.RefreshConfigListUI()
+
+-- KickDetector auto-start
+pcall(function() KickDetector.Start() end)
+
 
 pcall(function()
     task.spawn(function()
