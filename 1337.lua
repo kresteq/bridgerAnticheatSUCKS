@@ -1,4 +1,3 @@
--- rarity.bw v7
 repeat task.wait() until game:IsLoaded()
 
 if type(clearteleportqueue) == "function" then pcall(clearteleportqueue)
