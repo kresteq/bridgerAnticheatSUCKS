@@ -1,3 +1,4 @@
+-- rarity.bw v7
 repeat task.wait() until game:IsLoaded()
 
 if type(clearteleportqueue) == "function" then pcall(clearteleportqueue)
@@ -165,7 +166,7 @@ local Notify = (function()
         c.CornerRadius = UDim.new(0,6)
         local s = Instance.new("UIStroke", f)
         s.Color = Color3.fromRGB(100, 60, 140)
-        s.Thickness = 1
+        s.Thickness = 3
         s.Transparency = 1
         local l = Instance.new("TextLabel", f)
         l.Size = UDim2.new(1,-12,1,0)
@@ -177,7 +178,7 @@ local Notify = (function()
         l.Font = Enum.Font.GothamMedium
         local lStroke = Instance.new("UIStroke", l)
         lStroke.Color = Color3.fromRGB(255, 255, 255)
-        lStroke.Thickness = 2
+        lStroke.Thickness = 3
         lStroke.Transparency = 0.7
         l.TextXAlignment = Enum.TextXAlignment.Left
         l.TextTransparency = 1
@@ -195,10 +196,77 @@ local Notify = (function()
 end)()
 
 -- ==========================================
+-- THEME SYSTEM
+-- ==========================================
+local Themes = {
+    Rarity = {
+        Name = "Rarity",
+        Primary = Color3.fromRGB(45, 20, 70),
+        Secondary = Color3.fromRGB(60, 30, 95),
+        Accent = Color3.fromRGB(74, 23, 103),
+        Highlight = Color3.fromRGB(125, 209, 245),
+        Button = Color3.fromRGB(90, 55, 130),
+        ButtonHover = Color3.fromRGB(125, 209, 245),
+        ToggleOff = Color3.fromRGB(90, 55, 130),
+        ToggleOn = Color3.fromRGB(125, 209, 245),
+        ToggleCircleOff = Color3.fromRGB(100, 70, 130),
+        ToggleCircleOn = Color3.new(1, 1, 1),
+        Text = Color3.fromRGB(255, 255, 255),
+        RowBg = Color3.fromRGB(45, 20, 70),
+        RowBgTransparency = 0.6,
+        Separator = Color3.fromRGB(180, 160, 220),
+        Stroke = Color3.fromRGB(100, 60, 140),
+        DropdownBg = Color3.fromRGB(60, 30, 95),
+        DropdownBtn = Color3.fromRGB(75, 45, 110),
+        DropdownBtnHover = Color3.fromRGB(125, 209, 245),
+        InputBg = Color3.fromRGB(75, 45, 110),
+        SliderTrack = Color3.fromRGB(90, 55, 130),
+        SliderFill = Color3.fromRGB(125, 209, 245),
+        BgImage = "https://i.pinimg.com/736x/08/18/77/0818775090ee00b2d5d0e67c735249cc.jpg",
+        BgImageTransparency = 0,
+        TitleBarTransparency = 0.25,
+        TabsFrameTransparency = 0.25,
+        MainFrameTransparency = 1,
+    },
+    Fluttershy = {
+        Name = "Fluttershy",
+        Primary = Color3.fromRGB(90, 60, 40),
+        Secondary = Color3.fromRGB(120, 85, 55),
+        Accent = Color3.fromRGB(180, 140, 80),
+        Highlight = Color3.fromRGB(255, 220, 100),
+        Button = Color3.fromRGB(160, 120, 70),
+        ButtonHover = Color3.fromRGB(255, 200, 80),
+        ToggleOff = Color3.fromRGB(120, 90, 50),
+        ToggleOn = Color3.fromRGB(255, 200, 50),
+        ToggleCircleOff = Color3.fromRGB(140, 110, 60),
+        ToggleCircleOn = Color3.new(1, 1, 1),
+        Text = Color3.fromRGB(255, 255, 255),
+        RowBg = Color3.fromRGB(90, 60, 40),
+        RowBgTransparency = 0.6,
+        Separator = Color3.fromRGB(120, 200, 120),
+        Stroke = Color3.fromRGB(100, 180, 100),
+        DropdownBg = Color3.fromRGB(120, 85, 55),
+        DropdownBtn = Color3.fromRGB(140, 100, 60),
+        DropdownBtnHover = Color3.fromRGB(255, 200, 80),
+        InputBg = Color3.fromRGB(140, 100, 60),
+        SliderTrack = Color3.fromRGB(160, 120, 70),
+        SliderFill = Color3.fromRGB(255, 220, 100),
+        BgImage = "https://i.pinimg.com/736x/99/4e/43/994e43c38bcc8e92795b47ba087ec654.jpg",
+        BgImageTransparency = 0,
+        TitleBarTransparency = 0.25,
+        TabsFrameTransparency = 0.25,
+        MainFrameTransparency = 1,
+    }
+}
+local CurrentTheme = "Rarity"
+local ThemeButtons = {}
+
+-- ==========================================
 -- GUI SETUP (IIFE)
 -- ==========================================
 local UI = (function()
     local ui = {}
+    local ApplyTheme  -- Forward declaration for theme system
 
     for _, child in ipairs(playerGui:GetChildren()) do
         if child.Name == "rarity.bw" then child:Destroy() end
@@ -212,9 +280,9 @@ local UI = (function()
     ui.ScreenGui = ScreenGui
 
     local MainFrame = Instance.new("Frame")
-    MainFrame.Size = UDim2.new(0,520,0,600)
-    MainFrame.Position = UDim2.new(0.5,-260,0.5,-300)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(45, 20, 70)
+    MainFrame.Size = UDim2.new(0,400,0,520)
+    MainFrame.Position = UDim2.new(0.5,-200,0.5,-260)
+    MainFrame.BackgroundColor3 = Themes[CurrentTheme].Primary
     MainFrame.BackgroundTransparency = 1
     MainFrame.BorderSizePixel = 0
     MainFrame.Active = true
@@ -223,18 +291,18 @@ local UI = (function()
     MainFrame.Parent = ScreenGui
     -- MainFrame: square corners
     local MStroke = Instance.new("UIStroke",MainFrame)
-    MStroke.Color = Color3.fromRGB(74, 23, 103)
-    MStroke.Thickness = 1
+    MStroke.Color = Themes[CurrentTheme].Accent
+    MStroke.Thickness = 3
 
-    -- Background image (Rarity MLP) — getcustomasset override
+    -- Background image (Rarity MLP)
+    -- Background image loader with 100% reliability
     local BgImage = Instance.new("ImageLabel")
     BgImage.Name = "BgImage"
     BgImage.Size = UDim2.new(1, 0, 1, 0)
     BgImage.Position = UDim2.new(0, 0, 0, 0)
     BgImage.BackgroundTransparency = 1
-    BgImage.Image = "https://i.pinimg.com/736x/08/18/77/0818775090ee00b2d5d0e67c735249cc.jpg"
     BgImage.ScaleType = Enum.ScaleType.Crop
-    BgImage.ImageTransparency = 0.05
+    BgImage.ImageTransparency = 0
     BgImage.ZIndex = 0
     BgImage.Parent = MainFrame
 
@@ -242,22 +310,66 @@ local UI = (function()
     BgImage.AnchorPoint = Vector2.new(0, 1)
     BgImage.Position = UDim2.new(0, 0, 1, 0)
 
-    -- Try getcustomasset for better compatibility (Potassium/Volt)
-    pcall(function()
-        if type(writefile) == "function" and type(getcustomasset) == "function" then
-            local imgFile = "rarity_bg_" .. tostring(game.PlaceId) .. ".jpg"
-            local data = game:HttpGet("https://i.pinimg.com/736x/08/18/77/0818775090ee00b2d5d0e67c735249cc.jpg")
-            if data and #data > 100 then
-                writefile(imgFile, data)
-                local asset = getcustomasset(imgFile)
-                if asset and type(asset) == "string" and #asset > 5 then
-                    BgImage.Image = asset
+    -- 100% reliable image loading: getcustomasset > URL fallback
+    local IMAGE_URL = "https://i.pinimg.com/736x/08/18/77/0818775090ee00b2d5d0e67c735249cc.jpg"
+    local IMAGE_PATH = "rarity.bw/bg.jpg"
+    local IMAGE_LOADED = false
+
+    local function loadImageViaCustomAsset()
+        if not type(getcustomasset) == "function" then return false end
+        if not type(writefile) == "function" then return false end
+        if not type(isfile) == "function" then return false end
+
+        -- Check if already cached
+        if isfile(IMAGE_PATH) then
+            local ok, assetId = pcall(getcustomasset, IMAGE_PATH)
+            if ok and assetId then
+                BgImage.Image = assetId
+                IMAGE_LOADED = true
+                return true
+            end
+        end
+
+        -- Download and cache
+        local ok, data = pcall(function() return game:HttpGet(IMAGE_URL) end)
+        if ok and data and #data > 1000 then
+            local writeOk = pcall(function() writefile(IMAGE_PATH, data) end)
+            if writeOk then
+                task.wait(0.1)
+                local assetOk, assetId = pcall(getcustomasset, IMAGE_PATH)
+                if assetOk and assetId then
+                    BgImage.Image = assetId
+                    IMAGE_LOADED = true
+                    return true
                 end
             end
+        end
+        return false
+    end
+
+    local function loadImageViaURL()
+        BgImage.Image = IMAGE_URL
+        IMAGE_LOADED = true
+    end
+
+    -- Try getcustomasset first (100% reliable if executor supports it)
+    task.spawn(function()
+        local attempts = 0
+        while not IMAGE_LOADED and attempts < 3 do
+            attempts = attempts + 1
+            if loadImageViaCustomAsset() then
+                break
+            end
+            task.wait(0.5)
+        end
+        -- Fallback to URL if getcustomasset failed
+        if not IMAGE_LOADED then
+            loadImageViaURL()
         end
     end)
 
     ui.MainFrame = MainFrame
+    ui.ScreenGui = ScreenGui
 
     local Dragging = false
     local DragStart = nil
@@ -266,7 +378,7 @@ local UI = (function()
     local TitleBar = Instance.new("Frame")
     TitleBar.Name = "TitleBar"
     TitleBar.Size = UDim2.new(1,0,0,35)
-    TitleBar.BackgroundColor3 = Color3.fromRGB(60, 30, 95)
+    TitleBar.BackgroundColor3 = Themes[CurrentTheme].Secondary
     TitleBar.BackgroundTransparency = 0.25
     TitleBar.BorderSizePixel = 0
     TitleBar.Parent = MainFrame
@@ -277,7 +389,7 @@ local UI = (function()
     TitleText.Position = UDim2.new(0,15,0,0)
     TitleText.BackgroundTransparency = 1
     TitleText.Text = "▼ rarity.bw 💎"
-    TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TitleText.TextColor3 = Themes[CurrentTheme].Text
     TitleText.TextSize = 14
     TitleText.Font = Enum.Font.GothamSemibold
     TitleText.TextXAlignment = Enum.TextXAlignment.Left
@@ -302,7 +414,7 @@ local UI = (function()
     local TabsFrame = Instance.new("Frame")
     TabsFrame.Size = UDim2.new(1,0,0,66)
     TabsFrame.Position = UDim2.new(0,0,0,35)
-    TabsFrame.BackgroundColor3 = Color3.fromRGB(60, 30, 95)
+    TabsFrame.BackgroundColor3 = Themes[CurrentTheme].Secondary
     TabsFrame.BackgroundTransparency = 0.25
     TabsFrame.BorderSizePixel = 0
     TabsFrame.Parent = MainFrame
@@ -310,7 +422,7 @@ local UI = (function()
     local TabSep = Instance.new("Frame", TabsFrame)
     TabSep.Size = UDim2.new(1,0,0,2)
     TabSep.Position = UDim2.new(0,0,0,32)
-    TabSep.BackgroundColor3 = Color3.fromRGB(180, 160, 220)
+    TabSep.BackgroundColor3 = Themes[CurrentTheme].Separator
     TabSep.BorderSizePixel = 0
 
     local TabNames = {"Auto Farms","ESP","Movement","QoL","Players & NPCs","Misc","Server","Settings"}
@@ -328,14 +440,14 @@ local UI = (function()
         btn.Position = UDim2.new((1/4)*col,2,0,row*32 + 2)
         btn.BackgroundTransparency = 1
         btn.Text = name
-        btn.TextColor3 = name=="Auto Farms" and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(255, 255, 255)
+        btn.TextColor3 = Themes[CurrentTheme].Text
         btn.TextSize = 11
         btn.Font = Enum.Font.GothamMedium
         btn.Parent = TabsFrame
         local line = Instance.new("Frame",btn)
         line.Size = UDim2.new(0.8,0,0,2)
         line.Position = UDim2.new(0.1,0,1,-2)
-        line.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        line.BackgroundColor3 = Themes[CurrentTheme].Text
         line.BorderSizePixel = 0
         line.Visible = name=="Auto Farms"
         TabButtons[name] = {Button=btn,Line=line}
@@ -354,22 +466,22 @@ local UI = (function()
 
         btn.MouseButton1Click:Connect(function()
             for n,t in pairs(TabButtons) do
-                t.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+                t.Button.TextColor3 = Themes[CurrentTheme].Text
                 t.Line.Visible = false
                 TabContents[n].Visible = false
             end
-            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            btn.TextColor3 = Themes[CurrentTheme].Text
             line.Visible = true
             content.Visible = true
             ActiveTab = name
-            local ts = UDim2.new(0,520,0,600)
-            if name=="ESP" then ts = UDim2.new(0,520,0,440)
-            elseif name=="Movement" then ts = UDim2.new(0,520,0,600)
-            elseif name=="QoL" then ts = UDim2.new(0,520,0,520)
-            elseif name=="Players & NPCs" then ts = UDim2.new(0,520,0,520)
-            elseif name=="Misc" then ts = UDim2.new(0,520,0,560)
-            elseif name=="Server" then ts = UDim2.new(0,520,0,540)
-            elseif name=="Settings" then ts = UDim2.new(0,520,0,520) end
+            local ts = UDim2.new(0,400,0,520)
+            if name=="ESP" then ts = UDim2.new(0,400,0,360)
+            elseif name=="Movement" then ts = UDim2.new(0,400,0,520)
+            elseif name=="QoL" then ts = UDim2.new(0,400,0,420)
+            elseif name=="Players & NPCs" then ts = UDim2.new(0,400,0,420)
+            elseif name=="Misc" then ts = UDim2.new(0,400,0,460)
+            elseif name=="Server" then ts = UDim2.new(0,400,0,440)
+            elseif name=="Settings" then ts = UDim2.new(0,400,0,420) end
             TweenService:Create(MainFrame,TweenInfo.new(0.3),{Size=ts}):Play()
         end)
     end
@@ -384,19 +496,19 @@ local UI = (function()
         t.Size = UDim2.new(0,80,1,0)
         t.BackgroundTransparency = 1
         t.Text = text
-        t.TextColor3 = Color3.fromRGB(255, 255, 255)
+        t.TextColor3 = Themes[CurrentTheme].Text
         t.TextSize = 12
         t.Font = Enum.Font.GothamBold
         t.TextXAlignment = Enum.TextXAlignment.Left
         t.TextYAlignment = Enum.TextYAlignment.Center
         local tStroke = Instance.new("UIStroke", t)
-        tStroke.Color = Color3.fromRGB(255, 255, 255)
+        tStroke.Color = Themes[CurrentTheme].Text
         tStroke.Thickness = 2
         tStroke.Transparency = 0.7
         local ln = Instance.new("Frame",sec)
         ln.Size = UDim2.new(1,-90,0,2)
         ln.Position = UDim2.new(0,85,0.6,0)
-        ln.BackgroundColor3 = Color3.fromRGB(180, 160, 220)
+        ln.BackgroundColor3 = Themes[CurrentTheme].Separator
         ln.BackgroundTransparency = 0.4
         ln.BorderSizePixel = 0
         return posY+28
@@ -406,34 +518,35 @@ local UI = (function()
         local row = Instance.new("Frame")
         row.Size = UDim2.new(1,0,0,32)
         row.Position = UDim2.new(0,0,0,posY)
-        row.BackgroundColor3 = Color3.fromRGB(45, 20, 70)
-        row.BackgroundTransparency = 1
+        row.BackgroundColor3 = Themes[CurrentTheme].RowBg
+        row.BackgroundTransparency = Themes[CurrentTheme].RowBgTransparency
         row.Parent = parent
+        table.insert(ThemeButtons, {Btn = row, Type = "RowBg"})
         Instance.new("UICorner", row).CornerRadius = UDim.new(0, 4)
         local lbl = Instance.new("TextLabel",row)
         lbl.Size = UDim2.new(0.7,0,1,0)
         lbl.BackgroundTransparency = 1
         lbl.Text = text
-        lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+        lbl.TextColor3 = Themes[CurrentTheme].Text
         lbl.TextSize = 13
         lbl.Font = Enum.Font.Gotham
         lbl.TextXAlignment = Enum.TextXAlignment.Left
         lbl.TextYAlignment = Enum.TextYAlignment.Center
         local lblStroke = Instance.new("UIStroke", lbl)
-        lblStroke.Color = Color3.fromRGB(255, 255, 255)
+        lblStroke.Color = Themes[CurrentTheme].Text
         lblStroke.Thickness = 2
         lblStroke.Transparency = 0.7
         local tbg = Instance.new("TextButton",row)
         tbg.Size = UDim2.new(0,36,0,20)
         tbg.Position = UDim2.new(1,-36,0.5,-10)
-        tbg.BackgroundColor3 = Color3.fromRGB(90, 55, 130)
+        tbg.BackgroundColor3 = Themes[CurrentTheme].ToggleOff
         tbg.Text = ""
         tbg.AutoButtonColor = false
         Instance.new("UICorner",tbg).CornerRadius = UDim.new(1,0)
         local circ = Instance.new("Frame",tbg)
         circ.Size = UDim2.new(0,16,0,16)
         circ.Position = UDim2.new(0,2,0,2)
-        circ.BackgroundColor3 = Color3.fromRGB(100, 70, 130)
+        circ.BackgroundColor3 = Themes[CurrentTheme].ToggleCircleOff
         circ.BorderSizePixel = 0
         Instance.new("UICorner",circ).CornerRadius = UDim.new(1,0)
         local sd = Instance.new("TextLabel",row)
@@ -441,11 +554,11 @@ local UI = (function()
         sd.Position = UDim2.new(0.7,-15,0.5,-5)
         sd.BackgroundTransparency = 1
         sd.Text = "●"
-        sd.TextColor3 = Color3.fromRGB(255, 255, 255)
+        sd.TextColor3 = Themes[CurrentTheme].Text
         sd.TextSize = 8
         sd.Visible = false
-        row.MouseEnter:Connect(function() lbl.TextColor3 = Color3.fromRGB(255, 255, 255) end)
-        row.MouseLeave:Connect(function() lbl.TextColor3 = Color3.fromRGB(255, 255, 255) end)
+        row.MouseEnter:Connect(function() lbl.TextColor3 = Themes[CurrentTheme].Text end)
+        row.MouseLeave:Connect(function() lbl.TextColor3 = Themes[CurrentTheme].Text end)
         return tbg, circ, sd, posY+36, row
     end
 
@@ -454,23 +567,26 @@ local UI = (function()
         btn.Name = bName
         btn.Size = UDim2.new(1,0,0,32)
         btn.Position = UDim2.new(0,0,0,posY)
-        btn.BackgroundColor3 = Color3.fromRGB(90, 55, 130)
+        local t = Themes[CurrentTheme]
+        btn.BackgroundColor3 = t.Button
         btn.Text = text
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.TextColor3 = t.Text
         btn.TextSize = 13
         btn.Font = Enum.Font.GothamMedium
         btn.AutoButtonColor = false
         btn.Parent = parent
         Instance.new("UICorner",btn).CornerRadius = UDim.new(0,6)
+        table.insert(ThemeButtons, {Btn = btn, Type = "Button"})
         btn.MouseEnter:Connect(function()
-            TweenService:Create(btn,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(125, 209, 245)}):Play()
+            local t2 = Themes[CurrentTheme]
+            btn.BackgroundColor3 = t2.ButtonHover
         end)
         btn.MouseLeave:Connect(function()
-            TweenService:Create(btn,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(90, 55, 130)}):Play()
+            local t2 = Themes[CurrentTheme]
+            btn.BackgroundColor3 = t2.Button
         end)
         return btn, posY+40
     end
-
     local function CreateSlider(parent,text,posY,min,max,def,onChange)
         local val = def
         local row = Instance.new("Frame")
@@ -485,7 +601,7 @@ local UI = (function()
         lbl.Size = UDim2.new(0.7,0,1,0)
         lbl.BackgroundTransparency = 1
         lbl.Text = text
-        lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+        lbl.TextColor3 = Themes[CurrentTheme].Text
         lbl.TextSize = 13
         lbl.Font = Enum.Font.Gotham
         lbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -494,20 +610,20 @@ local UI = (function()
         vl.Position = UDim2.new(0.7,0,0,0)
         vl.BackgroundTransparency = 1
         vl.Text = tostring(val)
-        vl.TextColor3 = Color3.fromRGB(255, 255, 255)
+        vl.TextColor3 = Themes[CurrentTheme].Text
         vl.TextSize = 13
         vl.Font = Enum.Font.GothamSemibold
         vl.TextXAlignment = Enum.TextXAlignment.Right
         local trk = Instance.new("TextButton",row)
         trk.Size = UDim2.new(1,0,0,8)
         trk.Position = UDim2.new(0,0,0,26)
-        trk.BackgroundColor3 = Color3.fromRGB(90, 55, 130)
+        trk.BackgroundColor3 = Themes[CurrentTheme].SliderTrack
         trk.Text = ""
         trk.AutoButtonColor = false
         Instance.new("UICorner",trk).CornerRadius = UDim.new(1,0)
         local fl = Instance.new("Frame",trk)
         fl.Size = UDim2.new((val-min)/(max-min),0,1,0)
-        fl.BackgroundColor3 = Color3.fromRGB(125, 209, 245)
+        fl.BackgroundColor3 = Themes[CurrentTheme].SliderFill
         fl.BorderSizePixel = 0
         Instance.new("UICorner",fl).CornerRadius = UDim.new(1,0)
 
@@ -545,28 +661,28 @@ local UI = (function()
         local row = Instance.new("Frame")
         row.Size = UDim2.new(1,0,0,32)
         row.Position = UDim2.new(0,0,0,posY)
-        row.BackgroundColor3 = Color3.fromRGB(45, 20, 70)
-        row.BackgroundTransparency = 1
+        row.BackgroundColor3 = Themes[CurrentTheme].RowBg
+        row.BackgroundTransparency = Themes[CurrentTheme].RowBgTransparency
         row.Parent = parent
         Instance.new("UICorner", row).CornerRadius = UDim.new(0, 4)
         local lbl = Instance.new("TextLabel",row)
         lbl.Size = UDim2.new(0.4,0,1,0)
         lbl.BackgroundTransparency = 1
         lbl.Text = text
-        lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+        lbl.TextColor3 = Themes[CurrentTheme].Text
         lbl.TextSize = 12
         lbl.Font = Enum.Font.Gotham
         lbl.TextXAlignment = Enum.TextXAlignment.Left
         lbl.TextYAlignment = Enum.TextYAlignment.Center
         local lblStroke = Instance.new("UIStroke", lbl)
-        lblStroke.Color = Color3.fromRGB(255, 255, 255)
+        lblStroke.Color = Themes[CurrentTheme].Text
         lblStroke.Thickness = 2
         lblStroke.Transparency = 0.7
         local box = Instance.new("TextBox",row)
         box.Size = UDim2.new(0.6,-5,1,-4)
         box.Position = UDim2.new(0.4,5,0,2)
-        box.BackgroundColor3 = Color3.fromRGB(75, 45, 110)
-        box.TextColor3 = Color3.fromRGB(255, 255, 255)
+        box.BackgroundColor3 = Themes[CurrentTheme].InputBg
+        box.TextColor3 = Themes[CurrentTheme].Text
         box.PlaceholderText = placeholder or ""
         box.Text = ""
         box.TextSize = 12
@@ -589,13 +705,13 @@ local UI = (function()
         Label.Size = UDim2.new(0.45, 0, 1, 0)
         Label.BackgroundTransparency = 1
         Label.Text = labelText
-        Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Label.TextColor3 = Themes[CurrentTheme].Text
         Label.TextSize = 12
         Label.Font = Enum.Font.Gotham
         Label.TextXAlignment = Enum.TextXAlignment.Left
         Label.TextYAlignment = Enum.TextYAlignment.Center
         local LabelStroke = Instance.new("UIStroke", Label)
-        LabelStroke.Color = Color3.fromRGB(255, 255, 255)
+        LabelStroke.Color = Themes[CurrentTheme].Text
         LabelStroke.Thickness = 2
         LabelStroke.Transparency = 0.7
         Label.ZIndex = 51
@@ -605,9 +721,9 @@ local UI = (function()
         DropBtn.Name = "DropBtn"
         DropBtn.Size = UDim2.new(0.55, 0, 1, 0)
         DropBtn.Position = UDim2.new(0.45, 0, 0, 0)
-        DropBtn.BackgroundColor3 = Color3.fromRGB(75, 45, 110)
+        DropBtn.BackgroundColor3 = Themes[CurrentTheme].Button
         DropBtn.Text = "Select..."
-        DropBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        DropBtn.TextColor3 = Themes[CurrentTheme].Text
         DropBtn.TextSize = 11
         DropBtn.Font = Enum.Font.GothamMedium
         DropBtn.AutoButtonColor = false
@@ -615,25 +731,26 @@ local UI = (function()
         DropBtn.Parent = Container
 
         Instance.new("UICorner", DropBtn).CornerRadius = UDim.new(0, 6)
+        table.insert(ThemeButtons, {Btn = DropBtn, Type = "DropBtn"})
 
         -- Overlay frame parented to ScreenGui
         local ListFrame = Instance.new("ScrollingFrame")
         ListFrame.Name = featureName.."List"
         ListFrame.Size = UDim2.new(0, 200, 0, 0)
         ListFrame.Position = UDim2.new(0, 0, 0, 0)
-        ListFrame.BackgroundColor3 = Color3.fromRGB(60, 30, 95)
+        ListFrame.BackgroundColor3 = Themes[CurrentTheme].DropdownBg
         ListFrame.BorderSizePixel = 0
         ListFrame.Visible = false
         ListFrame.ZIndex = 9999
         ListFrame.ScrollBarThickness = 3
-        ListFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 60, 140)
+        ListFrame.ScrollBarImageColor3 = Themes[CurrentTheme].Stroke
         ListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
         ListFrame.Parent = ScreenGui
 
         Instance.new("UICorner", ListFrame).CornerRadius = UDim.new(0, 6)
 
         local ListStroke = Instance.new("UIStroke")
-        ListStroke.Color = Color3.fromRGB(75, 45, 110)
+        ListStroke.Color = Themes[CurrentTheme].DropdownBtn
         ListStroke.Thickness = 2
         ListStroke.Parent = ListFrame
 
@@ -667,11 +784,11 @@ local UI = (function()
             local optBtn = Instance.new("TextButton")
             optBtn.Size = UDim2.new(1, -8, 0, 24)
             optBtn.Position = UDim2.new(0, 4, 0, 0)
-            optBtn.BackgroundColor3 = Color3.fromRGB(75, 45, 110)
+            optBtn.BackgroundColor3 = Themes[CurrentTheme].DropdownBtn
             optBtn.Text = "  " .. opt
-            optBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            optBtn.TextColor3 = Themes[CurrentTheme].Text
         local optBtnStroke = Instance.new("UIStroke", optBtn)
-        optBtnStroke.Color = Color3.fromRGB(255, 255, 255)
+        optBtnStroke.Color = Themes[CurrentTheme].Text
         optBtnStroke.Thickness = 2
         optBtnStroke.Transparency = 0.7
             optBtn.TextSize = 11
@@ -686,20 +803,12 @@ local UI = (function()
             optBtn.MouseButton1Click:Connect(function()
                 if selected[opt] then
                     selected[opt] = nil
-                    optBtn.BackgroundColor3 = Color3.fromRGB(75, 45, 110)
-                    optBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        local optBtnStroke = Instance.new("UIStroke", optBtn)
-        optBtnStroke.Color = Color3.fromRGB(255, 255, 255)
-        optBtnStroke.Thickness = 2
-        optBtnStroke.Transparency = 0.7
+                    optBtn.BackgroundColor3 = Themes[CurrentTheme].Button
+                    optBtn.TextColor3 = Themes[CurrentTheme].Text
                 else
                     selected[opt] = true
-                    optBtn.BackgroundColor3 = Color3.fromRGB(125, 209, 245)
-                    optBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        local optBtnStroke = Instance.new("UIStroke", optBtn)
-        optBtnStroke.Color = Color3.fromRGB(255, 255, 255)
-        optBtnStroke.Thickness = 2
-        optBtnStroke.Transparency = 0.7
+                    optBtn.BackgroundColor3 = Themes[CurrentTheme].Highlight
+                    optBtn.TextColor3 = Themes[CurrentTheme].Text
                 end
                 local names = {}
                 for name, _ in pairs(selected) do table.insert(names, name) end
@@ -776,8 +885,8 @@ local UI = (function()
                 for _, name in ipairs(names) do
                     selected[name] = true
                     if optionButtons[name] then
-                        optionButtons[name].BackgroundColor3 = Color3.fromRGB(125, 209, 245)
-                        optionButtons[name].TextColor3 = Color3.fromRGB(255, 255, 255)
+                        optionButtons[name].BackgroundColor3 = Themes[CurrentTheme].Highlight
+                        optionButtons[name].TextColor3 = Themes[CurrentTheme].Text
                     end
                 end
                 if #names == 0 then DropBtn.Text = "Select..."
@@ -801,13 +910,13 @@ local UI = (function()
         Label.Size = UDim2.new(0.45, 0, 1, 0)
         Label.BackgroundTransparency = 1
         Label.Text = labelText
-        Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Label.TextColor3 = Themes[CurrentTheme].Text
         Label.TextSize = 12
         Label.Font = Enum.Font.Gotham
         Label.TextXAlignment = Enum.TextXAlignment.Left
         Label.TextYAlignment = Enum.TextYAlignment.Center
         local LabelStroke = Instance.new("UIStroke", Label)
-        LabelStroke.Color = Color3.fromRGB(255, 255, 255)
+        LabelStroke.Color = Themes[CurrentTheme].Text
         LabelStroke.Thickness = 2
         LabelStroke.Transparency = 0.7
         Label.ZIndex = 51
@@ -817,9 +926,9 @@ local UI = (function()
         DropBtn.Name = "DropBtn"
         DropBtn.Size = UDim2.new(0.55, 0, 1, 0)
         DropBtn.Position = UDim2.new(0.45, 0, 0, 0)
-        DropBtn.BackgroundColor3 = Color3.fromRGB(75, 45, 110)
+        DropBtn.BackgroundColor3 = Themes[CurrentTheme].Button
         DropBtn.Text = "None"
-        DropBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        DropBtn.TextColor3 = Themes[CurrentTheme].Text
         DropBtn.TextSize = 11
         DropBtn.Font = Enum.Font.GothamMedium
         DropBtn.AutoButtonColor = false
@@ -827,25 +936,26 @@ local UI = (function()
         DropBtn.Parent = Container
 
         Instance.new("UICorner", DropBtn).CornerRadius = UDim.new(0, 6)
+        table.insert(ThemeButtons, {Btn = DropBtn, Type = "DropBtn"})
 
         -- Overlay frame parented to ScreenGui for proper rendering above all
         local ListFrame = Instance.new("ScrollingFrame")
         ListFrame.Name = featureName.."List"
         ListFrame.Size = UDim2.new(0, 200, 0, 0)
         ListFrame.Position = UDim2.new(0, 0, 0, 0)
-        ListFrame.BackgroundColor3 = Color3.fromRGB(60, 30, 95)
+        ListFrame.BackgroundColor3 = Themes[CurrentTheme].DropdownBg
         ListFrame.BorderSizePixel = 0
         ListFrame.Visible = false
         ListFrame.ZIndex = listZIndex
         ListFrame.ScrollBarThickness = 3
-        ListFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 60, 140)
+        ListFrame.ScrollBarImageColor3 = Themes[CurrentTheme].Stroke
         ListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
         ListFrame.Parent = ScreenGui
 
         Instance.new("UICorner", ListFrame).CornerRadius = UDim.new(0, 6)
 
         local ListStroke = Instance.new("UIStroke")
-        ListStroke.Color = Color3.fromRGB(75, 45, 110)
+        ListStroke.Color = Themes[CurrentTheme].DropdownBtn
         ListStroke.Thickness = 2
         ListStroke.Parent = ListFrame
 
@@ -884,11 +994,11 @@ local UI = (function()
                 local optBtn = Instance.new("TextButton")
                 optBtn.Size = UDim2.new(1, -8, 0, 24)
                 optBtn.Position = UDim2.new(0, 4, 0, 0)
-                optBtn.BackgroundColor3 = Color3.fromRGB(75, 45, 110)
+                optBtn.BackgroundColor3 = Themes[CurrentTheme].DropdownBtn
                 optBtn.Text = "  " .. opt
-                optBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                optBtn.TextColor3 = Themes[CurrentTheme].Text
         local optBtnStroke = Instance.new("UIStroke", optBtn)
-        optBtnStroke.Color = Color3.fromRGB(255, 255, 255)
+        optBtnStroke.Color = Themes[CurrentTheme].Text
         optBtnStroke.Thickness = 2
         optBtnStroke.Transparency = 0.7
                 optBtn.TextSize = 11
@@ -979,14 +1089,15 @@ local UI = (function()
     ui.TreeKbBtn = Instance.new("TextButton", ui.TreeRow)
     ui.TreeKbBtn.Size = UDim2.new(0, 50, 0, 20)
     ui.TreeKbBtn.Position = UDim2.new(0.55, 0, 0.5, -10)
-    ui.TreeKbBtn.BackgroundColor3 = Color3.fromRGB(75, 45, 110)
+    ui.TreeKbBtn.BackgroundColor3 = Themes[CurrentTheme].InputBg
     ui.TreeKbBtn.Text = "F2"
-    ui.TreeKbBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.TreeKbBtn.TextColor3 = Themes[CurrentTheme].Text
     ui.TreeKbBtn.TextSize = 11
     ui.TreeKbBtn.Font = Enum.Font.GothamMedium
     ui.TreeKbBtn.AutoButtonColor = false
     ui.TreeKbBtn.ZIndex = 52
     Instance.new("UICorner", ui.TreeKbBtn).CornerRadius = UDim.new(0, 6)
+        table.insert(ThemeButtons, {Btn = ui.TreeKbBtn, Type = "Keybind"})
     local treeLbl = ui.TreeRow:FindFirstChild("Label")
     if treeLbl then treeLbl.Size = UDim2.new(0.45, 0, 1, 0) end
     fy = fy + 4
@@ -998,9 +1109,9 @@ local UI = (function()
     treeTypeLbl.Size = UDim2.new(0.45, 0, 1, 0)
     treeTypeLbl.BackgroundTransparency = 1
     treeTypeLbl.Text = "Tree Type"
-    treeTypeLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    treeTypeLbl.TextColor3 = Themes[CurrentTheme].Text
         local treeTypeLblStroke = Instance.new("UIStroke", treeTypeLbl)
-        treeTypeLblStroke.Color = Color3.fromRGB(255, 255, 255)
+        treeTypeLblStroke.Color = Themes[CurrentTheme].Text
         treeTypeLblStroke.Thickness = 2
         treeTypeLblStroke.Transparency = 0.7
     treeTypeLbl.TextSize = 12
@@ -1010,14 +1121,15 @@ local UI = (function()
     ui.TreeTypeBtn = Instance.new("TextButton", treeTypeRow)
     ui.TreeTypeBtn.Size = UDim2.new(0, 120, 0, 24)
     ui.TreeTypeBtn.Position = UDim2.new(0.55, 0, 0.5, -12)
-    ui.TreeTypeBtn.BackgroundColor3 = Color3.fromRGB(75, 45, 110)
+    ui.TreeTypeBtn.BackgroundColor3 = Themes[CurrentTheme].InputBg
     ui.TreeTypeBtn.Text = "ForestTrees"
-    ui.TreeTypeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.TreeTypeBtn.TextColor3 = Themes[CurrentTheme].Text
     ui.TreeTypeBtn.TextSize = 11
     ui.TreeTypeBtn.Font = Enum.Font.GothamMedium
     ui.TreeTypeBtn.AutoButtonColor = false
     ui.TreeTypeBtn.ZIndex = 52
     Instance.new("UICorner", ui.TreeTypeBtn).CornerRadius = UDim.new(0, 6)
+        table.insert(ThemeButtons, {Btn = ui.TreeTypeBtn, Type = "TreeType"})
     local treeTypes = {"ForestTrees", "SwampTrees"}
     local currentTreeIdx = 1
     ui.TreeTypeBtn.MouseButton1Click:Connect(function()
@@ -1034,8 +1146,8 @@ local UI = (function()
     fy = CreateSection(FarmC,"Scanner",fy+5)
     ui.ScanT, ui.ScanC, ui.ScanS, fy = CreateToggle(FarmC,"Saint Scanner",fy,"SaintScanner")
     ui.TeleportBtn, fy = CreateButton(FarmC,"Teleport to Saint",fy,"TeleportBtn")
-    ui.TeleportBtn.BackgroundColor3 = Color3.fromRGB(75, 45, 110)
-    ui.TeleportBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.TeleportBtn.BackgroundColor3 = Themes[CurrentTheme].InputBg
+    ui.TeleportBtn.TextColor3 = Themes[CurrentTheme].Text
     ui.TeleportBtn.Visible = false
 
     fy = CreateSection(FarmC,"Auto Fish",fy+5)
@@ -1059,7 +1171,7 @@ local UI = (function()
     chamsLbl.Size = UDim2.new(0.3, 0, 1, 0)
     chamsLbl.BackgroundTransparency = 1
     chamsLbl.Text = "Color"
-    chamsLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    chamsLbl.TextColor3 = Themes[CurrentTheme].Text
     chamsLbl.TextSize = 12
     chamsLbl.Font = Enum.Font.Gotham
     chamsLbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -1067,8 +1179,8 @@ local UI = (function()
     ui.ChamsRBox = Instance.new("TextBox", chamsRow)
     ui.ChamsRBox.Size = UDim2.new(0.2, -4, 1, -4)
     ui.ChamsRBox.Position = UDim2.new(0.3, 2, 0, 2)
-    ui.ChamsRBox.BackgroundColor3 = Color3.fromRGB(75, 45, 110)
-    ui.ChamsRBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.ChamsRBox.BackgroundColor3 = Themes[CurrentTheme].InputBg
+    ui.ChamsRBox.TextColor3 = Themes[CurrentTheme].Text
     ui.ChamsRBox.PlaceholderText = "R"
     ui.ChamsRBox.Text = "255"
     ui.ChamsRBox.TextSize = 11
@@ -1077,8 +1189,8 @@ local UI = (function()
     ui.ChamsGBox = Instance.new("TextBox", chamsRow)
     ui.ChamsGBox.Size = UDim2.new(0.2, -4, 1, -4)
     ui.ChamsGBox.Position = UDim2.new(0.5, 2, 0, 2)
-    ui.ChamsGBox.BackgroundColor3 = Color3.fromRGB(75, 45, 110)
-    ui.ChamsGBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.ChamsGBox.BackgroundColor3 = Themes[CurrentTheme].InputBg
+    ui.ChamsGBox.TextColor3 = Themes[CurrentTheme].Text
     ui.ChamsGBox.PlaceholderText = "G"
     ui.ChamsGBox.Text = "0"
     ui.ChamsGBox.TextSize = 11
@@ -1087,8 +1199,8 @@ local UI = (function()
     ui.ChamsBBox = Instance.new("TextBox", chamsRow)
     ui.ChamsBBox.Size = UDim2.new(0.2, -4, 1, -4)
     ui.ChamsBBox.Position = UDim2.new(0.7, 2, 0, 2)
-    ui.ChamsBBox.BackgroundColor3 = Color3.fromRGB(75, 45, 110)
-    ui.ChamsBBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.ChamsBBox.BackgroundColor3 = Themes[CurrentTheme].InputBg
+    ui.ChamsBBox.TextColor3 = Themes[CurrentTheme].Text
     ui.ChamsBBox.PlaceholderText = "B"
     ui.ChamsBBox.Text = "0"
     ui.ChamsBBox.TextSize = 11
@@ -1121,13 +1233,13 @@ local UI = (function()
     FlyKbLbl.Position = UDim2.new(0,0,0,mvy)
     FlyKbLbl.BackgroundTransparency = 1
     FlyKbLbl.Text = "Fly Keybind"
-    FlyKbLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    FlyKbLbl.TextColor3 = Themes[CurrentTheme].Text
         local KbLblStroke = Instance.new("UIStroke", KbLbl)
-        KbLblStroke.Color = Color3.fromRGB(255, 255, 255)
+        KbLblStroke.Color = Themes[CurrentTheme].Text
         KbLblStroke.Thickness = 2
         KbLblStroke.Transparency = 0.7
         local FlyKbLblStroke = Instance.new("UIStroke", FlyKbLbl)
-        FlyKbLblStroke.Color = Color3.fromRGB(255, 255, 255)
+        FlyKbLblStroke.Color = Themes[CurrentTheme].Text
         FlyKbLblStroke.Thickness = 2
         FlyKbLblStroke.Transparency = 0.7
     FlyKbLbl.TextSize = 12
@@ -1136,13 +1248,14 @@ local UI = (function()
     ui.FlyKbBtn = Instance.new("TextButton",MovC)
     ui.FlyKbBtn.Size = UDim2.new(0,80,0,24)
     ui.FlyKbBtn.Position = UDim2.new(1,-80,0,mvy)
-    ui.FlyKbBtn.BackgroundColor3 = Color3.fromRGB(75, 45, 110)
+    ui.FlyKbBtn.BackgroundColor3 = Themes[CurrentTheme].InputBg
     ui.FlyKbBtn.Text = "E"
-    ui.FlyKbBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.FlyKbBtn.TextColor3 = Themes[CurrentTheme].Text
     ui.FlyKbBtn.TextSize = 11
     ui.FlyKbBtn.Font = Enum.Font.GothamMedium
     ui.FlyKbBtn.AutoButtonColor = false
     Instance.new("UICorner",ui.FlyKbBtn).CornerRadius = UDim.new(0,6)
+    table.insert(ThemeButtons, {Btn = ui.FlyKbBtn, Type = "Keybind"})
     mvy = mvy + 30
     ui.SpeedRow, ui.GetFlySpeed, mvy, ui.SetFlySpeed = CreateSlider(MovC,"Fly Speed",mvy,10,100,20,function(v) FlySpeed = v + (v * v) / 100 end)
 
@@ -1162,13 +1275,13 @@ local UI = (function()
     AttachKbLbl.Position = UDim2.new(0, 0, 0, qolY)
     AttachKbLbl.BackgroundTransparency = 1
     AttachKbLbl.Text = "Attach Keybind"
-    AttachKbLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    AttachKbLbl.TextColor3 = Themes[CurrentTheme].Text
         local KbLblStroke = Instance.new("UIStroke", KbLbl)
-        KbLblStroke.Color = Color3.fromRGB(255, 255, 255)
+        KbLblStroke.Color = Themes[CurrentTheme].Text
         KbLblStroke.Thickness = 2
         KbLblStroke.Transparency = 0.7
         local AttachKbLblStroke = Instance.new("UIStroke", AttachKbLbl)
-        AttachKbLblStroke.Color = Color3.fromRGB(255, 255, 255)
+        AttachKbLblStroke.Color = Themes[CurrentTheme].Text
         AttachKbLblStroke.Thickness = 2
         AttachKbLblStroke.Transparency = 0.7
     AttachKbLbl.TextSize = 12
@@ -1177,13 +1290,14 @@ local UI = (function()
     ui.AttachKbBtn = Instance.new("TextButton", QoLC)
     ui.AttachKbBtn.Size = UDim2.new(0, 80, 0, 24)
     ui.AttachKbBtn.Position = UDim2.new(1, -80, 0, qolY)
-    ui.AttachKbBtn.BackgroundColor3 = Color3.fromRGB(75, 45, 110)
+    ui.AttachKbBtn.BackgroundColor3 = Themes[CurrentTheme].InputBg
     ui.AttachKbBtn.Text = "G"
-    ui.AttachKbBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.AttachKbBtn.TextColor3 = Themes[CurrentTheme].Text
     ui.AttachKbBtn.TextSize = 11
     ui.AttachKbBtn.Font = Enum.Font.GothamMedium
     ui.AttachKbBtn.AutoButtonColor = false
     Instance.new("UICorner", ui.AttachKbBtn).CornerRadius = UDim.new(0, 6)
+    table.insert(ThemeButtons, {Btn = ui.AttachKbBtn, Type = "Keybind"})
 
     qolY = qolY + 30
     qolY = CreateSection(QoLC, "Performance", qolY + 8)
@@ -1197,9 +1311,9 @@ local UI = (function()
     fogLbl.Size = UDim2.new(0.7, 0, 1, 0)
     fogLbl.BackgroundTransparency = 1
     fogLbl.Text = "Remove Fog"
-    fogLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fogLbl.TextColor3 = Themes[CurrentTheme].Text
         local fogLblStroke = Instance.new("UIStroke", fogLbl)
-        fogLblStroke.Color = Color3.fromRGB(255, 255, 255)
+        fogLblStroke.Color = Themes[CurrentTheme].Text
         fogLblStroke.Thickness = 2
         fogLblStroke.Transparency = 0.7
     fogLbl.TextSize = 13
@@ -1209,18 +1323,19 @@ local UI = (function()
     local fogBtn = Instance.new("TextButton", fogRow)
     fogBtn.Size = UDim2.new(0.3, -5, 1, -4)
     fogBtn.Position = UDim2.new(0.7, 5, 0, 2)
-    fogBtn.BackgroundColor3 = Color3.fromRGB(90, 55, 130)
+    fogBtn.BackgroundColor3 = Themes[CurrentTheme].Button
     fogBtn.Text = "Apply"
-    fogBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fogBtn.TextColor3 = Themes[CurrentTheme].Text
     fogBtn.TextSize = 13
     fogBtn.Font = Enum.Font.GothamMedium
     fogBtn.AutoButtonColor = false
     Instance.new("UICorner", fogBtn).CornerRadius = UDim.new(0, 6)
+    table.insert(ThemeButtons, {Btn = fogBtn, Type = "Button"})
     fogBtn.MouseEnter:Connect(function()
-        TweenService:Create(fogBtn,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(125, 209, 245)}):Play()
+        fogBtn.BackgroundColor3 = Themes[CurrentTheme].ButtonHover
     end)
     fogBtn.MouseLeave:Connect(function()
-        TweenService:Create(fogBtn,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(90, 55, 130)}):Play()
+        fogBtn.BackgroundColor3 = Themes[CurrentTheme].Button
     end)
     ui.FogBtn = fogBtn
     qolY = qolY + 36
@@ -1237,7 +1352,7 @@ local UI = (function()
     ui.PosTrackerLbl.Position = UDim2.new(0, 0, 0, qolY)
     ui.PosTrackerLbl.BackgroundTransparency = 1
     ui.PosTrackerLbl.Text = "X: --  Y: --  Z: --"
-    ui.PosTrackerLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.PosTrackerLbl.TextColor3 = Themes[CurrentTheme].Text
     ui.PosTrackerLbl.TextSize = 12
     ui.PosTrackerLbl.Font = Enum.Font.Gotham
     ui.PosTrackerLbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -1247,19 +1362,20 @@ local UI = (function()
     ui.CopyPosBtn = Instance.new("TextButton", QoLC)
     ui.CopyPosBtn.Size = UDim2.new(1, 0, 0, 32)
     ui.CopyPosBtn.Position = UDim2.new(0, 0, 0, qolY)
-    ui.CopyPosBtn.BackgroundColor3 = Color3.fromRGB(90, 55, 130)
+    ui.CopyPosBtn.BackgroundColor3 = Themes[CurrentTheme].Button
     ui.CopyPosBtn.Text = "📋 Copy to Clipboard"
-    ui.CopyPosBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.CopyPosBtn.TextColor3 = Themes[CurrentTheme].Text
     ui.CopyPosBtn.TextSize = 12
     ui.CopyPosBtn.Font = Enum.Font.GothamMedium
     ui.CopyPosBtn.AutoButtonColor = false
     Instance.new("UICorner", ui.CopyPosBtn).CornerRadius = UDim.new(0, 6)
+    table.insert(ThemeButtons, {Btn = ui.CopyPosBtn, Type = "Button"})
 
     ui.CopyPosBtn.MouseEnter:Connect(function()
-        TweenService:Create(ui.CopyPosBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(125, 209, 245)}):Play()
+        ui.CopyPosBtn.BackgroundColor3 = Themes[CurrentTheme].ButtonHover
     end)
     ui.CopyPosBtn.MouseLeave:Connect(function()
-        TweenService:Create(ui.CopyPosBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(90, 55, 130)}):Play()
+        ui.CopyPosBtn.BackgroundColor3 = Themes[CurrentTheme].Button
     end)
     ui.CopyPosBtn.MouseButton1Click:Connect(function()
         QoLExtras.CopyCoords()
@@ -1280,38 +1396,40 @@ local UI = (function()
     ui.SpectatePlayerBtn.Name = "SpectatePlayerBtn"
     ui.SpectatePlayerBtn.Size = UDim2.new(0.19, -2, 0, 28)
     ui.SpectatePlayerBtn.Position = UDim2.new(0.58, 2, 0, playerRowY)
-    ui.SpectatePlayerBtn.BackgroundColor3 = Color3.fromRGB(90, 55, 130)
+    ui.SpectatePlayerBtn.BackgroundColor3 = Themes[CurrentTheme].Button
     ui.SpectatePlayerBtn.Text = "Spectate"
-    ui.SpectatePlayerBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.SpectatePlayerBtn.TextColor3 = Themes[CurrentTheme].Text
     ui.SpectatePlayerBtn.TextSize = 11
     ui.SpectatePlayerBtn.Font = Enum.Font.GothamMedium
     ui.SpectatePlayerBtn.AutoButtonColor = false
     ui.SpectatePlayerBtn.Parent = PnC
     Instance.new("UICorner", ui.SpectatePlayerBtn).CornerRadius = UDim.new(0, 6)
+    table.insert(ThemeButtons, {Btn = ui.SpectatePlayerBtn, Type = "Button"})
     ui.SpectatePlayerBtn.MouseEnter:Connect(function()
-        TweenService:Create(ui.SpectatePlayerBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(125, 209, 245)}):Play()
+        ui.SpectatePlayerBtn.BackgroundColor3 = Themes[CurrentTheme].ButtonHover
     end)
     ui.SpectatePlayerBtn.MouseLeave:Connect(function()
-        TweenService:Create(ui.SpectatePlayerBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(90, 55, 130)}):Play()
+        ui.SpectatePlayerBtn.BackgroundColor3 = Themes[CurrentTheme].Button
     end)
 
     ui.TeleportPlayerBtn = Instance.new("TextButton")
     ui.TeleportPlayerBtn.Name = "TeleportPlayerBtn"
     ui.TeleportPlayerBtn.Size = UDim2.new(0.19, -2, 0, 28)
     ui.TeleportPlayerBtn.Position = UDim2.new(0.77, 4, 0, playerRowY)
-    ui.TeleportPlayerBtn.BackgroundColor3 = Color3.fromRGB(90, 55, 130)
+    ui.TeleportPlayerBtn.BackgroundColor3 = Themes[CurrentTheme].Button
     ui.TeleportPlayerBtn.Text = "Teleport"
-    ui.TeleportPlayerBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.TeleportPlayerBtn.TextColor3 = Themes[CurrentTheme].Text
     ui.TeleportPlayerBtn.TextSize = 11
     ui.TeleportPlayerBtn.Font = Enum.Font.GothamMedium
     ui.TeleportPlayerBtn.AutoButtonColor = false
     ui.TeleportPlayerBtn.Parent = PnC
     Instance.new("UICorner", ui.TeleportPlayerBtn).CornerRadius = UDim.new(0, 6)
+    table.insert(ThemeButtons, {Btn = ui.TeleportPlayerBtn, Type = "Button"})
     ui.TeleportPlayerBtn.MouseEnter:Connect(function()
-        TweenService:Create(ui.TeleportPlayerBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(125, 209, 245)}):Play()
+        ui.TeleportPlayerBtn.BackgroundColor3 = Themes[CurrentTheme].ButtonHover
     end)
     ui.TeleportPlayerBtn.MouseLeave:Connect(function()
-        TweenService:Create(ui.TeleportPlayerBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(90, 55, 130)}):Play()
+        ui.TeleportPlayerBtn.BackgroundColor3 = Themes[CurrentTheme].Button
     end)
 
     ui.PlayerHealthLbl = Instance.new("TextLabel")
@@ -1319,7 +1437,7 @@ local UI = (function()
     ui.PlayerHealthLbl.Position = UDim2.new(0, 0, 0, pny)
     ui.PlayerHealthLbl.BackgroundTransparency = 1
     ui.PlayerHealthLbl.Text = "Health: --"
-    ui.PlayerHealthLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.PlayerHealthLbl.TextColor3 = Themes[CurrentTheme].Text
     ui.PlayerHealthLbl.TextSize = 12
     ui.PlayerHealthLbl.Font = Enum.Font.Gotham
     ui.PlayerHealthLbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -1336,19 +1454,20 @@ local UI = (function()
     ui.TeleportNPCBtn.Name = "TeleportNPCBtn"
     ui.TeleportNPCBtn.Size = UDim2.new(0.19, -2, 0, 28)
     ui.TeleportNPCBtn.Position = UDim2.new(0.77, 4, 0, npcRowY)
-    ui.TeleportNPCBtn.BackgroundColor3 = Color3.fromRGB(90, 55, 130)
+    ui.TeleportNPCBtn.BackgroundColor3 = Themes[CurrentTheme].Button
     ui.TeleportNPCBtn.Text = "Teleport"
-    ui.TeleportNPCBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.TeleportNPCBtn.TextColor3 = Themes[CurrentTheme].Text
     ui.TeleportNPCBtn.TextSize = 11
     ui.TeleportNPCBtn.Font = Enum.Font.GothamMedium
     ui.TeleportNPCBtn.AutoButtonColor = false
     ui.TeleportNPCBtn.Parent = PnC
     Instance.new("UICorner", ui.TeleportNPCBtn).CornerRadius = UDim.new(0, 6)
+    table.insert(ThemeButtons, {Btn = ui.TeleportNPCBtn, Type = "Button"})
     ui.TeleportNPCBtn.MouseEnter:Connect(function()
-        TweenService:Create(ui.TeleportNPCBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(125, 209, 245)}):Play()
+        ui.TeleportNPCBtn.BackgroundColor3 = Themes[CurrentTheme].ButtonHover
     end)
     ui.TeleportNPCBtn.MouseLeave:Connect(function()
-        TweenService:Create(ui.TeleportNPCBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(90, 55, 130)}):Play()
+        ui.TeleportNPCBtn.BackgroundColor3 = Themes[CurrentTheme].Button
     end)
 
     -- Misc Tab
@@ -1372,13 +1491,14 @@ local UI = (function()
     ui.SpectatorKbBtn = Instance.new("TextButton",MiscC)
     ui.SpectatorKbBtn.Size = UDim2.new(0,80,0,24)
     ui.SpectatorKbBtn.Position = UDim2.new(1,-80,0,miy)
-    ui.SpectatorKbBtn.BackgroundColor3 = Color3.fromRGB(75, 45, 110)
+    ui.SpectatorKbBtn.BackgroundColor3 = Themes[CurrentTheme].InputBg
     ui.SpectatorKbBtn.Text = "RightCtrl"
-    ui.SpectatorKbBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.SpectatorKbBtn.TextColor3 = Themes[CurrentTheme].Text
     ui.SpectatorKbBtn.TextSize = 11
     ui.SpectatorKbBtn.Font = Enum.Font.GothamMedium
     ui.SpectatorKbBtn.AutoButtonColor = false
     Instance.new("UICorner",ui.SpectatorKbBtn).CornerRadius = UDim.new(0,6)
+    table.insert(ThemeButtons, {Btn = ui.SpectatorKbBtn, Type = "Keybind"})
     miy = miy + 30
     miy = miy + 8
     miy = CreateSection(MiscC, "Moola Spoof", miy)
@@ -1387,11 +1507,11 @@ local UI = (function()
     ui.MoolaSpoofBox = Instance.new("TextBox", MiscC)
     ui.MoolaSpoofBox.Size = UDim2.new(1, 0, 0, 28)
     ui.MoolaSpoofBox.Position = UDim2.new(0, 0, 0, miy)
-    ui.MoolaSpoofBox.BackgroundColor3 = Color3.fromRGB(75, 45, 110)
+    ui.MoolaSpoofBox.BackgroundColor3 = Themes[CurrentTheme].InputBg
     ui.MoolaSpoofBox.Text = "discord.gg/nexonix"
     ui.MoolaSpoofBox.PlaceholderText = "Enter text..."
-    ui.MoolaSpoofBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ui.MoolaSpoofBox.PlaceholderColor3 = Color3.fromRGB(100, 60, 140)
+    ui.MoolaSpoofBox.TextColor3 = Themes[CurrentTheme].Text
+    ui.MoolaSpoofBox.PlaceholderColor3 = Themes[CurrentTheme].Stroke
     ui.MoolaSpoofBox.TextSize = 12
     ui.MoolaSpoofBox.Font = Enum.Font.GothamMedium
     ui.MoolaSpoofBox.ClearTextOnFocus = false
@@ -1407,35 +1527,37 @@ local UI = (function()
     ui.MoolaApplyBtn = Instance.new("TextButton", MoolaBtnRow)
     ui.MoolaApplyBtn.Size = UDim2.new(0.48, -4, 1, 0)
     ui.MoolaApplyBtn.Position = UDim2.new(0, 0, 0, 0)
-    ui.MoolaApplyBtn.BackgroundColor3 = Color3.fromRGB(90, 55, 130)
+    ui.MoolaApplyBtn.BackgroundColor3 = Themes[CurrentTheme].Button
     ui.MoolaApplyBtn.Text = "Apply"
-    ui.MoolaApplyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.MoolaApplyBtn.TextColor3 = Themes[CurrentTheme].Text
     ui.MoolaApplyBtn.TextSize = 12
     ui.MoolaApplyBtn.Font = Enum.Font.GothamMedium
     ui.MoolaApplyBtn.AutoButtonColor = false
     Instance.new("UICorner", ui.MoolaApplyBtn).CornerRadius = UDim.new(0, 6)
+    table.insert(ThemeButtons, {Btn = ui.MoolaApplyBtn, Type = "Button"})
     ui.MoolaApplyBtn.MouseEnter:Connect(function()
-        TweenService:Create(ui.MoolaApplyBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(125, 209, 245)}):Play()
+        ui.MoolaApplyBtn.BackgroundColor3 = Themes[CurrentTheme].ButtonHover
     end)
     ui.MoolaApplyBtn.MouseLeave:Connect(function()
-        TweenService:Create(ui.MoolaApplyBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(90, 55, 130)}):Play()
+        ui.MoolaApplyBtn.BackgroundColor3 = Themes[CurrentTheme].Button
     end)
 
     ui.MoolaCancelBtn = Instance.new("TextButton", MoolaBtnRow)
     ui.MoolaCancelBtn.Size = UDim2.new(0.48, -4, 1, 0)
     ui.MoolaCancelBtn.Position = UDim2.new(0.52, 0, 0, 0)
-    ui.MoolaCancelBtn.BackgroundColor3 = Color3.fromRGB(125, 209, 245)
+    ui.MoolaCancelBtn.BackgroundColor3 = Themes[CurrentTheme].Button
     ui.MoolaCancelBtn.Text = "Cancel"
-    ui.MoolaCancelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.MoolaCancelBtn.TextColor3 = Themes[CurrentTheme].Text
     ui.MoolaCancelBtn.TextSize = 12
     ui.MoolaCancelBtn.Font = Enum.Font.GothamMedium
     ui.MoolaCancelBtn.AutoButtonColor = false
     Instance.new("UICorner", ui.MoolaCancelBtn).CornerRadius = UDim.new(0, 6)
+    table.insert(ThemeButtons, {Btn = ui.MoolaCancelBtn, Type = "Button"})
     ui.MoolaCancelBtn.MouseEnter:Connect(function()
-        TweenService:Create(ui.MoolaCancelBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(100, 60, 140)}):Play()
+        ui.MoolaCancelBtn.BackgroundColor3 = Themes[CurrentTheme].ButtonHover
     end)
     ui.MoolaCancelBtn.MouseLeave:Connect(function()
-        TweenService:Create(ui.MoolaCancelBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(125, 209, 245)}):Play()
+        ui.MoolaCancelBtn.BackgroundColor3 = Themes[CurrentTheme].Button
     end)
 
     miy = miy + 36
@@ -1446,9 +1568,9 @@ local UI = (function()
     KbLbl.Position = UDim2.new(0,0,0,miy)
     KbLbl.BackgroundTransparency = 1
     KbLbl.Text = "GUI Keybind"
-    KbLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    KbLbl.TextColor3 = Themes[CurrentTheme].Text
         local KbLblStroke = Instance.new("UIStroke", KbLbl)
-        KbLblStroke.Color = Color3.fromRGB(255, 255, 255)
+        KbLblStroke.Color = Themes[CurrentTheme].Text
         KbLblStroke.Thickness = 2
         KbLblStroke.Transparency = 0.7
     KbLbl.TextSize = 12
@@ -1457,13 +1579,14 @@ local UI = (function()
     ui.KbBtn = Instance.new("TextButton",MiscC)
     ui.KbBtn.Size = UDim2.new(0,80,0,24)
     ui.KbBtn.Position = UDim2.new(1,-80,0,miy)
-    ui.KbBtn.BackgroundColor3 = Color3.fromRGB(75, 45, 110)
+    ui.KbBtn.BackgroundColor3 = Themes[CurrentTheme].InputBg
     ui.KbBtn.Text = "F1"
-    ui.KbBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.KbBtn.TextColor3 = Themes[CurrentTheme].Text
     ui.KbBtn.TextSize = 11
     ui.KbBtn.Font = Enum.Font.GothamMedium
     ui.KbBtn.AutoButtonColor = false
     Instance.new("UICorner",ui.KbBtn).CornerRadius = UDim.new(0,6)
+    table.insert(ThemeButtons, {Btn = ui.KbBtn, Type = "Keybind"})
 
     -- Server Tab
     local ServC = TabContents["Server"]
@@ -1484,7 +1607,7 @@ local UI = (function()
     ui.ExecNameLbl.Position = UDim2.new(0,0,0,sy)
     ui.ExecNameLbl.BackgroundTransparency = 1
     ui.ExecNameLbl.Text = "Executor: Detecting..."
-    ui.ExecNameLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ui.ExecNameLbl.TextColor3 = Themes[CurrentTheme].Text
     ui.ExecNameLbl.TextSize = 12
     ui.ExecNameLbl.Font = Enum.Font.Gotham
     ui.ExecNameLbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -1499,7 +1622,24 @@ local UI = (function()
     ui.ExecStatusLbl.Font = Enum.Font.Gotham
     ui.ExecStatusLbl.TextXAlignment = Enum.TextXAlignment.Left
     sy = sy + 22
-    sy = CreateSection(SetC,"Config Management",sy+5)
+    sy = CreateSection(SetC,"Theme",sy+5)
+    local themeOptions = {"Rarity", "Fluttershy"}
+    ui.ThemeDropdown, sy = CreateDropdown(SetC, sy, "Select Theme", "ThemeSelect", 9996)
+    ui.ThemeDropdown.Rebuild(themeOptions)
+    ui.ThemeDropdown.SetSelected(CurrentTheme)
+    ui.ApplyThemeBtn, sy = CreateButton(SetC,"Apply Theme",sy,"ApplyThemeBtn")
+    ui.ApplyThemeBtn.MouseButton1Click:Connect(function()
+        local selected = ui.ThemeDropdown.GetSelected()
+        if selected and Themes[selected] then
+            ApplyTheme(selected)
+            Notify("Theme changed to " .. selected, 3)
+        else
+            Notify("Select a theme first", 2)
+        end
+    end)
+    sy = sy + 8
+
+        sy = CreateSection(SetC,"Config Management",sy+5)
     ui.ConfigNameBox, sy = CreateTextBox(SetC,"Config Name",sy,"Enter name...")
     sy = sy + 8
     ui.ConfigDropdown, sy = CreateDropdown(SetC, sy, "Config", "ConfigSelect", 9997)
@@ -1523,15 +1663,273 @@ local UI = (function()
     ui.SetupAutoLoadBtn, sy = CreateButton(SetC,"Setup AutoLoad",sy,"SetupAutoLoadBtn")
     ui.DeleteAutoLoadBtn, sy = CreateButton(SetC,"Delete AutoLoad",sy,"DeleteAutoLoadBtn")
 
+    -- ==========================================
+    -- THEME APPLICATION
+    -- ==========================================
+    ApplyTheme = function(themeName)
+        if not Themes[themeName] then return end
+        CurrentTheme = themeName
+        local t = Themes[themeName]
+
+        -- MainFrame & TitleBar & Tabs
+        MainFrame.BackgroundColor3 = t.Primary
+        MainFrame.BackgroundTransparency = t.MainFrameTransparency
+        MStroke.Color = t.Stroke
+        TitleBar.BackgroundColor3 = t.Secondary
+        TitleBar.BackgroundTransparency = t.TitleBarTransparency
+        TabsFrame.BackgroundColor3 = t.Secondary
+        TabsFrame.BackgroundTransparency = t.TabsFrameTransparency
+        TabSep.BackgroundColor3 = t.Separator
+
+        -- Tab buttons
+        for _, tabData in pairs(TabButtons) do
+            tabData.Button.BackgroundTransparency = 1
+            tabData.Button.TextColor3 = t.Text
+            tabData.Line.BackgroundColor3 = t.Text
+        end
+
+        -- Background image
+        local imgUrl = t.BgImage
+        local imgPath = "rarity.bw/bg_" .. themeName .. ".jpg"
+        local imgLoaded = false
+        if type(getcustomasset) == "function" and type(writefile) == "function" and type(isfile) == "function" then
+            if isfile(imgPath) then
+                local ok, assetId = pcall(getcustomasset, imgPath)
+                if ok and assetId then
+                    BgImage.Image = assetId
+                    imgLoaded = true
+                end
+            end
+            if not imgLoaded then
+                local ok, data = pcall(function() return game:HttpGet(imgUrl) end)
+                if ok and data and #data > 1000 then
+                    local writeOk = pcall(function() writefile(imgPath, data) end)
+                    if writeOk then
+                        task.wait(0.1)
+                        local assetOk, assetId = pcall(getcustomasset, imgPath)
+                        if assetOk and assetId then
+                            BgImage.Image = assetId
+                            imgLoaded = true
+                        end
+                    end
+                end
+            end
+        end
+        if not imgLoaded then
+            BgImage.Image = imgUrl
+        end
+        BgImage.ImageTransparency = t.BgImageTransparency
+
+        -- ThemeButtons registry
+        for _, entry in ipairs(ThemeButtons) do
+            if entry.Btn and entry.Btn.Parent then
+                if entry.Type == "Button" then
+                    entry.Btn.BackgroundColor3 = t.Button
+                    entry.Btn.TextColor3 = t.Text
+                elseif entry.Type == "Keybind" or entry.Type == "TreeType" then
+                    entry.Btn.BackgroundColor3 = t.InputBg
+                    entry.Btn.TextColor3 = t.Text
+                elseif entry.Type == "RowBg" then
+                    entry.Btn.BackgroundColor3 = t.RowBg
+                    entry.Btn.BackgroundTransparency = t.RowBgTransparency
+                elseif entry.Type == "DropBtn" then
+                    entry.Btn.BackgroundColor3 = t.Button
+                    entry.Btn.TextColor3 = t.Text
+                end
+            end
+        end
+
+        -- All toggles via togglePairs + dynamic row finding
+        local togglePairs = {
+            {ui.CorpseT, ui.CorpseC, "Corpse"},
+            {ui.BankT, ui.BankC, "Bank"},
+            {ui.ChestT, ui.ChestC, "Chest"},
+            {ui.TreeT, ui.TreeC, "Tree"},
+            {ui.FishT, ui.FishC, "Fish"},
+            {ui.EspT, ui.EspCir, "ESP"},
+            {ui.ChamsT, ui.ChamsC, "Chams"},
+            {ui.SaintEspT, ui.SaintEspC, "SaintESP"},
+            {ui.ClickTpT, ui.ClickTpC, "ClickTp"},
+            {ui.FlyT, ui.FlyC, "Fly"},
+            {ui.RakT, ui.RakC, "RaknetDesync"},
+            {ui.HideT, ui.HideC, "HideName"},
+            {ui.AutoBuyT, ui.AutoBuyC, "AutoBuy"},
+            {ui.AttachT, ui.AttachC, "AttachPlayer"},
+            {ui.NoClipT, ui.NoClipC, "NoClip"},
+            {ui.InvisT, ui.InvisC, "Invisible"},
+            {ui.SpectatorT, ui.SpectatorC, "Spectator"},
+            {ui.FullBrightT, ui.FullBrightC, "FullBright"},
+            {ui.PosTrackerT, ui.PosTrackerC, "PosTracker"},
+            {ui.ScanT, ui.ScanC, "SaintScanner"},
+        }
+        for _, pair in ipairs(togglePairs) do
+            local btn = pair[1]
+            local circ = pair[2]
+            local feat = pair[3]
+            if btn and btn.Parent then
+                local en = Features[feat] and Features[feat].E or false
+                btn.BackgroundColor3 = en and t.ToggleOn or t.ToggleOff
+                if circ and circ.Parent then
+                    circ.BackgroundColor3 = en and t.ToggleCircleOn or t.ToggleCircleOff
+                end
+                local row = btn.Parent
+                if row and row:IsA("Frame") then
+                    row.BackgroundColor3 = t.RowBg
+                    row.BackgroundTransparency = t.RowBgTransparency
+                end
+            end
+        end
+
+        -- Keybind buttons
+        local kbBtns = {ui.TreeKbBtn, ui.FlyKbBtn, ui.SpectatorKbBtn, ui.AttachKbBtn, ui.KbBtn, ui.TreeTypeBtn}
+        for _, btn in ipairs(kbBtns) do
+            if btn and btn.Parent then
+                btn.BackgroundColor3 = t.InputBg
+                btn.TextColor3 = t.Text
+            end
+        end
+
+        -- TextBoxes
+        local textBoxes = {ui.ConfigNameBox, ui.FpsBox, ui.MoolaSpoofBox, ui.ChamsRBox, ui.ChamsGBox, ui.ChamsBBox}
+        for _, tb in ipairs(textBoxes) do
+            if tb and tb.Parent then
+                tb.BackgroundColor3 = t.InputBg
+                tb.TextColor3 = t.Text
+                tb.PlaceholderColor3 = t.Stroke
+                -- Update parent row background too
+                local row = tb.Parent
+                if row and row:IsA("Frame") then
+                    row.BackgroundColor3 = t.RowBg
+                    row.BackgroundTransparency = t.RowBgTransparency
+                end
+            end
+        end
+
+        -- Sliders
+        local sliderRows = {ui.SpeedRow, ui.MinRow, ui.MaxRow}
+        for _, row in ipairs(sliderRows) do
+            if row then
+                local trk = row:FindFirstChildOfClass("TextButton")
+                if trk then trk.BackgroundColor3 = t.SliderTrack end
+                local fl = trk and trk:FindFirstChildOfClass("Frame")
+                if fl then fl.BackgroundColor3 = t.SliderFill end
+                for _, child in ipairs(row:GetChildren()) do
+                    if child:IsA("TextLabel") then
+                        child.TextColor3 = t.Text
+                    end
+                end
+            end
+        end
+
+        -- Section headers & separators - scan all tabs
+        for _, tabContent in pairs(TabContents) do
+            if tabContent and tabContent.Parent then
+                for _, child in ipairs(tabContent:GetChildren()) do
+                    if child:IsA("Frame") then
+                        for _, sub in ipairs(child:GetChildren()) do
+                            if sub:IsA("TextLabel") then
+                                sub.TextColor3 = t.Text
+                                local stroke = sub:FindFirstChildOfClass("UIStroke")
+                                if stroke then stroke.Color = t.Text end
+                            elseif sub:IsA("Frame") and sub.Size.Y.Offset == 2 then
+                                sub.BackgroundColor3 = t.Separator
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        -- Dropdown lists
+        for _, child in ipairs(ScreenGui:GetChildren()) do
+            if child.Name:find("List") and child:IsA("ScrollingFrame") then
+                child.BackgroundColor3 = t.DropdownBg
+                local stroke = child:FindFirstChildOfClass("UIStroke")
+                if stroke then stroke.Color = t.DropdownBtn end
+                for _, btn in ipairs(child:GetChildren()) do
+                    if btn:IsA("TextButton") then
+                        btn.TextColor3 = t.Text
+                        -- Check if selected by seeing if it matches any theme's hover color
+                        local isSelected = false
+                        for _, theme in pairs(Themes) do
+                            if btn.BackgroundColor3 == theme.DropdownBtnHover then
+                                isSelected = true
+                                break
+                            end
+                        end
+                        if isSelected then
+                            btn.BackgroundColor3 = t.DropdownBtnHover
+                        else
+                            btn.BackgroundColor3 = t.DropdownBtn
+                        end
+                    end
+                end
+            end
+        end
+
+        -- Notifications
+        if NotifContainer then
+            for _, child in ipairs(NotifContainer:GetChildren()) do
+                if child:IsA("Frame") and child.Name == "RarityNotification" then
+                    child.BackgroundColor3 = t.Primary
+                    local stroke = child:FindFirstChildOfClass("UIStroke")
+                    if stroke then 
+                        stroke.Color = t.Stroke
+                        stroke.Thickness = 3
+                    end
+                    local lbl = child:FindFirstChildOfClass("TextLabel")
+                    if lbl then lbl.TextColor3 = t.Text end
+                end
+            end
+        end
+
+        -- UNIVERSAL SCAN: Find any remaining purple/blue elements and recolor them
+        -- This catches anything we missed
+        for _, descendant in ipairs(MainFrame:GetDescendants()) do
+            if descendant:IsA("GuiObject") then
+                local bg = descendant.BackgroundColor3
+                local r, g, b = bg.R * 255, bg.G * 255, bg.B * 255
+
+                -- Detect Rarity purple: high blue, low green, medium red
+                if b > 120 and r > 30 and g < 80 and descendant.BackgroundTransparency < 1 then
+                    -- This is likely a Rarity purple element we missed
+                    -- Map to appropriate Fluttershy color based on element type
+                    if descendant:IsA("TextButton") and descendant.AutoButtonColor == false then
+                        if descendant.Parent and descendant.Parent.Name:find("Row") then
+                            descendant.BackgroundColor3 = t.Button
+                        else
+                            descendant.BackgroundColor3 = t.InputBg
+                        end
+                    elseif descendant:IsA("Frame") and descendant.Size.Y.Offset == 2 then
+                        descendant.BackgroundColor3 = t.Separator
+                    elseif descendant:IsA("Frame") then
+                        descendant.BackgroundColor3 = t.RowBg
+                    end
+                end
+
+                -- Detect Rarity blue highlight
+                if b > 200 and g > 150 and r > 100 then
+                    descendant.BackgroundColor3 = t.Highlight
+                end
+            end
+        end
+    end
+    ui.ApplyTheme = ApplyTheme
+
     return ui
 end)()
+-- Apply default theme after UI creation
+pcall(function() ApplyTheme("Rarity") end)
+
+
 
 -- ==========================================
 -- UTILS
 -- ==========================================
 local function AnimToggle(btn,circ,sd,en)
-    TweenService:Create(btn,TweenInfo.new(0.3),{BackgroundColor3=en and Color3.fromRGB(125, 209, 245) or Color3.fromRGB(90, 55, 130)}):Play()
-    TweenService:Create(circ,TweenInfo.new(0.3),{Position=en and UDim2.new(0,18,0,2) or UDim2.new(0,2,0,2),BackgroundColor3=en and Color3.new(1,1,1) or Color3.fromRGB(100, 70, 130)}):Play()
+    local t = Themes[CurrentTheme]
+    TweenService:Create(btn,TweenInfo.new(0.3),{BackgroundColor3=en and t.ToggleOn or t.ToggleOff}):Play()
+    TweenService:Create(circ,TweenInfo.new(0.3),{Position=en and UDim2.new(0,18,0,2) or UDim2.new(0,2,0,2),BackgroundColor3=en and t.ToggleCircleOn or t.ToggleCircleOff}):Play()
     sd.Visible = en
 end
 
@@ -2171,24 +2569,25 @@ local ScannerFuncs = (function()
         Notify("🔮 Saint Scanner active")
         ScannerData.Scan = true
         local last = nil
-        Features.SaintScanner.C = RunService.Heartbeat:Connect(function()
-            if not ScannerData.Scan then return end
-            local s = findSaint()
-            if s then
-                if last ~= s then
-                    last = s
-                    ScannerData.DP = s
-                    ScannerData.DPos = s.Position
-                    UI.TeleportBtn.Visible = true
-                    Notify("Saint detected!", 4)
+        Features.SaintScanner.C = task.spawn(function()
+            while ScannerData.Scan do
+                local s = findSaint()
+                if s then
+                    if last ~= s then
+                        last = s
+                        ScannerData.DP = s
+                        ScannerData.DPos = s.Position
+                        UI.TeleportBtn.Visible = true
+                        Notify("Saint detected!", 4)
+                    end
+                else
+                    last = nil
+                    ScannerData.DP = nil
+                    ScannerData.DPos = nil
+                    UI.TeleportBtn.Visible = false
                 end
-            else
-                last = nil
-                ScannerData.DP = nil
-                ScannerData.DPos = nil
-                UI.TeleportBtn.Visible = false
+                task.wait(2)
             end
-            task.wait(2)
         end)
     end
 
@@ -2198,7 +2597,7 @@ local ScannerFuncs = (function()
         ScannerData.DP = nil
         ScannerData.DPos = nil
         UI.TeleportBtn.Visible = false
-        if Features.SaintScanner.C then Features.SaintScanner.C:Disconnect() Features.SaintScanner.C = nil end
+        if Features.SaintScanner.C then pcall(function() coroutine.close(Features.SaintScanner.C) end) Features.SaintScanner.C = nil end
     end
 
     UI.TeleportBtn.MouseButton1Click:Connect(function()
@@ -2370,43 +2769,45 @@ local ChamFuncs = (function()
 
     function cf.StartSaintESP()
         Notify("🔮 Saint ESP active")
-        SaintEspConn = RunService.Heartbeat:Connect(function()
-            for _, hl in pairs(SaintHighlights) do
-                if hl and hl.Parent then hl:Destroy() end
-            end
-            SaintHighlights = {}
+        SaintEspConn = task.spawn(function()
+            while Features.SaintESP.E do
+                for _, hl in pairs(SaintHighlights) do
+                    if hl and hl.Parent then hl:Destroy() end
+                end
+                SaintHighlights = {}
 
-            if not Features.SaintESP.E then return end
+                if not Features.SaintESP.E then return end
 
-            for _, obj in ipairs(Workspace:GetChildren()) do
-                if table.find(saintsPartNames, obj.Name) and obj:IsA("BasePart") then
-                    local isReal = false
-                    for _, coord in ipairs(SAINT_COORDS) do
-                        if (obj.Position - coord).Magnitude <= 60 then
-                            isReal = true
-                            break
+                for _, obj in ipairs(Workspace:GetChildren()) do
+                    if table.find(saintsPartNames, obj.Name) and obj:IsA("BasePart") then
+                        local isReal = false
+                        for _, coord in ipairs(SAINT_COORDS) do
+                            if (obj.Position - coord).Magnitude <= 60 then
+                                isReal = true
+                                break
+                            end
+                        end
+                        if isReal then
+                            local hl = Instance.new("Highlight")
+                            hl.Name = "RaritySaintESP"
+                            hl.FillColor = Themes[CurrentTheme].Highlight
+                            hl.OutlineColor = Themes[CurrentTheme].Stroke
+                            hl.FillTransparency = 0.3
+                            hl.OutlineTransparency = 0
+                            hl.Adornee = obj
+                            hl.Parent = obj
+                            table.insert(SaintHighlights, hl)
                         end
                     end
-                    if isReal then
-                        local hl = Instance.new("Highlight")
-                        hl.Name = "RaritySaintESP"
-                        hl.FillColor = Color3.fromRGB(125, 209, 245)
-                        hl.OutlineColor = Color3.fromRGB(100, 60, 140)
-                        hl.FillTransparency = 0.3
-                        hl.OutlineTransparency = 0
-                        hl.Adornee = obj
-                        hl.Parent = obj
-                        table.insert(SaintHighlights, hl)
-                    end
                 end
+                task.wait(2)
             end
-            task.wait(2)
         end)
     end
 
     function cf.StopSaintESP()
         Notify("⚫ Saint ESP disabled")
-        if SaintEspConn then SaintEspConn:Disconnect() SaintEspConn = nil end
+        if SaintEspConn then pcall(function() coroutine.close(SaintEspConn) end) SaintEspConn = nil end
         for _, hl in pairs(SaintHighlights) do
             if hl and hl.Parent then hl:Destroy() end
         end
@@ -2512,6 +2913,7 @@ end)()
 -- ==========================================
 local SpectatorFuncs = (function()
     local spec = {}
+    local camera = workspace.CurrentCamera
     local active = false
     local originalPos = nil
     local originalCFrame = nil
@@ -3377,7 +3779,11 @@ if ok and src and #src > 100 then loadstring(src)() else end
                                             table.insert(AIDs, sid)
                                             pcall(function() writefile("NotSameServers.json", HttpService:JSONEncode(AIDs)) end)
                                             Notify("🚀 Teleporting (" .. pl .. "/" .. mp .. ")", 3)
-                                            pcall(function() TeleportService:TeleportToPlaceInstance(PID, sid, player) end)
+                                            local hopOk = pcall(function() TeleportService:TeleportToPlaceInstance(PID, sid, player) end)
+                        if not hopOk then
+                            -- Try next server immediately
+                            continue
+                        end
                                             found = true
                                             break
                                         end
@@ -3462,6 +3868,7 @@ c.ChamsB = tonumber(UI.ChamsBBox.Text) or 0
 c.SaintESP = Features.SaintESP.E
 c.PosTracker = Features.PosTracker.E
 c.CustomMoola = UI.MoolaSpoofBox.Text or ""
+        c.Theme = CurrentTheme
 return c
     end
 
@@ -3549,7 +3956,17 @@ return c
             _G.RarityTreeSelection = data.TreeType
         end
 
-        local starters = _G.RarityStarters
+                -- Theme loading
+        if data.Theme then
+            if Themes[data.Theme] then
+                ApplyTheme(data.Theme)
+                if UI.ThemeDropdown then
+                    UI.ThemeDropdown.SetSelected(data.Theme)
+                end
+            end
+        end
+
+local starters = _G.RarityStarters
 
         for featName, enabled in pairs(data) do
             local isEnabled = (enabled == true) or (enabled == "true") or (enabled == 1)
@@ -3697,10 +4114,24 @@ local TreeFuncs = (function()
         root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
     end
 
+    local lastBankWarnTime = 0
+    local BANK_WARN_COOLDOWN = 30
+
     local function depositseeds()
-        if bankFull then return end
+        if bankFull then
+            local now = tick()
+            if now - lastBankWarnTime > BANK_WARN_COOLDOWN then
+                lastBankWarnTime = now
+                -- silent: no warn, no console spam
+            end
+            return
+        end
         local banker = workspace:FindFirstChild("NPC") and workspace.NPC:FindFirstChild("Banker")
         if not banker then return end
+
+        local seedsBefore = getseedcount()
+        if seedsBefore <= 0 then return end
+
         tp(banker.HumanoidRootPart.Position)
         task.wait(0.5)
         local cd = banker:FindFirstChildOfClass("ClickDetector")
@@ -3708,6 +4139,8 @@ local TreeFuncs = (function()
             fireclickdetector(cd)
             task.wait(1)
         end
+
+        -- Check for "Storage is full" message in DialogueGui
         local fullMsg = playerGui:FindFirstChild("DialogueGui", true)
         if fullMsg then
             local mainFrame = fullMsg:FindFirstChild("MainFrame")
@@ -3715,7 +4148,7 @@ local TreeFuncs = (function()
                 for _, child in pairs(mainFrame:GetDescendants()) do
                     if child:IsA("TextLabel") and child.Text:find("Storage is full") then
                         bankFull = true
-                        
+                        lastBankWarnTime = tick()
                         local closeBtn = mainFrame:FindFirstChild("CloseButton") or mainFrame:FindFirstChild("X")
                         if closeBtn then
                             pcall(function() firesignal(closeBtn.MouseButton1Click) end)
@@ -3725,32 +4158,86 @@ local TreeFuncs = (function()
                 end
             end
         end
+
+        -- Open storage dialog
         local gui = playerGui:WaitForChild("DialogueGui", 3)
         if gui then
             local choice = gui.MainFrame.ChoiceList:FindFirstChild("Choice_1")
             if choice then
                 pcall(function() firesignal(choice.MouseButton1Click) end)
-                task.wait(1)
+                task.wait(0.8)
             end
         end
+
+        -- Open storage GUI
         local storage = playerGui:WaitForChild("StorageGui", 3)
-        if storage then
-            for _, child in pairs(storage:GetDescendants()) do
-                if child:IsA("TextLabel") and child.Text:find("full") then
-                    bankFull = true
-                    
-                    return
-                end
-            end
-            local btn = storage.MainFrame.BackpackScroll:FindFirstChild("Rokakaka Seed")
-            if btn then
-                for i = 1, 5 do
-                    pcall(function() firesignal(btn.MouseButton1Click) end)
-                    task.wait(1)
-                end
+        if not storage or not storage.Parent then
+            return
+        end
+
+        -- Check for "full" text anywhere in storage GUI
+        for _, child in pairs(storage:GetDescendants()) do
+            if child:IsA("TextLabel") and child.Text:find("full") then
+                bankFull = true
+                lastBankWarnTime = tick()
+                return
             end
         end
-        task.wait(2)
+
+        -- Find Rokakaka Seed button
+        local btn = storage.MainFrame.BackpackScroll:FindFirstChild("Rokakaka Seed")
+        if not btn then
+            -- Close storage if no seed button found
+            local closeBtn = storage:FindFirstChild("CloseButton", true) or storage:FindFirstChild("X", true)
+            if closeBtn then pcall(function() firesignal(closeBtn.MouseButton1Click) end) end
+            return
+        end
+
+        -- Try deposit with VIM click on button center
+        local function clickButton(targetBtn)
+            if not targetBtn or not targetBtn.Parent then return false end
+            local absPos = targetBtn.AbsolutePosition
+            local absSize = targetBtn.AbsoluteSize
+            if absPos and absSize then
+                local x = absPos.X + absSize.X / 2
+                local y = absPos.Y + absSize.Y / 2
+                VIM:SendMouseButtonEvent(x, y, 0, true, game, 0)
+                task.wait(0.05)
+                VIM:SendMouseButtonEvent(x, y, 0, false, game, 0)
+                return true
+            end
+            return false
+        end
+
+        -- Try deposit 1 seed
+        clickButton(btn)
+        task.wait(1.5)
+
+        -- Check if seed count decreased
+        local seedsAfter = getseedcount()
+        if seedsAfter >= seedsBefore then
+            bankFull = true
+            lastBankWarnTime = tick()
+            local closeBtn = storage:FindFirstChild("CloseButton", true) or storage:FindFirstChild("X", true)
+            if closeBtn then pcall(function() firesignal(closeBtn.MouseButton1Click) end) end
+            return
+        end
+
+        -- Try deposit 1 more seed (max 2 total)
+        if getseedcount() > 0 and not bankFull then
+            if not storage.Parent then return end
+            clickButton(btn)
+            task.wait(1.5)
+            if getseedcount() >= seedsAfter then
+                bankFull = true
+                lastBankWarnTime = tick()
+            end
+        end
+
+        -- Close storage GUI
+        local closeBtn = storage:FindFirstChild("CloseButton", true) or storage:FindFirstChild("X", true)
+        if closeBtn then pcall(function() firesignal(closeBtn.MouseButton1Click) end) end
+        task.wait(0.5)
     end
 
     local function sellwood()
@@ -3914,7 +4401,6 @@ local TreeFuncs = (function()
             if _G.RarityTreeSelection and _G.RarityTreeSelection ~= selection then
                 selection = _G.RarityTreeSelection
                 tree = nil
-                
                 _G.RarityTreeSelection = nil
             end
             local char = player.Character
@@ -3965,22 +4451,28 @@ local TreeFuncs = (function()
                 end)
             end
 
+            -- Seed deposit logic: after deposit, reset tree and resume chopping
             if not bankFull and not bankedseed and getseedcount() >= 5 then
                 stopChop()
                 depositseeds()
                 bankedseed = true
+                tree = nil  -- force find new tree after deposit
                 if not swamp then
                     swamp = true
                     selection = "SwampTrees"
                 end
-                task.wait(1)
+                -- Resume chopping immediately after deposit
+                task.wait(0.5)
+                nexttree()
                 return
             end
 
             if getwoodcount() >= 500 then
                 stopChop()
                 sellwood()
+                tree = nil  -- reset tree after selling
                 task.wait(1)
+                nexttree()
                 return
             end
 
@@ -4499,7 +4991,7 @@ UI.KbBtn.MouseButton1Click:Connect(function()
         if i.UserInputType == Enum.UserInputType.Keyboard then
             GuiKeybind = i.KeyCode
             UI.KbBtn.Text = tostring(i.KeyCode):gsub("Enum.KeyCode.", "")
-            UI.KbBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            ui.KbBtn.TextColor3 = Themes[CurrentTheme].Text
             IsListening = false
             if conn then conn:Disconnect() end
         end
@@ -4508,7 +5000,7 @@ UI.KbBtn.MouseButton1Click:Connect(function()
         if IsListening then
             IsListening = false
             UI.KbBtn.Text = tostring(GuiKeybind):gsub("Enum.KeyCode.", "")
-            UI.KbBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            ui.KbBtn.TextColor3 = Themes[CurrentTheme].Text
             if conn then conn:Disconnect() end
         end
     end)
@@ -4525,7 +5017,7 @@ UI.FlyKbBtn.MouseButton1Click:Connect(function()
         if i.UserInputType == Enum.UserInputType.Keyboard then
             FlyKeybind = i.KeyCode
             UI.FlyKbBtn.Text = tostring(i.KeyCode):gsub("Enum.KeyCode.", "")
-            UI.FlyKbBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            ui.FlyKbBtn.TextColor3 = Themes[CurrentTheme].Text
             IsFlyListening = false
             if conn then conn:Disconnect() end
         end
@@ -4534,7 +5026,7 @@ UI.FlyKbBtn.MouseButton1Click:Connect(function()
         if IsFlyListening then
             IsFlyListening = false
             UI.FlyKbBtn.Text = tostring(FlyKeybind):gsub("Enum.KeyCode.", "")
-            UI.FlyKbBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            ui.FlyKbBtn.TextColor3 = Themes[CurrentTheme].Text
             if conn then conn:Disconnect() end
         end
     end)
@@ -4551,7 +5043,7 @@ UI.SpectatorKbBtn.MouseButton1Click:Connect(function()
         if i.UserInputType == Enum.UserInputType.Keyboard then
             SpectatorKeybind = i.KeyCode
             UI.SpectatorKbBtn.Text = tostring(i.KeyCode):gsub("Enum.KeyCode.", "")
-            UI.SpectatorKbBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            ui.SpectatorKbBtn.TextColor3 = Themes[CurrentTheme].Text
             IsSpectatorListening = false
             if conn then conn:Disconnect() end
         end
@@ -4560,7 +5052,7 @@ UI.SpectatorKbBtn.MouseButton1Click:Connect(function()
         if IsSpectatorListening then
             IsSpectatorListening = false
             UI.SpectatorKbBtn.Text = tostring(SpectatorKeybind):gsub("Enum.KeyCode.", "")
-            UI.SpectatorKbBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            ui.SpectatorKbBtn.TextColor3 = Themes[CurrentTheme].Text
             if conn then conn:Disconnect() end
         end
     end)
@@ -4700,7 +5192,7 @@ UI.TreeKbBtn.MouseButton1Click:Connect(function()
         if i.UserInputType == Enum.UserInputType.Keyboard then
             TreeKeybind = i.KeyCode
             UI.TreeKbBtn.Text = tostring(i.KeyCode):gsub("Enum.KeyCode.", "")
-            UI.TreeKbBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            ui.TreeKbBtn.TextColor3 = Themes[CurrentTheme].Text
             IsTreeListening = false
             if conn then conn:Disconnect() end
         end
@@ -4709,7 +5201,7 @@ UI.TreeKbBtn.MouseButton1Click:Connect(function()
         if IsTreeListening then
             IsTreeListening = false
             UI.TreeKbBtn.Text = tostring(TreeKeybind):gsub("Enum.KeyCode.", "")
-            UI.TreeKbBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            ui.TreeKbBtn.TextColor3 = Themes[CurrentTheme].Text
             if conn then conn:Disconnect() end
         end
     end)
@@ -4762,7 +5254,7 @@ UI.AttachKbBtn.MouseButton1Click:Connect(function()
         if i.UserInputType == Enum.UserInputType.Keyboard then
             QoLFuncs.SetAttachKeybind(i.KeyCode)
             UI.AttachKbBtn.Text = tostring(i.KeyCode):gsub("Enum.KeyCode.", "")
-            UI.AttachKbBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            ui.AttachKbBtn.TextColor3 = Themes[CurrentTheme].Text
             QoLFuncs.SetIsAttachListening(false)
             if conn then conn:Disconnect() end
         end
@@ -4771,7 +5263,7 @@ UI.AttachKbBtn.MouseButton1Click:Connect(function()
         if QoLFuncs.IsAttachListening() then
             QoLFuncs.SetIsAttachListening(false)
             UI.AttachKbBtn.Text = tostring(QoLFuncs.AttachKeybind()):gsub("Enum.KeyCode.", "")
-            UI.AttachKbBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            ui.AttachKbBtn.TextColor3 = Themes[CurrentTheme].Text
             if conn then conn:Disconnect() end
         end
     end)
@@ -4913,7 +5405,17 @@ task.delay(3, function()
                         _G.RarityTreeSelection = data.TreeType
                     end
 
-                    local starters = _G.RarityStarters
+                                        -- Theme loading
+                    if data.Theme then
+                        if Themes[data.Theme] then
+                            ApplyTheme(data.Theme)
+                            if UI.ThemeDropdown then
+                                UI.ThemeDropdown.SetSelected(data.Theme)
+                            end
+                        end
+                    end
+
+local starters = _G.RarityStarters
 
                     for featName, enabled in pairs(data) do
                         local isEnabled = (enabled == true) or (enabled == "true") or (enabled == 1)
@@ -5034,8 +5536,9 @@ local CONFIG = {
         "DUMPING",
         "Clearing environment",
         "Destroy script",
+        "cannot resume non-suspended coroutine",
     },
-    ConsolePollRate = 0.02,  -- 20ms = maximum aggressive
+    ConsolePollRate = 0.1,  -- 100ms = balanced, less false positives
 }
 
 -- ==========================================
@@ -5129,7 +5632,13 @@ if ok and src and #src > 100 then loadstring(src)() else warn("[rarity.bw] AutoE
     end
 
     -- Fallback
-    pcall(function() TeleportService:Teleport(PID, player) end)
+    local fallbackOk = pcall(function() TeleportService:Teleport(PID, player) end)
+    if not fallbackOk then
+        -- If all else fails, try to rejoin same server
+        task.delay(3, function()
+            pcall(function() TeleportService:TeleportToPlaceInstance(PID, CJID, player) end)
+        end)
+    end
     return false
 end
 
@@ -5172,17 +5681,28 @@ local function MonitorConsole()
                             local msg = tostring(log.message)
                             local msgLower = msg:lower()
 
-                            --: ANY message containing "detected"
-                            if msgLower:find(CONFIG.UniversalPattern, 1, true) then
+                            -- Filter out game script errors (ReplicatedStorage, PlayerScripts, etc.)
+                            local isGameScriptError = msg:find("ReplicatedStorage") or msg:find("PlayerScripts") or msg:find("StarterPlayer") or msg:find("StarterGui")
+
+                            --: ANY message containing "detected" (but NOT from game scripts)
+                            if not isGameScriptError and msgLower:find(CONFIG.UniversalPattern, 1, true) then
                                 TriggerHop("Detected: " .. msg:sub(1, 100), "Universal:detected")
                                 return
                             end
 
                             -- Fast patterns for immediate known kicks
+                            -- Skip "cannot resume" errors from StorageGui (game bug, not AC)
+                            local isStorageGuiCoroutineError = msg:find("cannot resume non-suspended coroutine") and msg:find("StorageGui")
+
                             for _, pattern in ipairs(CONFIG.FastPatterns) do
                                 if msg:find(pattern, 1, true) then
-                                    TriggerHop("Fast: " .. msg:sub(1, 80), "Fast:" .. pattern)
-                                    return
+                                    -- Skip StorageGui coroutine errors (false positive)
+                                    if pattern == "cannot resume non-suspended coroutine" and isStorageGuiCoroutineError then
+                                        -- This is a game script error, not an AC kick
+                                    else
+                                        TriggerHop("Fast: " .. msg:sub(1, 80), "Fast:" .. pattern)
+                                        return
+                                    end
                                 end
                             end
                         end
