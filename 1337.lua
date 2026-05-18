@@ -132,17 +132,8 @@ local Notify = (function()
     NotifGui.DisplayOrder = 100
     NotifGui.Parent = playerGui
 
-    -- Notification background image
-    local NotifBg = Instance.new("ImageLabel")
-    NotifBg.Name = "NotifBg"
-    NotifBg.Size = UDim2.new(1, 0, 1, 0)
-    NotifBg.BackgroundTransparency = 1
-    NotifBg.Image = "https://i.pinimg.com/736x/08/18/77/0818775090ee00b2d5d0e67c735249cc.jpg"
-    NotifBg.ScaleType = Enum.ScaleType.Crop
-    NotifBg.ImageTransparency = 0.85
-    NotifBg.ZIndex = 0
-    NotifBg.Parent = NotifGui
     local NotifContainer = Instance.new("Frame")
+    NotifContainer.Name = "NotifContainer"
     NotifContainer.Size = UDim2.new(0, 280, 1, -20)
     NotifContainer.Position = UDim2.new(1, -290, 0, 10)
     NotifContainer.BackgroundTransparency = 1
@@ -153,41 +144,103 @@ local Notify = (function()
     NotifLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
     NotifLayout.Parent = NotifContainer
 
+    -- Global theme update function for notifications
+    _G.UpdateNotificationTheme = function(t)
+        -- Update global colors for new notifications
+        _G.CurrentNotifColors = {
+            Primary = t.Primary,
+            Stroke = t.Stroke,
+            Text = t.Text,
+            BgImageTransparency = t.BgImageTransparency,
+            RowBgTransparency = t.RowBgTransparency
+        }
+        -- Update existing notifications
+        for _, child in ipairs(NotifContainer:GetChildren()) do
+            if child:IsA("ImageLabel") and child.Name == "RarityNotification" then
+                child.ImageTransparency = t.BgImageTransparency
+                local tint = child:FindFirstChild("Tint")
+                if tint then
+                    tint.BackgroundColor3 = t.Primary
+                    tint.BackgroundTransparency = t.RowBgTransparency
+                end
+                local stroke = child:FindFirstChildOfClass("UIStroke")
+                if stroke then
+                    stroke.Color = t.Stroke
+                    stroke.Thickness = 3
+                end
+                local lbl = child:FindFirstChildOfClass("TextLabel")
+                if lbl then
+                    lbl.TextColor3 = t.Text
+                end
+            end
+        end
+    end
+
+    -- Default notification colors (Rarity theme)
+    _G.CurrentNotifColors = {
+        Primary = Color3.fromRGB(45, 20, 70),
+        Stroke = Color3.fromRGB(100, 60, 140),
+        Text = Color3.fromRGB(255, 255, 255),
+        BgImageTransparency = 0,
+        RowBgTransparency = 0.4
+    }
+
     return function(text, dur)
         dur = dur or 3
-        local f = Instance.new("Frame")
+        local colors = _G.CurrentNotifColors or {
+            Primary = Color3.fromRGB(45, 20, 70),
+            Stroke = Color3.fromRGB(100, 60, 140),
+            Text = Color3.fromRGB(255, 255, 255),
+            BgImageTransparency = 0,
+            RowBgTransparency = 0.4
+        }
+        local f = Instance.new("ImageLabel")
+        f.Name = "RarityNotification"
         f.Size = UDim2.new(1, 0, 0, 36)
-        f.BackgroundColor3 = Color3.fromRGB(45, 20, 70)
-        f.BorderSizePixel = 0
         f.BackgroundTransparency = 1
+        f.ScaleType = Enum.ScaleType.Crop
+        f.ImageTransparency = colors.BgImageTransparency
+        f.ZIndex = 1
+        f.Image = "https://i.pinimg.com/1200x/75/36/a5/7536a5820661ebaa5e7a2fd129d57c3d.jpg"
         f.Parent = NotifContainer
-        local c = Instance.new("UICorner", f)
-        c.CornerRadius = UDim.new(0,6)
+        -- Tint overlay
+        local tint = Instance.new("Frame", f)
+        tint.Name = "Tint"
+        tint.Size = UDim2.new(1, 0, 1, 0)
+        tint.BackgroundColor3 = colors.Primary
+        tint.BackgroundTransparency = colors.RowBgTransparency
+        tint.BorderSizePixel = 0
+        tint.ZIndex = 2
+        -- Stroke
         local s = Instance.new("UIStroke", f)
-        s.Color = Color3.fromRGB(100, 60, 140)
+        s.Color = colors.Stroke
         s.Thickness = 3
         s.Transparency = 1
+        -- Text
         local l = Instance.new("TextLabel", f)
         l.Size = UDim2.new(1,-12,1,0)
         l.Position = UDim2.new(0,12,0,0)
         l.BackgroundTransparency = 1
+        l.ZIndex = 3
         l.Text = text
-        l.TextColor3 = Color3.fromRGB(255, 255, 255)
+        l.TextColor3 = colors.Text
         l.TextSize = 12
         l.Font = Enum.Font.GothamMedium
         local lStroke = Instance.new("UIStroke", l)
-        lStroke.Color = Color3.fromRGB(255, 255, 255)
+        lStroke.Color = colors.Text
         lStroke.Thickness = 3
         lStroke.Transparency = 0.7
         l.TextXAlignment = Enum.TextXAlignment.Left
         l.TextTransparency = 1
-        TweenService:Create(f,TweenInfo.new(0.3),{BackgroundTransparency=0}):Play()
+        -- Fade in
+        TweenService:Create(tint,TweenInfo.new(0.3),{BackgroundTransparency=0.4}):Play()
         TweenService:Create(s,TweenInfo.new(0.3),{Transparency=0.4}):Play()
         TweenService:Create(l,TweenInfo.new(0.3),{TextTransparency=0}):Play()
         task.delay(dur, function()
-            TweenService:Create(f,TweenInfo.new(0.3),{BackgroundTransparency=1}):Play()
+            TweenService:Create(tint,TweenInfo.new(0.3),{BackgroundTransparency=1}):Play()
             TweenService:Create(s,TweenInfo.new(0.3),{Transparency=1}):Play()
             TweenService:Create(l,TweenInfo.new(0.3),{TextTransparency=1}):Play()
+            TweenService:Create(f,TweenInfo.new(0.3),{ImageTransparency=1}):Play()
             task.wait(0.3)
             f:Destroy()
         end)
@@ -1867,19 +1920,8 @@ local UI = (function()
         end
 
         -- Notifications
-        if NotifContainer then
-            for _, child in ipairs(NotifContainer:GetChildren()) do
-                if child:IsA("Frame") and child.Name == "RarityNotification" then
-                    child.BackgroundColor3 = t.Primary
-                    local stroke = child:FindFirstChildOfClass("UIStroke")
-                    if stroke then 
-                        stroke.Color = t.Stroke
-                        stroke.Thickness = 3
-                    end
-                    local lbl = child:FindFirstChildOfClass("TextLabel")
-                    if lbl then lbl.TextColor3 = t.Text end
-                end
-            end
+        if _G.UpdateNotificationTheme then
+            _G.UpdateNotificationTheme(t)
         end
 
         -- UNIVERSAL SCAN: Find any remaining purple/blue elements and recolor them
@@ -5592,52 +5634,62 @@ if ok and src and #src > 100 then loadstring(src)() else warn("[rarity.bw] AutoE
     if type(queue_on_teleport) == "function" then pcall(queue_on_teleport, loader)
     elseif type(queueonteleport) == "function" then pcall(queueonteleport, loader) end
 
-    -- Try server list
-    local AIDs = {}
-    pcall(function()
-        local data = readfile("NotSameServers.json")
-        AIDs = HttpService:JSONDecode(data)
-    end)
-    if #AIDs == 0 then
-        table.insert(AIDs, os.date("!*t").hour)
-        pcall(function() writefile("NotSameServers.json", HttpService:JSONEncode(AIDs)) end)
+    -- STEP 1: Try Rejoin (same server) first
+    if CONFIG.NotifyOnHop then
+        Notify("🔄 Rejoining...", 3)
+    end
+    local rejoinOk = pcall(function() TeleportService:TeleportToPlaceInstance(PID, CJID, player) end)
+    if rejoinOk then
+        return true
     end
 
-    -- Fast single request
-    local url = 'https://games.roblox.com/v1/games/'..PID..'/servers/Public?sortOrder=Desc&limit=100'..'&_nc='..tostring(tick())
-    local response
-    local httpOk = pcall(function() response = game:HttpGet(url) end)
+    -- STEP 2: If Rejoin failed, wait 2 seconds then Server Hop
+    task.delay(2, function()
+        if not State.hopInProgress then return end
 
-    if httpOk and response then
-        local decodeOk, S = pcall(function() return HttpService:JSONDecode(response) end)
-        if decodeOk and S and S.data then
-            for _, v in ipairs(S.data) do
-                local pl = tonumber(v.playing)
-                local mp = tonumber(v.maxPlayers)
-                local sid = tostring(v.id)
-                if pl and mp and sid and pl >= 1 and pl <= 25 and sid ~= CJID and pl < mp then
-                    if not table.find(AIDs, sid) then
-                        table.insert(AIDs, sid)
-                        pcall(function() writefile("NotSameServers.json", HttpService:JSONEncode(AIDs)) end)
-                        if CONFIG.NotifyOnHop then
-                            Notify("🚀 HOPPING!", 2)
+        if CONFIG.NotifyOnHop then
+            Notify("🚀 Server Hopping...", 3)
+        end
+
+        -- Try server list
+        local AIDs = {}
+        pcall(function()
+            local data = readfile("NotSameServers.json")
+            AIDs = HttpService:JSONDecode(data)
+        end)
+        if #AIDs == 0 then
+            table.insert(AIDs, os.date("!*t").hour)
+            pcall(function() writefile("NotSameServers.json", HttpService:JSONEncode(AIDs)) end)
+        end
+
+        -- Fast single request
+        local url = 'https://games.roblox.com/v1/games/'..PID..'/servers/Public?sortOrder=Desc&limit=100'..'&_nc='..tostring(tick())
+        local response
+        local httpOk = pcall(function() response = game:HttpGet(url) end)
+
+        if httpOk and response then
+            local decodeOk, S = pcall(function() return HttpService:JSONDecode(response) end)
+            if decodeOk and S and S.data then
+                for _, v in ipairs(S.data) do
+                    local pl = tonumber(v.playing)
+                    local mp = tonumber(v.maxPlayers)
+                    local sid = tostring(v.id)
+                    if pl and mp and sid and pl >= 1 and pl <= 25 and sid ~= CJID and pl < mp then
+                        if not table.find(AIDs, sid) then
+                            table.insert(AIDs, sid)
+                            pcall(function() writefile("NotSameServers.json", HttpService:JSONEncode(AIDs)) end)
+                            pcall(function() TeleportService:TeleportToPlaceInstance(PID, sid, player) end)
+                            return
                         end
-                        pcall(function() TeleportService:TeleportToPlaceInstance(PID, sid, player) end)
-                        return true
                     end
                 end
             end
         end
-    end
 
-    -- Fallback
-    local fallbackOk = pcall(function() TeleportService:Teleport(PID, player) end)
-    if not fallbackOk then
-        -- If all else fails, try to rejoin same server
-        task.delay(3, function()
-            pcall(function() TeleportService:TeleportToPlaceInstance(PID, CJID, player) end)
-        end)
-    end
+        -- Fallback: random teleport
+        pcall(function() TeleportService:Teleport(PID, player) end)
+    end)
+
     return false
 end
 
