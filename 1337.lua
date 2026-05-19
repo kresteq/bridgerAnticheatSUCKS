@@ -39,6 +39,7 @@ local IsFlyListening = false
 local IsGuiHidden = false
 local ServerHopRunning = false
 
+local KeybindConnections = {}
 local Features = {
     Corpse={E=false,C=nil}, Bank={E=false,C=nil}, Chest={E=false,C=nil}, Tree={E=false,C=nil},
     Fish={E=false,C=nil}, Chams={E=false,C=nil,PlayerAdded=nil}, SaintESP={E=false,C=nil}, PosTracker={E=false,C=nil},
@@ -4096,28 +4097,8 @@ local TreeFuncs = (function()
     local ambushhide = Vector3.new(-5971, 242, -3820)
     local bankedseed = false
     local swamp = false
-    local autoclick = false
     local bankFull = false
-    local chopThread = nil
-
-    local CLICK_COOLDOWN = 0.066
-    local CLICK_DURATION = 0.03
-    local lastChop = 0
-    local vim = game:GetService("VirtualInputManager")
-
-    local userClicking = false
-    UserInputService.InputBegan:Connect(function(input, gpe)
-        if gpe then return end
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            userClicking = true
-        end
-    end)
-    UserInputService.InputEnded:Connect(function(input, gpe)
-        if gpe then return end
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            userClicking = false
-        end
-    end)
+        local vim = game:GetService("VirtualInputManager")
 
     local function equipaxe()
         local axe = player.Backpack:FindFirstChild("LumberAxe")
@@ -4315,29 +4296,21 @@ local TreeFuncs = (function()
         end
     end
 
+    -- ==========================================
+    -- CHOP: Always fires LumberAxe, no flags, no cooldowns
+    -- ==========================================
     local function chop()
-        if autoclick then return end
-        if userClicking then return end
-        local now = tick()
-        if now - lastChop < CLICK_COOLDOWN then return end
-        local axe = player.Character and (player.Character:FindFirstChild("LumberAxe") or player.Backpack:FindFirstChild("LumberAxe"))
-        if not axe then return end
-        if not player.Character:FindFirstChild("LumberAxe") then
+        local char = player.Character
+        if not char then return end
+        -- Ensure axe is equipped
+        if not char:FindFirstChild("LumberAxe") then
             equipaxe()
             task.wait(0.15)
         end
+        -- Fire tool via VIM mouse click (only method that works for LumberAxe)
         vim:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-        task.wait(CLICK_DURATION)
+        task.wait(0.03)
         vim:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-        autoclick = true
-        lastChop = now
-        task.delay(CLICK_COOLDOWN, function()
-            autoclick = false
-        end)
-    end
-
-    local function stopChop()
-        autoclick = false
     end
 
     local function findbark(t)
@@ -4433,6 +4406,9 @@ local TreeFuncs = (function()
         end
     end
 
+    -- ==========================================
+    -- HEARTBEAT: Continuous chop via Heartbeat, no threads
+    -- ==========================================
     local treeHeartbeat = nil
 
     local function startHeartbeat()
@@ -4449,8 +4425,10 @@ local TreeFuncs = (function()
             local root = char:FindFirstChild("HumanoidRootPart")
             if not root then return end
 
+            -- Always chop first - no conditions, no flags
+            chop()
+
             if not player.Backpack:FindFirstChild("LumberAxe") and not char:FindFirstChild("LumberAxe") then
-                stopChop()
                 local old = root.CFrame
                 local chuck = workspace.NPC:FindFirstChild("ChuckB")
                 if chuck then
@@ -4478,23 +4456,8 @@ local TreeFuncs = (function()
                 return
             end
 
-            if not char:FindFirstChild("LumberAxe") then
-                equipaxe()
-                task.wait(0.3)
-            end
-
-            if not autoclick and (not chopThread or coroutine.status(chopThread) == "dead") then
-                chopThread = task.spawn(function()
-                    while active and autoclick == false do
-                        chop()
-                        task.wait(0.02)
-                    end
-                end)
-            end
-
             -- Seed deposit logic: after deposit, reset tree and resume chopping
             if not bankFull and not bankedseed and getseedcount() >= 5 then
-                stopChop()
                 depositseeds()
                 bankedseed = true
                 tree = nil  -- force find new tree after deposit
@@ -4509,7 +4472,6 @@ local TreeFuncs = (function()
             end
 
             if getwoodcount() >= 500 then
-                stopChop()
                 sellwood()
                 tree = nil  -- reset tree after selling
                 task.wait(1)
@@ -4523,19 +4485,16 @@ local TreeFuncs = (function()
             end
 
             if not tree or not tree.Parent then
-                stopChop()
                 nexttree()
                 return
             end
 
             if isplayernearby() then
-                stopChop()
                 nexttree()
                 return
             end
 
             if isnpcnearby() then
-                stopChop()
                 tp(ambushhide)
                 task.wait(10)
                 if tree and tree.Parent then
@@ -4548,7 +4507,6 @@ local TreeFuncs = (function()
             local bark = findbark(tree)
             if bark then
                 if not bark.CanCollide then
-                    stopChop()
                     nexttree()
                 else
                     tp(bark.Position)
@@ -4562,14 +4520,12 @@ local TreeFuncs = (function()
             treeHeartbeat:Disconnect()
             treeHeartbeat = nil
         end
-        stopChop()
     end
 
     function tf.StartTree()
         if active then return end
         active = true
         wasActiveBeforeDeath = true
-        autoclick = false
         bankedseed = false
         Notify("🌲 Auto Tree active")
         cleanupTrees()
@@ -4588,7 +4544,7 @@ local TreeFuncs = (function()
         selection = sel
         tree = nil
         if sel == "SwampTrees" then swamp = true else swamp = false end
-        
+
     end
 
     function tf.GetSelection() return selection end
@@ -4597,15 +4553,14 @@ local TreeFuncs = (function()
         local newRoot = newChar:WaitForChild("HumanoidRootPart")
         local shouldResume = wasActiveBeforeDeath
         active = false
-        autoclick = false
         bankedseed = false
         if not shouldResume then
             return
         end
         task.spawn(function()
-            
-            task.wait(2)
-            
+
+            task.wait(4)
+
             local chuck = workspace.NPC:FindFirstChild("ChuckB")
             if chuck then
                 local cd = chuck:FindFirstChildWhichIsA("ClickDetector", true)
@@ -4627,12 +4582,11 @@ local TreeFuncs = (function()
                     end
                 end
             end
-            
+
             task.wait(5)
-            
+
             active = true
             wasActiveBeforeDeath = true
-            autoclick = false
             bankedseed = false
             startHeartbeat()
             nexttree()
@@ -4641,7 +4595,6 @@ local TreeFuncs = (function()
 
     return tf
 end)()
-
 -- ==========================================
 -- AUTO FISH (IIFE)
 -- ==========================================
@@ -5026,79 +4979,106 @@ UI.KbBtn.MouseButton1Click:Connect(function()
     IsListening = true
     UI.KbBtn.Text = "Press key"
     UI.KbBtn.TextColor3 = Color3.new(1, 1, 1)
-    local conn
-    conn = UserInputService.InputBegan:Connect(function(i, g)
+    if KeybindConnections.Gui then
+        pcall(function() KeybindConnections.Gui:Disconnect() end)
+        KeybindConnections.Gui = nil
+    end
+    KeybindConnections.Gui = UserInputService.InputBegan:Connect(function(i, g)
+        if not IsListening then return end
         if g then return end
         if i.UserInputType == Enum.UserInputType.Keyboard then
             GuiKeybind = i.KeyCode
             UI.KbBtn.Text = tostring(i.KeyCode):gsub("Enum.KeyCode.", "")
-            ui.KbBtn.TextColor3 = Themes[CurrentTheme].Text
+            UI.KbBtn.TextColor3 = Themes[CurrentTheme].Text
             IsListening = false
-            if conn then conn:Disconnect() end
+            if KeybindConnections.Gui then
+                pcall(function() KeybindConnections.Gui:Disconnect() end)
+                KeybindConnections.Gui = nil
+            end
         end
     end)
     task.delay(5, function()
         if IsListening then
             IsListening = false
             UI.KbBtn.Text = tostring(GuiKeybind):gsub("Enum.KeyCode.", "")
-            ui.KbBtn.TextColor3 = Themes[CurrentTheme].Text
-            if conn then conn:Disconnect() end
+            UI.KbBtn.TextColor3 = Themes[CurrentTheme].Text
+            if KeybindConnections.Gui then
+                pcall(function() KeybindConnections.Gui:Disconnect() end)
+                KeybindConnections.Gui = nil
+            end
         end
     end)
 end)
-
 UI.FlyKbBtn.MouseButton1Click:Connect(function()
     if IsFlyListening then return end
     IsFlyListening = true
     UI.FlyKbBtn.Text = "Press key"
     UI.FlyKbBtn.TextColor3 = Color3.new(1, 1, 1)
-    local conn
-    conn = UserInputService.InputBegan:Connect(function(i, g)
+    if KeybindConnections.Fly then
+        pcall(function() KeybindConnections.Fly:Disconnect() end)
+        KeybindConnections.Fly = nil
+    end
+    KeybindConnections.Fly = UserInputService.InputBegan:Connect(function(i, g)
+        if not IsFlyListening then return end
         if g then return end
         if i.UserInputType == Enum.UserInputType.Keyboard then
             FlyKeybind = i.KeyCode
             UI.FlyKbBtn.Text = tostring(i.KeyCode):gsub("Enum.KeyCode.", "")
-            ui.FlyKbBtn.TextColor3 = Themes[CurrentTheme].Text
+            UI.FlyKbBtn.TextColor3 = Themes[CurrentTheme].Text
             IsFlyListening = false
-            if conn then conn:Disconnect() end
+            if KeybindConnections.Fly then
+                pcall(function() KeybindConnections.Fly:Disconnect() end)
+                KeybindConnections.Fly = nil
+            end
         end
     end)
     task.delay(5, function()
         if IsFlyListening then
             IsFlyListening = false
             UI.FlyKbBtn.Text = tostring(FlyKeybind):gsub("Enum.KeyCode.", "")
-            ui.FlyKbBtn.TextColor3 = Themes[CurrentTheme].Text
-            if conn then conn:Disconnect() end
+            UI.FlyKbBtn.TextColor3 = Themes[CurrentTheme].Text
+            if KeybindConnections.Fly then
+                pcall(function() KeybindConnections.Fly:Disconnect() end)
+                KeybindConnections.Fly = nil
+            end
         end
     end)
 end)
-
 UI.SpectatorKbBtn.MouseButton1Click:Connect(function()
     if IsSpectatorListening then return end
     IsSpectatorListening = true
     UI.SpectatorKbBtn.Text = "Press key"
     UI.SpectatorKbBtn.TextColor3 = Color3.new(1, 1, 1)
-    local conn
-    conn = UserInputService.InputBegan:Connect(function(i, g)
+    if KeybindConnections.Spectator then
+        pcall(function() KeybindConnections.Spectator:Disconnect() end)
+        KeybindConnections.Spectator = nil
+    end
+    KeybindConnections.Spectator = UserInputService.InputBegan:Connect(function(i, g)
+        if not IsSpectatorListening then return end
         if g then return end
         if i.UserInputType == Enum.UserInputType.Keyboard then
             SpectatorKeybind = i.KeyCode
             UI.SpectatorKbBtn.Text = tostring(i.KeyCode):gsub("Enum.KeyCode.", "")
-            ui.SpectatorKbBtn.TextColor3 = Themes[CurrentTheme].Text
+            UI.SpectatorKbBtn.TextColor3 = Themes[CurrentTheme].Text
             IsSpectatorListening = false
-            if conn then conn:Disconnect() end
+            if KeybindConnections.Spectator then
+                pcall(function() KeybindConnections.Spectator:Disconnect() end)
+                KeybindConnections.Spectator = nil
+            end
         end
     end)
     task.delay(5, function()
         if IsSpectatorListening then
             IsSpectatorListening = false
             UI.SpectatorKbBtn.Text = tostring(SpectatorKeybind):gsub("Enum.KeyCode.", "")
-            ui.SpectatorKbBtn.TextColor3 = Themes[CurrentTheme].Text
-            if conn then conn:Disconnect() end
+            UI.SpectatorKbBtn.TextColor3 = Themes[CurrentTheme].Text
+            if KeybindConnections.Spectator then
+                pcall(function() KeybindConnections.Spectator:Disconnect() end)
+                KeybindConnections.Spectator = nil
+            end
         end
     end)
 end)
-
 UserInputService.InputBegan:Connect(function(i, g)
     if g then return end
     if i.KeyCode == FlyKeybind then
@@ -5227,90 +5207,71 @@ UI.TreeKbBtn.MouseButton1Click:Connect(function()
     IsTreeListening = true
     UI.TreeKbBtn.Text = "Press key"
     UI.TreeKbBtn.TextColor3 = Color3.new(1, 1, 1)
-    local conn
-    conn = UserInputService.InputBegan:Connect(function(i, g)
+    if KeybindConnections.Tree then
+        pcall(function() KeybindConnections.Tree:Disconnect() end)
+        KeybindConnections.Tree = nil
+    end
+    KeybindConnections.Tree = UserInputService.InputBegan:Connect(function(i, g)
+        if not IsTreeListening then return end
         if g then return end
         if i.UserInputType == Enum.UserInputType.Keyboard then
             TreeKeybind = i.KeyCode
             UI.TreeKbBtn.Text = tostring(i.KeyCode):gsub("Enum.KeyCode.", "")
-            ui.TreeKbBtn.TextColor3 = Themes[CurrentTheme].Text
+            UI.TreeKbBtn.TextColor3 = Themes[CurrentTheme].Text
             IsTreeListening = false
-            if conn then conn:Disconnect() end
+            if KeybindConnections.Tree then
+                pcall(function() KeybindConnections.Tree:Disconnect() end)
+                KeybindConnections.Tree = nil
+            end
         end
     end)
     task.delay(5, function()
         if IsTreeListening then
             IsTreeListening = false
             UI.TreeKbBtn.Text = tostring(TreeKeybind):gsub("Enum.KeyCode.", "")
-            ui.TreeKbBtn.TextColor3 = Themes[CurrentTheme].Text
-            if conn then conn:Disconnect() end
+            UI.TreeKbBtn.TextColor3 = Themes[CurrentTheme].Text
+            if KeybindConnections.Tree then
+                pcall(function() KeybindConnections.Tree:Disconnect() end)
+                KeybindConnections.Tree = nil
+            end
         end
     end)
 end)
-
-UI.FpsApplyBtn.MouseButton1Click:Connect(function()
-    local n = tonumber(UI.FpsBox.Text)
-    if n and n > 0 then
-        pcall(function() setfpscap(n) end)
-        _G.RarityFpsCap = n
-        _G.RarityFpsCheckTime = 0
-        Notify("FPS Cap set to " .. n, 2)
-    else
-        Notify("Invalid FPS value", 2)
-    end
-end)
-
--- Smart FPS Cap restore: only apply if current FPS exceeds the cap
-RunService.Heartbeat:Connect(function()
-    if not _G.RarityFpsCap or _G.RarityFpsCap <= 0 then return end
-    local now = tick()
-    -- Check every 2 seconds to avoid constant calls
-    if now - (_G.RarityFpsCheckTime or 0) < 2 then return end
-    _G.RarityFpsCheckTime = now
-
-    -- Check current FPS via workspace:GetRealPhysicsFPS() or similar
-    local currentFps = 60 -- default assumption
-    pcall(function()
-        if workspace.GetRealPhysicsFPS then
-            currentFps = workspace:GetRealPhysicsFPS()
-        end
-    end)
-
-    -- If current FPS is significantly higher than cap, re-apply
-    if currentFps > _G.RarityFpsCap + 10 then
-        pcall(function() setfpscap(_G.RarityFpsCap) end)
-    end
-end)
-
-UI.FogBtn.MouseButton1Click:Connect(VisualFuncs.RemoveFog)
-
 UI.AttachKbBtn.MouseButton1Click:Connect(function()
     if QoLFuncs.IsAttachListening() then return end
     QoLFuncs.SetIsAttachListening(true)
     UI.AttachKbBtn.Text = "Press key"
     UI.AttachKbBtn.TextColor3 = Color3.new(1, 1, 1)
-    local conn
-    conn = UserInputService.InputBegan:Connect(function(i, g)
+    if KeybindConnections.Attach then
+        pcall(function() KeybindConnections.Attach:Disconnect() end)
+        KeybindConnections.Attach = nil
+    end
+    KeybindConnections.Attach = UserInputService.InputBegan:Connect(function(i, g)
+        if not QoLFuncs.IsAttachListening() then return end
         if g then return end
         if i.UserInputType == Enum.UserInputType.Keyboard then
             QoLFuncs.SetAttachKeybind(i.KeyCode)
             UI.AttachKbBtn.Text = tostring(i.KeyCode):gsub("Enum.KeyCode.", "")
-            ui.AttachKbBtn.TextColor3 = Themes[CurrentTheme].Text
+            UI.AttachKbBtn.TextColor3 = Themes[CurrentTheme].Text
             QoLFuncs.SetIsAttachListening(false)
-            if conn then conn:Disconnect() end
+            if KeybindConnections.Attach then
+                pcall(function() KeybindConnections.Attach:Disconnect() end)
+                KeybindConnections.Attach = nil
+            end
         end
     end)
     task.delay(5, function()
         if QoLFuncs.IsAttachListening() then
             QoLFuncs.SetIsAttachListening(false)
             UI.AttachKbBtn.Text = tostring(QoLFuncs.AttachKeybind()):gsub("Enum.KeyCode.", "")
-            ui.AttachKbBtn.TextColor3 = Themes[CurrentTheme].Text
-            if conn then conn:Disconnect() end
+            UI.AttachKbBtn.TextColor3 = Themes[CurrentTheme].Text
+            if KeybindConnections.Attach then
+                pcall(function() KeybindConnections.Attach:Disconnect() end)
+                KeybindConnections.Attach = nil
+            end
         end
     end)
 end)
-
--- Players & NPCs Buttons
 local currentSpectateSubject = nil
 UI.SpectatePlayerBtn.MouseButton1Click:Connect(function()
     local name = UI.PlayersDropdown.GetSelected()
