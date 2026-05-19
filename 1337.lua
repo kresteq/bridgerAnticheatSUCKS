@@ -1960,7 +1960,7 @@ local UI = (function()
     return ui
 end)()
 -- Apply default theme after UI creation
-pcall(function() ApplyTheme("Rarity") end)
+pcall(function() UI.ApplyTheme("Rarity") end)
 
 
 
@@ -4000,7 +4000,7 @@ return c
                 -- Theme loading
         if data.Theme then
             if Themes[data.Theme] then
-                ApplyTheme(data.Theme)
+                UI.ApplyTheme(data.Theme)
                 if UI.ThemeDropdown then
                     UI.ThemeDropdown.SetSelected(data.Theme)
                 end
@@ -5387,6 +5387,7 @@ UI.TeleportNPCBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
+-- ==========================================
 -- AUTO-RESTORE
 -- ==========================================
 task.delay(3, function()
@@ -5398,109 +5399,14 @@ task.delay(3, function()
             if name ~= "" then
                 UI.ConfigNameBox.Text = name
                 CurrentConfigName = name
-                local data = (function()
-                    local path = ConfigFolder.."/"..name..".json"
-                    if isfile(path) then
-                        local s,r = pcall(function() return HttpService:JSONDecode(readfile(path)) end)
-                        if s and type(r)=="table" then return r end
-                    end
-                    return nil
-                end)()
-                if data then
-                    if data.MinPlayers and UI.SetMin then UI.SetMin(data.MinPlayers) end
-                    if data.MaxPlayers and UI.SetMax then UI.SetMax(data.MaxPlayers) end
-                    if data.FlySlider and UI.SetFlySpeed then UI.SetFlySpeed(data.FlySlider) elseif data.FlySpeed then FlySpeed = data.FlySpeed end
-                    if data.GuiKeybind then
-                        local ok2,kc=pcall(function() return Enum.KeyCode[data.GuiKeybind] end)
-                        if ok2 and kc then GuiKeybind=kc UI.KbBtn.Text=data.GuiKeybind end
-                    end
-                    if data.FlyKeybind then
-                        local ok2,kc=pcall(function() return Enum.KeyCode[data.FlyKeybind] end)
-                        if ok2 and kc then FlyKeybind=kc UI.FlyKbBtn.Text=data.FlyKeybind end
-                    end
-                    if data.BuyItems and #data.BuyItems > 0 then UI.ItemDropdown.SetSelected(data.BuyItems) end
-                    if data.AttachTarget then UI.PlayerDropdown.SetSelected(data.AttachTarget) end
-                    if data.PlayersTarget then UI.PlayersDropdown.SetSelected(data.PlayersTarget) end
-                    if data.NPCTarget then UI.NPCDropdown.SetSelected(data.NPCTarget) end
-                    if data.AttachKeybind then
-                        local ok2,kc2=pcall(function() return Enum.KeyCode[data.AttachKeybind] end)
-                        if ok2 and kc2 then QoLFuncs.SetAttachKeybind(kc2) UI.AttachKbBtn.Text=data.AttachKeybind end
-                    end
-                    if data.SpectatorKeybind then
-                        local ok2,kc2=pcall(function() return Enum.KeyCode[data.SpectatorKeybind] end)
-                        if ok2 and kc2 then SpectatorFuncs.SetSpectatorKeybind(kc2) UI.SpectatorKbBtn.Text=data.SpectatorKeybind end
-                    end
-                    if data.TreeKeybind then
-                        local ok2,kc2=pcall(function() return Enum.KeyCode[data.TreeKeybind] end)
-                        if ok2 and kc2 then TreeKeybind=kc2 UI.TreeKbBtn.Text=data.TreeKeybind end
-                    end
-                    if data.TreeType then
-                    if data.ChamsR then UI.ChamsRBox.Text = tostring(data.ChamsR) end
-                    if data.ChamsG then UI.ChamsGBox.Text = tostring(data.ChamsG) end
-                    if data.ChamsB then UI.ChamsBBox.Text = tostring(data.ChamsB) end
-                    if data.CustomMoola and data.CustomMoola ~= "" then 
-                        UI.MoolaSpoofBox.Text = data.CustomMoola
-                        QoLExtras.StartMoolaSpoof(data.CustomMoola)
-                    end
-                        UI.TreeTypeBtn.Text = data.TreeType
-                        _G.RarityTreeSelection = data.TreeType
-                    end
-
-                                        -- Theme loading
-                    if data.Theme then
-                        if Themes[data.Theme] then
-                            ApplyTheme(data.Theme)
-                            if UI.ThemeDropdown then
-                                UI.ThemeDropdown.SetSelected(data.Theme)
-                            end
-                        end
-                    end
-
-local starters = _G.RarityStarters
-
-                    for featName, enabled in pairs(data) do
-                        local isEnabled = (enabled == true) or (enabled == "true") or (enabled == 1)
-                        if isEnabled and Features[featName] then
-                            if featName == "Corpse" then AnimToggle(UI.CorpseT, UI.CorpseC, UI.CorpseS, true) end
-                            if featName == "Bank" then AnimToggle(UI.BankT, UI.BankC, UI.BankS, true) end
-                            if featName == "Chest" then AnimToggle(UI.ChestT, UI.ChestC, UI.ChestS, true) end
-                            if featName == "Tree" then AnimToggle(UI.TreeT, UI.TreeC, UI.TreeS, true) end
-                            if featName == "SaintScanner" then AnimToggle(UI.ScanT, UI.ScanC, UI.ScanS, true) end
-                            if featName == "ESP" then AnimToggle(UI.EspT, UI.EspCir, UI.EspS, true) end
-                            if featName == "ClickTp" then AnimToggle(UI.ClickTpT, UI.ClickTpC, UI.ClickTpS, true) end
-                            if featName == "Fly" then AnimToggle(UI.FlyT, UI.FlyC, UI.FlyS, true) end
-                            if featName == "RaknetDesync" then AnimToggle(UI.RakT, UI.RakC, UI.RakS, true) end
-                            if featName == "HideName" then AnimToggle(UI.HideT, UI.HideC, UI.HideS, true) end
-                            if featName == "AutoBuy" then AnimToggle(UI.AutoBuyT, UI.AutoBuyC, UI.AutoBuyS, true) end
-                            if featName == "AttachPlayer" then AnimToggle(UI.AttachT, UI.AttachC, UI.AttachS, true) end
-                            if featName == "NoClip" then AnimToggle(UI.NoClipT, UI.NoClipC, UI.NoClipS, true) end
-                            if featName == "Invisible" then AnimToggle(UI.InvisT, UI.InvisC, UI.InvisS, true) end
-                            if featName == "Spectator" then AnimToggle(UI.SpectatorT, UI.SpectatorC, UI.SpectatorS, true) end
-                            if featName == "FullBright" then AnimToggle(UI.FullBrightT, UI.FullBrightC, UI.FullBrightS, true) end
-                            if featName == "Fish" then AnimToggle(UI.FishT, UI.FishC, UI.FishS, true) end
-                            if featName == "Chams" then AnimToggle(UI.ChamsT, UI.ChamsC, UI.ChamsS, true) end
-                            if featName == "SaintESP" then AnimToggle(UI.SaintEspT, UI.SaintEspC, UI.SaintEspS, true) end
-                            if not Features[featName].E then
-                                Features[featName].E = true
-                                local starterFunc = starters[featName]
-                                if starterFunc then task.spawn(starterFunc) end
-                            end
-                        end
-                    end
-                    Notify("✅ AutoLoad successful", 3)
-                else
-                    Notify("❌ AutoLoad failed: config '" .. name .. "' not found", 3)
-                end
-            else
-                Notify("📭 AutoLoad is empty", 3)
+                ConfigFuncs.LoadCurrentConfig()
+                return
             end
-        else
-            Notify("📭 AutoLoad is empty", 3)
         end
-    else
-        Notify("📭 AutoLoad is empty", 3)
     end
+    Notify("📭 AutoLoad is empty", 3)
 end)
+
 
 -- ==========================================
 -- PLAYERS & NPCs UPDATERS
