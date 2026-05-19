@@ -5175,6 +5175,46 @@ end
 UI.SaveCfgBtn.MouseButton1Click:Connect(ConfigFuncs.SaveCurrentConfig)
 UI.LoadCfgBtn.MouseButton1Click:Connect(ConfigFuncs.LoadCurrentConfig)
 UI.DelCfgBtn.MouseButton1Click:Connect(ConfigFuncs.DeleteCurrentConfig)
+UI.FpsApplyBtn.MouseButton1Click:Connect(function()
+    local fpsText = UI.FpsBox.Text
+    local fps = tonumber(fpsText)
+    if fps and fps > 0 then
+        -- Stop existing FPS cap loops if any
+        if _G.RarityFpsCapConnection then
+            _G.RarityFpsCapConnection:Disconnect()
+            _G.RarityFpsCapConnection = nil
+        end
+        if _G.RarityFpsCapLoop then
+            _G.RarityFpsCapLoop = false
+        end
+        -- Method 1: Persistent setfpscap loop (re-applies every 1 sec to fight resets)
+        local setfpscapOk = pcall(function() setfpscap(fps) end)
+        if setfpscapOk then
+            _G.RarityFpsCapLoop = true
+            task.spawn(function()
+                while _G.RarityFpsCapLoop do
+                    pcall(function() setfpscap(fps) end)
+                    task.wait(1)
+                end
+                -- Reset to uncapped when stopped
+                pcall(function() setfpscap(0) end)
+            end)
+            Notify("FPS Cap set to " .. fps, 2)
+        else
+            -- Method 2: Heartbeat-based FPS cap (works on all executors)
+            _G.RarityFpsCapConnection = RunService.Heartbeat:Connect(function()
+                local start = os.clock()
+                local target = 1 / fps
+                while (os.clock() - start) < target do
+                    -- busy wait to cap FPS
+                end
+            end)
+            Notify("FPS Cap set to " .. fps .. " (Heartbeat method)", 2)
+        end
+    else
+        Notify("Invalid FPS value", 2)
+    end
+end)
 UI.ServerHopBtn.MouseButton1Click:Connect(function()
     Notify("Starting server hop...", 2)
     ServerHop()
