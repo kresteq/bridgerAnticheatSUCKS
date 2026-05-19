@@ -4085,7 +4085,7 @@ end)()
 -- ==========================================
 
 -- ==========================================
--- AUTO TREE FARM (from nezua by 55.lua, adapted for rarity.bw)
+-- AUTO TREE FARM
 -- ==========================================
 local TreeFuncs = (function()
     local tf = {}
@@ -5721,19 +5721,6 @@ local function MonitorCharacter()
                 TriggerHop("Character removed", "Character")
             end
         end)
-    end)
-    table.insert(State.connections, conn)
-end
-
--- Method 5: Heartbeat freeze
-local function MonitorHeartbeat()
-    local lastTick = tick()
-    local conn = RunService.Heartbeat:Connect(function()
-        if not State.detectorActive then return end
-        if tick() - lastTick > 3 then
-            TriggerHop("Connection frozen", "Heartbeat")
-        end
-        lastTick = tick()
     end)
     table.insert(State.connections, conn)
 end
