@@ -35,6 +35,7 @@ local FlySpeed = 24
 local IsListening = false
 local IsTreeListening = false
 local TreeKeybind = Enum.KeyCode.F2
+local LassoKeybind = Enum.KeyCode.F3
 local IsFlyListening = false
 local IsGuiHidden = false
 local ServerHopRunning = false
@@ -48,7 +49,8 @@ local Features = {
     RaknetDesync={E=false,C=nil}, HideName={E=false,C=nil},
     AutoBuy={E=false,C=nil}, AttachPlayer={E=false,C=nil},
     NoClip={E=false,C=nil}, Invisible={E=false,C=nil},
-    Spectator={E=false,C=nil}, FullBright={E=false,C=nil}
+    Spectator={E=false,C=nil}, FullBright={E=false,C=nil},
+    LassoSnitch={E=false,C=nil}
 }
 
 local saintsPartNames = {"SaintsLeftArm","SaintsRightArm","SaintsLeftLeg","SaintsRightLeg","SaintsRibcage"}
@@ -531,7 +533,7 @@ local UI = (function()
             if name=="ESP" then ts = UDim2.new(0,400,0,360)
             elseif name=="Movement" then ts = UDim2.new(0,400,0,520)
             elseif name=="QoL" then ts = UDim2.new(0,400,0,420)
-            elseif name=="Players & NPCs" then ts = UDim2.new(0,400,0,420)
+            elseif name=="Players & NPCs" then ts = UDim2.new(0,400,0,480)
             elseif name=="Misc" then ts = UDim2.new(0,400,0,460)
             elseif name=="Server" then ts = UDim2.new(0,400,0,440)
             elseif name=="Settings" then ts = UDim2.new(0,400,0,420) end
@@ -1522,6 +1524,20 @@ local UI = (function()
     ui.TeleportNPCBtn.MouseLeave:Connect(function()
         ui.TeleportNPCBtn.BackgroundColor3 = Themes[CurrentTheme].Button
     end)
+
+    pny = pny + 36
+    pny = CreateSection(PnC, "Lasso Tricks", pny + 8)
+    ui.LassoT, ui.LassoC, ui.LassoS, pny = CreateToggle(PnC, "Lasso Snitch", pny, "LassoSnitch")
+    ui.LassoStatusLbl = Instance.new("TextLabel", PnC)
+    ui.LassoStatusLbl.Size = UDim2.new(1, 0, 0, 20)
+    ui.LassoStatusLbl.Position = UDim2.new(0, 0, 0, pny)
+    ui.LassoStatusLbl.BackgroundTransparency = 1
+    ui.LassoStatusLbl.Text = "Status: Idle"
+    ui.LassoStatusLbl.TextColor3 = Themes[CurrentTheme].Text
+    ui.LassoStatusLbl.TextSize = 12
+    ui.LassoStatusLbl.Font = Enum.Font.Gotham
+    ui.LassoStatusLbl.TextXAlignment = Enum.TextXAlignment.Left
+    pny = pny + 24
 
     -- Misc Tab
     local MiscC = TabContents["Misc"]
@@ -2901,6 +2917,8 @@ local MovementFuncs = (function()
 
         FlyAct = true
         hum.PlatformStand = true
+        _G.RarityOriginalGravity = Workspace.Gravity
+        Workspace.Gravity = 0
 
         FlyConn = RunService.Heartbeat:Connect(function()
             if not hrp.Parent or not hum.Parent then return end
@@ -2919,7 +2937,6 @@ local MovementFuncs = (function()
                     local cam = workspace.CurrentCamera
                     local moveDir = (cam.CFrame.LookVector * -md.Z + cam.CFrame.RightVector * md.X + Vector3.new(0, md.Y, 0)).Unit
                     hrp.Velocity = moveDir * FlySpeed
-                    hrp.CFrame = CFrame.new(hrp.Position + moveDir * 0.5)
                 else
                     hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                     hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
@@ -2935,6 +2952,7 @@ local MovementFuncs = (function()
         Notify("⚫ Fly disabled")
         FlyAct = false
         if FlyConn then FlyConn:Disconnect() FlyConn = nil end
+        Workspace.Gravity = _G.RarityOriginalGravity or 196.2
         local c = player.Character
         if c then
             local hum = c:FindFirstChildOfClass("Humanoid")
@@ -4085,7 +4103,7 @@ end)()
 -- ==========================================
 
 -- ==========================================
--- AUTO TREE FARM
+-- AUTO TREE FARM (from nezua by 55.lua, adapted for rarity.bw)
 -- ==========================================
 local TreeFuncs = (function()
     local tf = {}
@@ -4896,6 +4914,184 @@ local FishFuncs = (function()
     return ff
 end)()
 
+-- ==========================================
+-- LASSO SNITCH (IIFE)
+-- ==========================================
+local LassoFuncs = (function()
+    local lf = {}
+    local active = false
+    local lassoConnection = nil
+    local moveInterval = 0.075
+
+    local function getLassoHead()
+        return Workspace:FindFirstChild("LassoHead")
+    end
+
+    local function getPlayerHRP()
+        local char = player.Character
+        if not char then return nil end
+        return char:FindFirstChild("HumanoidRootPart")
+    end
+
+    local function isRagdoll(targetPlayer)
+        local ents = Workspace:FindFirstChild("Entities")
+        if not ents then return false end
+        local pFolder = ents:FindFirstChild(targetPlayer.Name)
+        if not pFolder then return false end
+        local ragReq = pFolder:FindFirstChild("RagdollRequests")
+        return ragReq and #ragReq:GetChildren() > 0
+    end
+
+    local function findClosestPlayer()
+        local hrp = getPlayerHRP()
+        if not hrp then return nil end
+        local closest = nil
+        local minDist = math.huge
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= player and p.Character then
+                local r = p.Character:FindFirstChild("HumanoidRootPart")
+                local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                if r and hum and hum.Health > 0 then
+                    local d = (r.Position - hrp.Position).Magnitude
+                    if d < minDist then
+                        minDist = d
+                        closest = p
+                    end
+                end
+            end
+        end
+        return closest
+    end
+
+    local function getLassoTargetCF(targetChar, lassoHead)
+        local t = targetChar:FindFirstChild("Torso") or targetChar:FindFirstChild("UpperTorso") or targetChar:FindFirstChild("HumanoidRootPart")
+        if not t then return nil end
+        local r = targetChar:FindFirstChild("HumanoidRootPart")
+        if not r then return t.CFrame end
+        local vel = r.Velocity
+        local spd = vel.Magnitude
+        if spd > 3 then
+            local flatVel = Vector3.new(vel.X, 0, vel.Z)
+            local dir = flatVel.Unit
+            local lead = math.min(spd * 0.15, 8)
+            local newPos = Vector3.new(t.Position.X + dir.X * lead, t.Position.Y, t.Position.Z + dir.Z * lead)
+            return CFrame.new(newPos)
+        else
+            return t.CFrame
+        end
+    end
+
+    local function updateStatus(text)
+        if UI.LassoStatusLbl and UI.LassoStatusLbl.Parent then
+            UI.LassoStatusLbl.Text = text
+        end
+    end
+
+    function lf.StartLassoSnitch()
+        if active then return end
+        active = true
+        Notify("🪢 Lasso Snitch active - waiting for LassoHead...")
+        updateStatus("Status: Scanning for LassoHead...")
+
+        local lastMove = tick()
+        local lassoTarget = nil
+        local lassoStartTime = tick()
+        local lassoState = 1
+        local delayTime = 1.0
+        local scanStart = tick()
+
+        lassoConnection = RunService.Heartbeat:Connect(function()
+            if not active then return end
+
+            local lassoHead = getLassoHead()
+            if not lassoHead then
+                lassoTarget = nil
+                lassoState = 1
+                lassoStartTime = tick()
+                if tick() - scanStart > 0.5 then
+                    updateStatus("Status: Waiting for LassoHead...")
+                end
+                return
+            end
+
+            local elapsed = tick() - lassoStartTime
+
+            if lassoState == 1 then
+                if elapsed >= delayTime then
+                    lassoState = 2
+                    if not lassoTarget then
+                        lassoTarget = findClosestPlayer()
+                        if lassoTarget then
+                            Notify("🎯 Target locked: " .. lassoTarget.Name)
+                        end
+                    end
+                else
+                    local nextTarget = findClosestPlayer()
+                    if nextTarget and nextTarget.Character then
+                        local cf = getLassoTargetCF(nextTarget.Character, lassoHead)
+                        if cf then
+                            if tick() - lastMove >= moveInterval then
+                                lastMove = tick()
+                                pcall(function() lassoHead:PivotTo(cf) end)
+                            end
+                        end
+                    end
+                    updateStatus("Status: Tracking (delay " .. string.format("%.1f", delayTime - elapsed) .. "s)")
+                end
+            elseif lassoState == 2 then
+                if not lassoTarget or not lassoTarget.Character then
+                    lassoTarget = nil
+                    lassoState = 1
+                    lassoStartTime = tick()
+                    return
+                end
+
+                local tChar = lassoTarget.Character
+                local tHum = tChar:FindFirstChildOfClass("Humanoid")
+                if not tHum or tHum.Health <= 0 then
+                    lassoTarget = nil
+                    lassoState = 1
+                    lassoStartTime = tick()
+                    return
+                end
+
+                if isRagdoll(lassoTarget) then
+                    local hrp = getPlayerHRP()
+                    if hrp then
+                        local pullPos = hrp.CFrame + Vector3.new(0, 0.5, -2)
+                        if tick() - lastMove >= moveInterval then
+                            lastMove = tick()
+                            pcall(function() lassoHead:PivotTo(pullPos) end)
+                        end
+                    end
+                    updateStatus("Status: Pulling " .. lassoTarget.Name)
+                else
+                    local cf = getLassoTargetCF(tChar, lassoHead)
+                    if cf then
+                        if tick() - lastMove >= moveInterval then
+                            lastMove = tick()
+                            pcall(function() lassoHead:PivotTo(cf) end)
+                        end
+                    end
+                    updateStatus("Status: Snitching " .. lassoTarget.Name)
+                end
+            end
+        end)
+    end
+
+    function lf.StopLassoSnitch()
+        active = false
+        if lassoConnection then
+            pcall(function() lassoConnection:Disconnect() end)
+            lassoConnection = nil
+        end
+        updateStatus("Status: Idle")
+        Notify("⚫ Lasso Snitch disabled")
+    end
+
+    return lf
+end)()
+
 _G.RarityStarters = {
     Corpse = FarmFuncs.StartCorpse,
     Bank = FarmFuncs.StartBank,
@@ -4915,7 +5111,8 @@ _G.RarityStarters = {
     Fish = FishFuncs.StartFish,
     Chams = ChamFuncs.StartChams,
     SaintESP = ChamFuncs.StartSaintESP,
-    PosTracker = QoLExtras.StartPosTracker
+    PosTracker = QoLExtras.StartPosTracker,
+    LassoSnitch = LassoFuncs.StartLassoSnitch
 }
 _G.RarityStoppers = {
     Corpse = FarmFuncs.StopCorpse,
@@ -4936,7 +5133,8 @@ _G.RarityStoppers = {
     Fish = FishFuncs.StopFish,
     Chams = ChamFuncs.StopChams,
     SaintESP = ChamFuncs.StopSaintESP,
-    PosTracker = QoLExtras.StopPosTracker
+    PosTracker = QoLExtras.StopPosTracker,
+    LassoSnitch = LassoFuncs.StopLassoSnitch
 }
 
 -- ==========================================
@@ -4970,6 +5168,7 @@ ST(UI.FishT, UI.FishC, UI.FishS, "Fish", FishFuncs.StartFish, FishFuncs.StopFish
 ST(UI.ChamsT, UI.ChamsC, UI.ChamsS, "Chams", ChamFuncs.StartChams, ChamFuncs.StopChams)
 ST(UI.SaintEspT, UI.SaintEspC, UI.SaintEspS, "SaintESP", ChamFuncs.StartSaintESP, ChamFuncs.StopSaintESP)
 ST(UI.PosTrackerT, UI.PosTrackerC, UI.PosTrackerS, "PosTracker", QoLExtras.StartPosTracker, QoLExtras.StopPosTracker)
+ST(UI.LassoT, UI.LassoC, UI.LassoS, "LassoSnitch", LassoFuncs.StartLassoSnitch, LassoFuncs.StopLassoSnitch)
 
 -- ==========================================
 -- KEYBINDS
@@ -5112,6 +5311,15 @@ UserInputService.InputBegan:Connect(function(i, g)
         Features.AttachPlayer.E = not Features.AttachPlayer.E
         AnimToggle(UI.AttachT, UI.AttachC, UI.AttachS, Features.AttachPlayer.E)
         if Features.AttachPlayer.E then QoLFuncs.startAttach() else QoLFuncs.stopAttach() end
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(i, g)
+    if g then return end
+    if i.KeyCode == LassoKeybind then
+        Features.LassoSnitch.E = not Features.LassoSnitch.E
+        AnimToggle(UI.LassoT, UI.LassoC, UI.LassoS, Features.LassoSnitch.E)
+        if Features.LassoSnitch.E then LassoFuncs.StartLassoSnitch() else LassoFuncs.StopLassoSnitch() end
     end
 end)
 
@@ -5721,6 +5929,19 @@ local function MonitorCharacter()
                 TriggerHop("Character removed", "Character")
             end
         end)
+    end)
+    table.insert(State.connections, conn)
+end
+
+-- Method 5: Heartbeat freeze
+local function MonitorHeartbeat()
+    local lastTick = tick()
+    local conn = RunService.Heartbeat:Connect(function()
+        if not State.detectorActive then return end
+        if tick() - lastTick > 3 then
+            TriggerHop("Connection frozen", "Heartbeat")
+        end
+        lastTick = tick()
     end)
     table.insert(State.connections, conn)
 end
