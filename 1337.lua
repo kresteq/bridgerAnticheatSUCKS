@@ -35,8 +35,11 @@ local FlySpeed = 24
 local IsListening = false
 local IsTreeListening = false
 local TreeKeybind = Enum.KeyCode.F2
-local LassoKeybind = Enum.KeyCode.F3
+local LassoKeybind = Enum.KeyCode.Z
+local LassoKillKeybind = Enum.KeyCode.LeftAlt
 local IsFlyListening = false
+local IsLassoListening = false
+local IsLassoKillListening = false
 local IsGuiHidden = false
 local ServerHopRunning = false
 
@@ -50,7 +53,8 @@ local Features = {
     AutoBuy={E=false,C=nil}, AttachPlayer={E=false,C=nil},
     NoClip={E=false,C=nil}, Invisible={E=false,C=nil},
     Spectator={E=false,C=nil}, FullBright={E=false,C=nil},
-    LassoSnitch={E=false,C=nil}
+    LassoSnitch={E=false,C=nil},
+    LassoKill={E=false,C=nil}
 }
 
 local saintsPartNames = {"SaintsLeftArm","SaintsRightArm","SaintsLeftLeg","SaintsRightLeg","SaintsRibcage"}
@@ -1393,6 +1397,31 @@ local UI = (function()
         fogBtn.BackgroundColor3 = Themes[CurrentTheme].Button
     end)
     ui.FogBtn = fogBtn
+    -- Client-sided Remove Fog: continuous override via Heartbeat
+    local fogConn = nil
+    ui.FogBtn.MouseButton1Click:Connect(function()
+        if fogConn then
+            fogConn:Disconnect()
+            fogConn = nil
+            Notify("🌫️ Fog override stopped", 2)
+        else
+            Notify("🌫️ Fog override active", 2)
+            fogConn = RunService.Heartbeat:Connect(function()
+                pcall(function()
+                    local lighting = game:GetService("Lighting")
+                    lighting.FogEnd = 100000
+                    lighting.FogStart = 0
+                    lighting.FogColor = Color3.new(1,1,1)
+                    local atm = lighting:FindFirstChildOfClass("Atmosphere")
+                    if atm then
+                        atm.Density = 0
+                        atm.Haze = 0
+                        atm.Glare = 0
+                    end
+                end)
+            end)
+        end
+    end)
     qolY = qolY + 36
 
     ui.FullBrightT, ui.FullBrightC, ui.FullBrightS, qolY = CreateToggle(QoLC, "Full Brightness", qolY, "FullBright")
@@ -1527,7 +1556,48 @@ local UI = (function()
 
     pny = pny + 36
     pny = CreateSection(PnC, "Lasso Tricks", pny + 8)
-    ui.LassoT, ui.LassoC, ui.LassoS, pny = CreateToggle(PnC, "Lasso Snitch", pny, "LassoSnitch")
+
+    -- Lasso Snitch row with keybind
+    ui.LassoT, ui.LassoC, ui.LassoS, pny, ui.LassoRow = CreateToggle(PnC, "Lasso Snitch", pny, "LassoSnitch")
+    ui.LassoKbBtn = Instance.new("TextButton", ui.LassoRow)
+    ui.LassoKbBtn.Size = UDim2.new(0, 50, 0, 20)
+    ui.LassoKbBtn.Position = UDim2.new(0.55, 0, 0.5, -10)
+    ui.LassoKbBtn.BackgroundColor3 = Themes[CurrentTheme].InputBg
+    ui.LassoKbBtn.Text = "Z"
+    ui.LassoKbBtn.TextColor3 = Themes[CurrentTheme].Text
+    ui.LassoKbBtn.TextSize = 11
+    ui.LassoKbBtn.Font = Enum.Font.GothamMedium
+    ui.LassoKbBtn.AutoButtonColor = false
+    ui.LassoKbBtn.ZIndex = 52
+    Instance.new("UICorner", ui.LassoKbBtn).CornerRadius = UDim.new(0, 6)
+    table.insert(ThemeButtons, {Btn = ui.LassoKbBtn, Type = "Keybind"})
+    local lassoLbl = ui.LassoRow:FindFirstChild("Label")
+    if lassoLbl then lassoLbl.Size = UDim2.new(0.45, 0, 1, 0) end
+    pny = pny + 4
+
+    -- Lasso Kill row with keybind
+    ui.LassoKillT, ui.LassoKillC, ui.LassoKillS, pny, ui.LassoKillRow = CreateToggle(PnC, "Lasso Kill", pny, "LassoKill")
+    ui.LassoKillKbBtn = Instance.new("TextButton", ui.LassoKillRow)
+    ui.LassoKillKbBtn.Size = UDim2.new(0, 50, 0, 20)
+    ui.LassoKillKbBtn.Position = UDim2.new(0.55, 0, 0.5, -10)
+    ui.LassoKillKbBtn.BackgroundColor3 = Themes[CurrentTheme].InputBg
+    ui.LassoKillKbBtn.Text = "LeftAlt"
+    ui.LassoKillKbBtn.TextColor3 = Themes[CurrentTheme].Text
+    ui.LassoKillKbBtn.TextSize = 11
+    ui.LassoKillKbBtn.Font = Enum.Font.GothamMedium
+    ui.LassoKillKbBtn.AutoButtonColor = false
+    ui.LassoKillKbBtn.ZIndex = 52
+    Instance.new("UICorner", ui.LassoKillKbBtn).CornerRadius = UDim.new(0, 6)
+    table.insert(ThemeButtons, {Btn = ui.LassoKillKbBtn, Type = "Keybind"})
+    local lassoKillLbl = ui.LassoKillRow:FindFirstChild("Label")
+    if lassoKillLbl then lassoKillLbl.Size = UDim2.new(0.45, 0, 1, 0) end
+    pny = pny + 4
+
+    -- Shared Target Dropdown
+    ui.LassoTargetDropdown, pny = CreateDropdown(PnC, pny, "Target", "LassoTarget", 10002)
+    ui.LassoTargetDropdown.Frame.Size = UDim2.new(1, 0, 0, 28)
+
+    -- Shared Status Label
     ui.LassoStatusLbl = Instance.new("TextLabel", PnC)
     ui.LassoStatusLbl.Size = UDim2.new(1, 0, 0, 20)
     ui.LassoStatusLbl.Position = UDim2.new(0, 0, 0, pny)
@@ -1538,6 +1608,79 @@ local UI = (function()
     ui.LassoStatusLbl.Font = Enum.Font.Gotham
     ui.LassoStatusLbl.TextXAlignment = Enum.TextXAlignment.Left
     pny = pny + 24
+
+    -- Lasso Keybind Change Handlers
+    ui.LassoKbBtn.MouseButton1Click:Connect(function()
+        if IsLassoListening then return end
+        IsLassoListening = true
+        ui.LassoKbBtn.Text = "Press key"
+        ui.LassoKbBtn.TextColor3 = Color3.new(1, 1, 1)
+        if KeybindConnections.Lasso then
+            pcall(function() KeybindConnections.Lasso:Disconnect() end)
+            KeybindConnections.Lasso = nil
+        end
+        KeybindConnections.Lasso = UserInputService.InputBegan:Connect(function(i, g)
+            if not IsLassoListening then return end
+            if g then return end
+            if i.UserInputType == Enum.UserInputType.Keyboard then
+                LassoKeybind = i.KeyCode
+                ui.LassoKbBtn.Text = tostring(i.KeyCode):gsub("Enum.KeyCode.", "")
+                ui.LassoKbBtn.TextColor3 = Themes[CurrentTheme].Text
+                IsLassoListening = false
+                if KeybindConnections.Lasso then
+                    pcall(function() KeybindConnections.Lasso:Disconnect() end)
+                    KeybindConnections.Lasso = nil
+                end
+            end
+        end)
+        task.delay(5, function()
+            if IsLassoListening then
+                IsLassoListening = false
+                ui.LassoKbBtn.Text = tostring(LassoKeybind):gsub("Enum.KeyCode.", "")
+                ui.LassoKbBtn.TextColor3 = Themes[CurrentTheme].Text
+                if KeybindConnections.Lasso then
+                    pcall(function() KeybindConnections.Lasso:Disconnect() end)
+                    KeybindConnections.Lasso = nil
+                end
+            end
+        end)
+    end)
+
+    ui.LassoKillKbBtn.MouseButton1Click:Connect(function()
+        if IsLassoKillListening then return end
+        IsLassoKillListening = true
+        ui.LassoKillKbBtn.Text = "Press key"
+        ui.LassoKillKbBtn.TextColor3 = Color3.new(1, 1, 1)
+        if KeybindConnections.LassoKill then
+            pcall(function() KeybindConnections.LassoKill:Disconnect() end)
+            KeybindConnections.LassoKill = nil
+        end
+        KeybindConnections.LassoKill = UserInputService.InputBegan:Connect(function(i, g)
+            if not IsLassoKillListening then return end
+            if g then return end
+            if i.UserInputType == Enum.UserInputType.Keyboard then
+                LassoKillKeybind = i.KeyCode
+                ui.LassoKillKbBtn.Text = tostring(i.KeyCode):gsub("Enum.KeyCode.", "")
+                ui.LassoKillKbBtn.TextColor3 = Themes[CurrentTheme].Text
+                IsLassoKillListening = false
+                if KeybindConnections.LassoKill then
+                    pcall(function() KeybindConnections.LassoKill:Disconnect() end)
+                    KeybindConnections.LassoKill = nil
+                end
+            end
+        end)
+        task.delay(5, function()
+            if IsLassoKillListening then
+                IsLassoKillListening = false
+                ui.LassoKillKbBtn.Text = tostring(LassoKillKeybind):gsub("Enum.KeyCode.", "")
+                ui.LassoKillKbBtn.TextColor3 = Themes[CurrentTheme].Text
+                if KeybindConnections.LassoKill then
+                    pcall(function() KeybindConnections.LassoKill:Disconnect() end)
+                    KeybindConnections.LassoKill = nil
+                end
+            end
+        end)
+    end)
 
     -- Misc Tab
     local MiscC = TabContents["Misc"]
@@ -1830,6 +1973,8 @@ local UI = (function()
             {ui.FullBrightT, ui.FullBrightC, "FullBright"},
             {ui.PosTrackerT, ui.PosTrackerC, "PosTracker"},
             {ui.ScanT, ui.ScanC, "SaintScanner"},
+            {ui.LassoT, ui.LassoC, "LassoSnitch"},
+            {ui.LassoKillT, ui.LassoKillC, "LassoKill"},
         }
         for _, pair in ipairs(togglePairs) do
             local btn = pair[1]
@@ -1850,7 +1995,7 @@ local UI = (function()
         end
 
         -- Keybind buttons
-        local kbBtns = {ui.TreeKbBtn, ui.FlyKbBtn, ui.SpectatorKbBtn, ui.AttachKbBtn, ui.KbBtn, ui.TreeTypeBtn}
+        local kbBtns = {ui.TreeKbBtn, ui.FlyKbBtn, ui.SpectatorKbBtn, ui.AttachKbBtn, ui.KbBtn, ui.TreeTypeBtn, ui.LassoKbBtn, ui.LassoKillKbBtn}
         for _, btn in ipairs(kbBtns) do
             if btn and btn.Parent then
                 btn.BackgroundColor3 = t.InputBg
@@ -2233,6 +2378,7 @@ task.spawn(function()
         end
         UI.PlayerDropdown.Rebuild(displayList)
         if UI.PlayersDropdown then UI.PlayersDropdown.Rebuild(displayList) end
+        if UI.LassoTargetDropdown then UI.LassoTargetDropdown.Rebuild(displayList) end
         task.wait(5)
     end
 end)
@@ -3462,6 +3608,9 @@ local VisualFuncs = (function()
     return vis
 end)()
 
+-- Expose RemoveFog for manual console use
+_G.RemoveFogManual = VisualFuncs.RemoveFog
+
 -- ==========================================
 -- POSITION TRACKER & CUSTOM MOOLA (IIFE)
 -- ==========================================
@@ -3908,11 +4057,7 @@ local ConfigFuncs = (function()
         c.FlySlider=UI.GetFlySpeed and UI.GetFlySpeed() or 20
         c.MinPlayers=UI.GetMin and UI.GetMin() or 1
         c.MaxPlayers=UI.GetMax and UI.GetMax() or 25
-        c.BuyItems = UI.ItemDropdown.GetSelected()
-        c.AttachTarget = UI.PlayerDropdown.GetSelected()
-        c.PlayersTarget = UI.PlayersDropdown.GetSelected()
-        c.NPCTarget = UI.NPCDropdown.GetSelected()
-        c.AttachKeybind = tostring(QoLFuncs.AttachKeybind())
+                                        c.AttachKeybind = tostring(QoLFuncs.AttachKeybind())
         c.SpectatorKeybind = tostring(SpectatorFuncs.SpectatorKeybind())
         c.TreeKeybind = tostring(TreeKeybind)
         c.TreeType = UI.TreeTypeBtn.Text
@@ -3928,6 +4073,10 @@ c.ChamsB = tonumber(UI.ChamsBBox.Text) or 0
 c.SaintESP = Features.SaintESP.E
 c.PosTracker = Features.PosTracker.E
 c.CustomMoola = UI.MoolaSpoofBox.Text or ""
+        c.LassoSnitch = Features.LassoSnitch.E
+        c.LassoKill = Features.LassoKill.E
+        c.LassoKeybind = tostring(LassoKeybind)
+        c.LassoKillKeybind = tostring(LassoKillKeybind)
         c.Theme = CurrentTheme
 return c
     end
@@ -3989,16 +4138,17 @@ return c
         end
 
         if data.BuyItems and #data.BuyItems > 0 then UI.ItemDropdown.SetSelected(data.BuyItems) end
-        if data.AttachTarget then UI.PlayerDropdown.SetSelected(data.AttachTarget) end
-        if data.PlayersTarget then UI.PlayersDropdown.SetSelected(data.PlayersTarget) end
-        if data.NPCTarget then UI.NPCDropdown.SetSelected(data.NPCTarget) end
-        if data.AttachKeybind then
-            local ok2,kc2=pcall(function() return Enum.KeyCode[data.AttachKeybind] end)
-            if ok2 and kc2 then QoLFuncs.SetAttachKeybind(kc2) UI.AttachKbBtn.Text=data.AttachKeybind end
-        end
         if data.SpectatorKeybind then
             local ok2,kc2=pcall(function() return Enum.KeyCode[data.SpectatorKeybind] end)
             if ok2 and kc2 then SpectatorFuncs.SetSpectatorKeybind(kc2) UI.SpectatorKbBtn.Text=data.SpectatorKeybind end
+        end
+        if data.LassoKeybind then
+            local ok2,kc2=pcall(function() return Enum.KeyCode[data.LassoKeybind] end)
+            if ok2 and kc2 then LassoKeybind=kc2 UI.LassoKbBtn.Text=data.LassoKeybind end
+        end
+        if data.LassoKillKeybind then
+            local ok2,kc2=pcall(function() return Enum.KeyCode[data.LassoKillKeybind] end)
+            if ok2 and kc2 then LassoKillKeybind=kc2 UI.LassoKillKbBtn.Text=data.LassoKillKeybind end
         end
         if data.TreeKeybind then
             local ok2,kc2=pcall(function() return Enum.KeyCode[data.TreeKeybind] end)
@@ -4915,13 +5065,16 @@ local FishFuncs = (function()
 end)()
 
 -- ==========================================
--- LASSO SNITCH (IIFE)
+-- LASSO FUNCTIONS (IIFE) - Snitch + Kill
 -- ==========================================
 local LassoFuncs = (function()
     local lf = {}
-    local active = false
-    local lassoConnection = nil
+    local snitchActive = false
+    local killActive = false
+    local snitchConnection = nil
+    local killConnection = nil
     local moveInterval = 0.075
+    local lassoTarget = nil
 
     local function getLassoHead()
         return Workspace:FindFirstChild("LassoHead")
@@ -4940,6 +5093,17 @@ local LassoFuncs = (function()
         if not pFolder then return false end
         local ragReq = pFolder:FindFirstChild("RagdollRequests")
         return ragReq and #ragReq:GetChildren() > 0
+    end
+
+    local function isPlayerValid(targetPlayer)
+        if not targetPlayer then return false end
+        if not targetPlayer.Parent then return false end
+        if not targetPlayer.Character then return false end
+        local hum = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if not hum or hum.Health <= 0 then return false end
+        local hrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return false end
+        return true
     end
 
     local function findClosestPlayer()
@@ -4961,6 +5125,18 @@ local LassoFuncs = (function()
             end
         end
         return closest
+    end
+
+    local function getSelectedOrClosestTarget()
+        local selected = UI.LassoTargetDropdown.GetSelected()
+        if selected and selected ~= "None" then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p.Name == selected and p ~= player then
+                    if isPlayerValid(p) then return p end
+                end
+            end
+        end
+        return findClosestPlayer()
     end
 
     local function getLassoTargetCF(targetChar, lassoHead)
@@ -4987,30 +5163,46 @@ local LassoFuncs = (function()
         end
     end
 
+    local function destroyLassoHead()
+        local lh = getLassoHead()
+        if lh and lh.Parent then
+            pcall(function() lh:Destroy() end)
+        end
+    end
+
+    -- ==========================================
+    -- LASSO SNITCH
+    -- ==========================================
     function lf.StartLassoSnitch()
-        if active then return end
-        active = true
+        if snitchActive then return end
+        snitchActive = true
         Notify("🪢 Lasso Snitch active - waiting for LassoHead...")
-        updateStatus("Status: Scanning for LassoHead...")
+        updateStatus("Status: Snitch scanning...")
 
         local lastMove = tick()
-        local lassoTarget = nil
         local lassoStartTime = tick()
         local lassoState = 1
         local delayTime = 1.0
-        local scanStart = tick()
 
-        lassoConnection = RunService.Heartbeat:Connect(function()
-            if not active then return end
+        snitchConnection = RunService.Heartbeat:Connect(function()
+            if not snitchActive then return end
 
             local lassoHead = getLassoHead()
             if not lassoHead then
                 lassoTarget = nil
                 lassoState = 1
                 lassoStartTime = tick()
-                if tick() - scanStart > 0.5 then
-                    updateStatus("Status: Waiting for LassoHead...")
-                end
+                updateStatus("Status: Snitch waiting for LassoHead...")
+                return
+            end
+
+            -- Validate target
+            if lassoTarget and not isPlayerValid(lassoTarget) then
+                destroyLassoHead()
+                lassoTarget = nil
+                lassoState = 1
+                lassoStartTime = tick()
+                updateStatus("Status: Snitch target lost")
                 return
             end
 
@@ -5020,13 +5212,13 @@ local LassoFuncs = (function()
                 if elapsed >= delayTime then
                     lassoState = 2
                     if not lassoTarget then
-                        lassoTarget = findClosestPlayer()
+                        lassoTarget = getSelectedOrClosestTarget()
                         if lassoTarget then
-                            Notify("🎯 Target locked: " .. lassoTarget.Name)
+                            Notify("🎯 Snitch target: " .. lassoTarget.Name)
                         end
                     end
                 else
-                    local nextTarget = findClosestPlayer()
+                    local nextTarget = getSelectedOrClosestTarget()
                     if nextTarget and nextTarget.Character then
                         local cf = getLassoTargetCF(nextTarget.Character, lassoHead)
                         if cf then
@@ -5036,7 +5228,7 @@ local LassoFuncs = (function()
                             end
                         end
                     end
-                    updateStatus("Status: Tracking (delay " .. string.format("%.1f", delayTime - elapsed) .. "s)")
+                    updateStatus("Status: Snitch tracking (" .. string.format("%.1f", delayTime - elapsed) .. "s)")
                 end
             elseif lassoState == 2 then
                 if not lassoTarget or not lassoTarget.Character then
@@ -5049,6 +5241,7 @@ local LassoFuncs = (function()
                 local tChar = lassoTarget.Character
                 local tHum = tChar:FindFirstChildOfClass("Humanoid")
                 if not tHum or tHum.Health <= 0 then
+                    destroyLassoHead()
                     lassoTarget = nil
                     lassoState = 1
                     lassoStartTime = tick()
@@ -5064,7 +5257,7 @@ local LassoFuncs = (function()
                             pcall(function() lassoHead:PivotTo(pullPos) end)
                         end
                     end
-                    updateStatus("Status: Pulling " .. lassoTarget.Name)
+                    updateStatus("Status: Snitch pulling " .. lassoTarget.Name)
                 else
                     local cf = getLassoTargetCF(tChar, lassoHead)
                     if cf then
@@ -5080,13 +5273,146 @@ local LassoFuncs = (function()
     end
 
     function lf.StopLassoSnitch()
-        active = false
-        if lassoConnection then
-            pcall(function() lassoConnection:Disconnect() end)
-            lassoConnection = nil
+        snitchActive = false
+        lassoTarget = nil
+        if snitchConnection then
+            pcall(function() snitchConnection:Disconnect() end)
+            snitchConnection = nil
         end
         updateStatus("Status: Idle")
         Notify("⚫ Lasso Snitch disabled")
+    end
+
+    -- ==========================================
+    -- LASSO KILL
+    -- ==========================================
+    function lf.StartLassoKill()
+        if killActive then return end
+        killActive = true
+        Notify("💀 Lasso Kill active - waiting for LassoHead...")
+        updateStatus("Status: Kill scanning...")
+
+        local lastMove = tick()
+        local lassoStartTime = tick()
+        local lassoState = 1
+        local delayTime = 1.0
+        local state2Start = 0
+        local killDone = false
+
+        killConnection = RunService.Heartbeat:Connect(function()
+            if not killActive then return end
+            if killDone then return end
+
+            local lassoHead = getLassoHead()
+            if not lassoHead then
+                lassoTarget = nil
+                lassoState = 1
+                lassoStartTime = tick()
+                updateStatus("Status: Kill waiting for LassoHead...")
+                return
+            end
+
+            -- Validate target
+            if lassoTarget and not isPlayerValid(lassoTarget) then
+                destroyLassoHead()
+                lassoTarget = nil
+                lassoState = 1
+                lassoStartTime = tick()
+                updateStatus("Status: Kill target lost")
+                return
+            end
+
+            local elapsed = tick() - lassoStartTime
+
+            if lassoState == 1 then
+                -- Phase 1: Track target for 1 second to "stick" the lasso
+                if elapsed >= delayTime then
+                    lassoState = 2
+                    state2Start = tick()
+                    if not lassoTarget then
+                        lassoTarget = getSelectedOrClosestTarget()
+                        if lassoTarget then
+                            Notify("🎯 Kill target: " .. lassoTarget.Name)
+                        end
+                    end
+                else
+                    local nextTarget = getSelectedOrClosestTarget()
+                    if nextTarget and nextTarget.Character then
+                        local cf = getLassoTargetCF(nextTarget.Character, lassoHead)
+                        if cf then
+                            if tick() - lastMove >= moveInterval then
+                                lastMove = tick()
+                                pcall(function() lassoHead:PivotTo(cf) end)
+                            end
+                        end
+                    end
+                    updateStatus("Status: Kill tracking (" .. string.format("%.1f", delayTime - elapsed) .. "s)")
+                end
+            elseif lassoState == 2 then
+                -- Phase 2: Drop into void
+                if not lassoTarget or not lassoTarget.Character then
+                    destroyLassoHead()
+                    lassoTarget = nil
+                    lassoState = 1
+                    lassoStartTime = tick()
+                    return
+                end
+
+                local tChar = lassoTarget.Character
+                local tHum = tChar:FindFirstChildOfClass("Humanoid")
+                if not tHum or tHum.Health <= 0 then
+                    destroyLassoHead()
+                    lassoTarget = nil
+                    lassoState = 1
+                    lassoStartTime = tick()
+                    return
+                end
+
+                -- Drop to void immediately in Phase 2
+                local cf = lassoHead:GetPivot()
+                local x, y, z, r00, r01, r02, r10, r11, r12, r20, r21, r22 = cf:GetComponents()
+                local voidCF = CFrame.fromMatrix(Vector3.new(x, -500, z), Vector3.new(r00, r10, r20), Vector3.new(r01, r11, r21))
+                if tick() - lastMove >= moveInterval then
+                    lastMove = tick()
+                    pcall(function() lassoHead:PivotTo(voidCF) end)
+                end
+
+                local state2Elapsed = tick() - state2Start
+                updateStatus("Status: Kill dropping " .. lassoTarget.Name .. " (" .. string.format("%.1f", state2Elapsed) .. "s)")
+
+                -- After 3.0 seconds of dropping, clean up but keep function active
+                if state2Elapsed >= 3.0 then
+                    killDone = true
+                    destroyLassoHead()
+                    Notify("☠️ " .. lassoTarget.Name .. " eliminated")
+                    -- Unequip lasso from hands (but keep function running)
+                    local char = player.Character
+                    if char then
+                        local hum = char:FindFirstChildOfClass("Humanoid")
+                        if hum then
+                            hum:UnequipTools()
+                        end
+                    end
+                    -- Reset for next throw
+                    lassoTarget = nil
+                    lassoState = 1
+                    lassoStartTime = tick()
+                    killDone = false
+                    updateStatus("Status: Kill ready for next throw")
+                end
+            end
+        end)
+    end
+
+    function lf.StopLassoKill()
+        killActive = false
+        lassoTarget = nil
+        if killConnection then
+            pcall(function() killConnection:Disconnect() end)
+            killConnection = nil
+        end
+        updateStatus("Status: Idle")
+        Notify("⚫ Lasso Kill disabled")
     end
 
     return lf
@@ -5112,7 +5438,8 @@ _G.RarityStarters = {
     Chams = ChamFuncs.StartChams,
     SaintESP = ChamFuncs.StartSaintESP,
     PosTracker = QoLExtras.StartPosTracker,
-    LassoSnitch = LassoFuncs.StartLassoSnitch
+    LassoSnitch = LassoFuncs.StartLassoSnitch,
+    LassoKill = LassoFuncs.StartLassoKill
 }
 _G.RarityStoppers = {
     Corpse = FarmFuncs.StopCorpse,
@@ -5134,7 +5461,8 @@ _G.RarityStoppers = {
     Chams = ChamFuncs.StopChams,
     SaintESP = ChamFuncs.StopSaintESP,
     PosTracker = QoLExtras.StopPosTracker,
-    LassoSnitch = LassoFuncs.StopLassoSnitch
+    LassoSnitch = LassoFuncs.StopLassoSnitch,
+    LassoKill = LassoFuncs.StopLassoKill
 }
 
 -- ==========================================
@@ -5169,6 +5497,7 @@ ST(UI.ChamsT, UI.ChamsC, UI.ChamsS, "Chams", ChamFuncs.StartChams, ChamFuncs.Sto
 ST(UI.SaintEspT, UI.SaintEspC, UI.SaintEspS, "SaintESP", ChamFuncs.StartSaintESP, ChamFuncs.StopSaintESP)
 ST(UI.PosTrackerT, UI.PosTrackerC, UI.PosTrackerS, "PosTracker", QoLExtras.StartPosTracker, QoLExtras.StopPosTracker)
 ST(UI.LassoT, UI.LassoC, UI.LassoS, "LassoSnitch", LassoFuncs.StartLassoSnitch, LassoFuncs.StopLassoSnitch)
+ST(UI.LassoKillT, UI.LassoKillC, UI.LassoKillS, "LassoKill", LassoFuncs.StartLassoKill, LassoFuncs.StopLassoKill)
 
 -- ==========================================
 -- KEYBINDS
@@ -5322,6 +5651,17 @@ UserInputService.InputBegan:Connect(function(i, g)
         if Features.LassoSnitch.E then LassoFuncs.StartLassoSnitch() else LassoFuncs.StopLassoSnitch() end
     end
 end)
+
+UserInputService.InputBegan:Connect(function(i, g)
+    if g then return end
+    if i.KeyCode == LassoKillKeybind then
+        Features.LassoKill.E = not Features.LassoKill.E
+        AnimToggle(UI.LassoKillT, UI.LassoKillC, UI.LassoKillS, Features.LassoKill.E)
+        if Features.LassoKill.E then LassoFuncs.StartLassoKill() else LassoFuncs.StopLassoKill() end
+    end
+end)
+
+
 
 UserInputService.InputBegan:Connect(function(i, g)
     if g then return end
