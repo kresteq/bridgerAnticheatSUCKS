@@ -67,22 +67,8 @@ local SAINT_COORDS = {
 }
 
 -- ==========================================
--- AUTO PLAY & EQUIP
+-- AUTO PLAY (GUI loads in main menu)
 -- ==========================================
-local function AutoEquipRandom()
-    task.wait(3)
-    local char = player.Character
-    if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-    local bp = player:FindFirstChild("Backpack")
-    if not bp then return end
-    local tools = {}
-    for _, item in ipairs(bp:GetChildren()) do if item:IsA("Tool") then table.insert(tools, item) end end
-    if #tools > 0 then pcall(function() hum:EquipTool(tools[math.random(1, #tools)]) end) end
-end
-player.CharacterAdded:Connect(function() task.spawn(AutoEquipRandom) end)
-
 local function PressPlayButton()
     local mainMenu = playerGui:FindFirstChild("MainMenu")
     if not mainMenu then return false end
@@ -121,12 +107,50 @@ local function PressPlayButton()
     return false
 end
 
+-- v43: Auto press Play button, then AutoLoad after spawn
 while true do
     if Workspace.Entities:FindFirstChild(player.Name) then break end
     PressPlayButton()
     task.wait(1.5)
 end
-task.spawn(AutoEquipRandom)
+
+-- v43: AutoLoad after character fully loads (2s delay)
+player.CharacterAdded:Connect(function(char)
+    task.delay(2, function()
+        local autoLoadPath = ConfigFolder .. "/autoload.txt"
+        if isfile(autoLoadPath) then
+            local ok, name = pcall(function() return readfile(autoLoadPath) end)
+            if ok and name and name ~= "" then
+                name = name:gsub("%s+", "")
+                if name ~= "" then
+                    UI.ConfigNameBox.Text = name
+                    CurrentConfigName = name
+                    ConfigFuncs.LoadCurrentConfig()
+                    return
+                end
+            end
+        end
+        Notify("📭 AutoLoad is empty", 3)
+    end)
+end)
+
+-- If already in game (rejoin), trigger AutoLoad immediately
+if Workspace.Entities:FindFirstChild(player.Name) then
+    task.delay(2, function()
+        local autoLoadPath = ConfigFolder .. "/autoload.txt"
+        if isfile(autoLoadPath) then
+            local ok, name = pcall(function() return readfile(autoLoadPath) end)
+            if ok and name and name ~= "" then
+                name = name:gsub("%s+", "")
+                if name ~= "" then
+                    UI.ConfigNameBox.Text = name
+                    CurrentConfigName = name
+                    ConfigFuncs.LoadCurrentConfig()
+                end
+            end
+        end
+    end)
+end
 
 -- ==========================================
 -- NOTIFICATIONS (IIFE)
@@ -2390,7 +2414,8 @@ local FarmFuncs = (function()
     local farm = {}
 
     function farm.StartCorpse()
-        Notify("🟣 Auto Corpse active")
+        Notify("🟣 Auto Corpse active (5s load delay)")
+        task.wait(5)
         local VIM = game:GetService("VirtualInputManager")
         local SAFE = CFrame.new(-4387.25,217.5,-4482.04)
         local processing = false
@@ -2509,7 +2534,8 @@ if ok and src and #src > 100 then loadstring(src)() else end
     function farm.StartBank()
         if BankRunning then return end
         BankRunning = true
-        Notify("🟣 Auto Bank active")
+        Notify("🟣 Auto Bank active (5s load delay)")
+        task.wait(5)
 
         BankThread = task.spawn(function()
             local ok, err = pcall(function()
@@ -2724,7 +2750,8 @@ if ok and src and #src > 100 then loadstring(src)() else end
     -- AUTO CHEST
     -- ==========================================
     function farm.StartChest()
-        Notify("🟣 Auto Chest active")
+        Notify("🟣 Auto Chest active (5s load delay)")
+        task.wait(5)
         repeat task.wait() until game:IsLoaded()
         local char = player.Character or player.CharacterAdded:Wait()
         local hrp = char:WaitForChild("HumanoidRootPart")
@@ -4695,7 +4722,8 @@ local TreeFuncs = (function()
         active = true
         wasActiveBeforeDeath = true
         bankedseed = false
-        Notify("🌲 Auto Tree active")
+        Notify("🌲 Auto Tree active (5s load delay)")
+        task.wait(5)
         cleanupTrees()
         startHeartbeat()
         nexttree()
@@ -4997,7 +5025,8 @@ local FishFuncs = (function()
         active = true
         spotTimer = 0
         currentSpotIdx = 1
-        Notify("🎣 Auto Fish active")
+        Notify("🎣 Auto Fish active (5s load delay)")
+        task.wait(5)
 
         fishThread = task.spawn(function()
             while active do
@@ -5936,25 +5965,7 @@ UI.TeleportNPCBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- ==========================================
--- AUTO-RESTORE
--- ==========================================
-task.delay(3, function()
-    local autoLoadPath = ConfigFolder .. "/autoload.txt"
-    if isfile(autoLoadPath) then
-        local ok, name = pcall(function() return readfile(autoLoadPath) end)
-        if ok and name and name ~= "" then
-            name = name:gsub("%s+", "")
-            if name ~= "" then
-                UI.ConfigNameBox.Text = name
-                CurrentConfigName = name
-                ConfigFuncs.LoadCurrentConfig()
-                return
-            end
-        end
-    end
-    Notify("📭 AutoLoad is empty", 3)
-end)
+-- v43: AutoLoad handled after character spawn
 
 
 -- ==========================================
@@ -6362,4 +6373,4 @@ UI.ScreenGui.Destroying:Connect(function()
     end
 end)
 
-Notify("✅ rarity.bw loaded successfully", 4)
+Notify("✅ rarity.bw loaded", 4)
