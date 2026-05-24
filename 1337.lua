@@ -6373,4 +6373,4 @@ UI.ScreenGui.Destroying:Connect(function()
     end
 end)
 
-Notify("✅ rarity.bw loaded", 4)
+Notify("✅ rarity.bw v43 loaded — GUI in main menu, AutoLoad after Play", 4)
