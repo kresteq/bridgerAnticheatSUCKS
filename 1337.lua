@@ -1,3 +1,4 @@
+task.wait(0.1)
 repeat task.wait() until game:IsLoaded()
 
 if type(clearteleportqueue) == "function" then pcall(clearteleportqueue)
@@ -7,6 +8,7 @@ if getgenv().RarityHubLoaded then return end
 getgenv().RarityHubLoaded = true
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local GuiService = game:GetService("GuiService")
@@ -107,54 +109,7 @@ local function PressPlayButton()
     return false
 end
 
--- v43: Auto press Play button, then AutoLoad after spawn
-while true do
-    if Workspace.Entities:FindFirstChild(player.Name) then break end
-    PressPlayButton()
-    task.wait(1.5)
-end
-
--- v43: AutoLoad after character fully loads (2s delay)
-player.CharacterAdded:Connect(function(char)
-    task.delay(2, function()
-        local autoLoadPath = ConfigFolder .. "/autoload.txt"
-        if isfile(autoLoadPath) then
-            local ok, name = pcall(function() return readfile(autoLoadPath) end)
-            if ok and name and name ~= "" then
-                name = name:gsub("%s+", "")
-                if name ~= "" then
-                    UI.ConfigNameBox.Text = name
-                    CurrentConfigName = name
-                    ConfigFuncs.LoadCurrentConfig()
-                    return
-                end
-            end
-        end
-        Notify("📭 AutoLoad is empty", 3)
-    end)
-end)
-
--- If already in game (rejoin), trigger AutoLoad immediately
-if Workspace.Entities:FindFirstChild(player.Name) then
-    task.delay(2, function()
-        local autoLoadPath = ConfigFolder .. "/autoload.txt"
-        if isfile(autoLoadPath) then
-            local ok, name = pcall(function() return readfile(autoLoadPath) end)
-            if ok and name and name ~= "" then
-                name = name:gsub("%s+", "")
-                if name ~= "" then
-                    UI.ConfigNameBox.Text = name
-                    CurrentConfigName = name
-                    ConfigFuncs.LoadCurrentConfig()
-                end
-            end
-        end
-    end)
-end
-
--- ==========================================
--- NOTIFICATIONS (IIFE)
--- ==========================================
+-- : Auto press Play button after GUI loads, then AutoLoad after spawn
 local Notify = (function()
     local NotifGui = Instance.new("ScreenGui")
     NotifGui.Name = "RarityNotifications"
@@ -2145,7 +2100,6 @@ local UI = (function()
 
     return ui
 end)()
--- Apply default theme after UI creation
 pcall(function() UI.ApplyTheme("Rarity") end)
 
 
@@ -2207,11 +2161,16 @@ local function SafeTeleport(target, instant)
     hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
     hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
     task.wait(0.05)
+    -- AC bypass: Sit before teleport
+    hum.Sit = true
+    task.wait(0.2)
     if typeof(target) == "CFrame" then
         hrp.CFrame = target
     elseif typeof(target) == "Vector3" then
         hrp.CFrame = CFrame.new(target)
     end
+    task.wait(0.2)
+    hum.Sit = false
     if not instant then
         task.wait(0.1)
         hrp.Velocity = Vector3.new(0, 0, 0)
@@ -2220,6 +2179,7 @@ local function SafeTeleport(target, instant)
     end
     return true
 end
+
 
 player.CharacterAdded:Connect(function(char)
     char:SetAttribute("RaritySpawn", tick())
@@ -2362,7 +2322,12 @@ local IsSpectatorListening = false
             if not targetModel then targetModel = Workspace:FindFirstChild(targetName) end
             if not targetModel then return end
             local targetHrp = targetModel:FindFirstChild("HumanoidRootPart")
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum then hum.Sit = true end
+            task.wait(0.2)
             if targetHrp then hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 3) end
+            task.wait(0.2)
+            hum.Sit = false
         end)
     end
 
@@ -2414,8 +2379,8 @@ local FarmFuncs = (function()
     local farm = {}
 
     function farm.StartCorpse()
-        Notify("🟣 Auto Corpse active (5s load delay)")
-        task.wait(5)
+        Notify("🟣 Auto Corpse active (7s load delay)")
+        task.wait(7)
         local VIM = game:GetService("VirtualInputManager")
         local SAFE = CFrame.new(-4387.25,217.5,-4482.04)
         local processing = false
@@ -2476,7 +2441,12 @@ if ok and src and #src > 100 then loadstring(src)() else end
                 if targetPart and targetPart.Parent then
                     local promptPos = targetPart.Position
                     local lookCFrame = CFrame.lookAt(hrp.Position, Vector3.new(promptPos.X, hrp.Position.Y, promptPos.Z))
+                    local hum = char:FindFirstChildOfClass("Humanoid")
+                    if hum then hum.Sit = true end
+                    task.wait(0.1)
                     hrp.CFrame = lookCFrame
+                    task.wait(0.1)
+                    if hum then hum.Sit = false end
                 end
 
                 pcall(function() p:InputHoldBegin() end) task.wait(6)
@@ -2514,7 +2484,13 @@ if ok and src and #src > 100 then loadstring(src)() else end
             local ns = nearSaint()
             if ns then
                 tapWA() task.wait(0.5)
-                nr.CFrame = ns.CFrame + Vector3.new(0, 3, 0) task.wait(0.6)
+                local hum2 = nc:FindFirstChildOfClass("Humanoid")
+                if hum2 then hum2.Sit = true end
+                task.wait(0.2)
+                nr.CFrame = ns.CFrame + Vector3.new(0, 3, 0)
+                task.wait(0.2)
+                hum2.Sit = false
+                task.wait(0.6)
                 holdPrompt(ns:FindFirstChildOfClass("ProximityPrompt") or ns.Parent:FindFirstChildOfClass("ProximityPrompt"), ns)
             end
         end)
@@ -2534,8 +2510,8 @@ if ok and src and #src > 100 then loadstring(src)() else end
     function farm.StartBank()
         if BankRunning then return end
         BankRunning = true
-        Notify("🟣 Auto Bank active (5s load delay)")
-        task.wait(5)
+        Notify("🟣 Auto Bank active (7s load delay)")
+        task.wait(7)
 
         BankThread = task.spawn(function()
             local ok, err = pcall(function()
@@ -2552,9 +2528,14 @@ if ok and src and #src > 100 then loadstring(src)() else end
 
                 local function tp(x, y, z)
                     if not BankRunning then return end
+                    local hum = ch:FindFirstChildOfClass("Humanoid")
+                    if hum then hum.Sit = true end
+                    task.wait(0.2)
                     rt.CFrame = CFrame.new(x, y, z)
                     rt.Velocity = Vector3.new(0, 0, 0)
                     rt.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    task.wait(0.2)
+                    hum.Sit = false
                     task.wait(0.2)
                 end
                 local function clickD(o)
@@ -2616,7 +2597,7 @@ if ok and src and #src > 100 then loadstring(src)() else end
                     local bp = player:WaitForChild("Backpack")
                     local t = bp:FindFirstChild(n) if not t then return false end
                     local h = ch:FindFirstChildOfClass("Humanoid") if not h then return false end
-                    h:EquipTool(t) task.wait(0.15) return true
+                    h:EquipTool(t) task.wait(0.2) return true
                 end
                 local function clickOnce()
                     if not BankRunning then return end
@@ -2643,14 +2624,14 @@ if ok and src and #src > 100 then loadstring(src)() else end
                         if not BankRunning then break end
                         local cash = findCash()
                         if #cash == 0 then break end
-                        tp(-5764.15, 48.4, -4035.92) task.wait(0.15)
+                        tp(-5764.15, 48.4, -4035.92) task.wait(0.2)
                         for _, d in ipairs(cash) do
                             for i = 1, 3 do
                                 fireclickdetector(d.cd)
                                 task.wait(0.08)
                             end
                             col = col + 1
-                            task.wait(0.15)
+                            task.wait(0.2)
                         end
                         att = att + 1
                         task.wait(0.2)
@@ -2750,8 +2731,8 @@ if ok and src and #src > 100 then loadstring(src)() else end
     -- AUTO CHEST
     -- ==========================================
     function farm.StartChest()
-        Notify("🟣 Auto Chest active (5s load delay)")
-        task.wait(5)
+        Notify("🟣 Auto Chest active (7s load delay)")
+        task.wait(7)
         repeat task.wait() until game:IsLoaded()
         local char = player.Character or player.CharacterAdded:Wait()
         local hrp = char:WaitForChild("HumanoidRootPart")
@@ -2762,7 +2743,12 @@ if ok and src and #src > 100 then loadstring(src)() else end
             if not chest or not chest.Parent then return end
             local part = chest:FindFirstChildWhichIsA("BasePart") or chest.PrimaryPart
             if not part then return end
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum then hum.Sit = true end
+            task.wait(0.2)
             hrp.CFrame = part.CFrame * CFrame.new(0, 5, 0)
+            task.wait(0.2)
+            hum.Sit = false
             task.wait(0.3)
             for _, desc in ipairs(chest:GetDescendants()) do
                 if desc:IsA("ProximityPrompt") then
@@ -2835,7 +2821,12 @@ local ScannerFuncs = (function()
         if ScannerData.DP and ScannerData.DP.Parent then
             local c = player.Character
             if c and c:FindFirstChild("HumanoidRootPart") then
+                local hum = c:FindFirstChildOfClass("Humanoid")
+                if hum then hum.Sit = true end
+                task.wait(0.2)
                 c.HumanoidRootPart.CFrame = ScannerData.DP.CFrame + Vector3.new(0, 5, 0)
+                task.wait(0.2)
+                if hum then hum.Sit = false end
                 Notify("Teleported", 3)
             end
         else
@@ -3063,7 +3054,12 @@ local MovementFuncs = (function()
                 if c then
                     local r = c:FindFirstChild("HumanoidRootPart")
                     if r then
+                        local hum = c:FindFirstChildOfClass("Humanoid")
+                        if hum then hum.Sit = true end
+                        task.wait(0.2)
                         r.CFrame = CFrame.new(Mouse.Hit.Position + Vector3.new(0, 3, 0))
+                        task.wait(0.2)
+                        hum.Sit = false
                         r.Velocity = Vector3.new(0, 0, 0)
                         r.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
                     end
@@ -3089,13 +3085,14 @@ local MovementFuncs = (function()
         if not hrp or not hum then return end
 
         FlyAct = true
-        hum.PlatformStand = true
         _G.RarityOriginalGravity = Workspace.Gravity
         Workspace.Gravity = 0
 
         FlyConn = RunService.Heartbeat:Connect(function()
             if not hrp.Parent or not hum.Parent then return end
             if FlyAct then
+                -- Sit during flight to bypass AC
+                hum.Sit = true
                 hum:ChangeState(Enum.HumanoidStateType.RunningNoPhysics)
                 local md = Vector3.new()
                 if UserInputService:IsKeyDown(Enum.KeyCode.W) then md = md + Vector3.new(0, 0, -1) end
@@ -3130,7 +3127,7 @@ local MovementFuncs = (function()
         if c then
             local hum = c:FindFirstChildOfClass("Humanoid")
             if hum then
-                hum.PlatformStand = false
+                hum.Sit = false
                 hum:ChangeState(Enum.HumanoidStateType.GettingUp)
             end
             local hrp = c:FindFirstChild("HumanoidRootPart")
@@ -3210,7 +3207,12 @@ local SpectatorFuncs = (function()
         -- Teleport up
         local lookDir = hrp.CFrame.LookVector
         local newPos = Vector3.new(originalPos.X, targetY, originalPos.Z)
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.Sit = true end
+        task.wait(0.2)
         hrp.CFrame = CFrame.lookAt(newPos, newPos + Vector3.new(lookDir.X, 0, lookDir.Z))
+        task.wait(0.2)
+        hum.Sit = false
 
         -- Heartbeat: Fly movement + ReplicationFocus follows CAMERA
         rsConnection = RunService.Heartbeat:Connect(function()
@@ -3281,6 +3283,8 @@ local SpectatorFuncs = (function()
         local humanoid = char:FindFirstChildOfClass("Humanoid")
         local hrp = char:FindFirstChild("HumanoidRootPart")
 
+        if humanoid then humanoid.Sit = false end
+
         if not hrp or not humanoid or not originalPos then
             player.ReplicationFocus = nil
             destroyReplicationPart()
@@ -3303,8 +3307,11 @@ local SpectatorFuncs = (function()
 
         humanoid.PlatformStand = false
         task.wait(0.1)
-        hrp.CFrame = CFrame.new(originalPos.X, originalPos.Y + 5, originalPos.Z)
-            * CFrame.Angles(0, math.atan2(hrp.CFrame.LookVector.X, hrp.CFrame.LookVector.Z), 0)
+        if humanoid then humanoid.Sit = true end
+        task.wait(0.2)
+        hrp.CFrame = CFrame.new(originalPos.X, originalPos.Y + 5, originalPos.Z) * CFrame.Angles(0, math.atan2(hrp.CFrame.LookVector.X, hrp.CFrame.LookVector.Z), 0)
+        task.wait(0.2)
+        humanoid.Sit = false
 
         task.wait(0.3)
         humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
@@ -3313,8 +3320,12 @@ local SpectatorFuncs = (function()
         hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
         hrp.Velocity = Vector3.new(0, 0, 0)
-        hrp.CFrame = CFrame.new(originalPos.X, originalPos.Y + 3, originalPos.Z)
-            * CFrame.Angles(0, math.atan2(hrp.CFrame.LookVector.X, hrp.CFrame.LookVector.Z), 0)
+        if humanoid then humanoid.Sit = true end
+        task.wait(0.2)
+        hrp.CFrame = CFrame.new(originalPos.X, originalPos.Y + 3, originalPos.Z) * CFrame.Angles(0, math.atan2(hrp.CFrame.LookVector.X, hrp.CFrame.LookVector.Z), 0)
+        task.wait(0.2)
+        humanoid.Sit = false
+
 
         landPlatform:Destroy()
         player.ReplicationFocus = nil
@@ -4326,7 +4337,12 @@ local TreeFuncs = (function()
         if not char then return end
         local root = char:FindFirstChild("HumanoidRootPart")
         if not root then return end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.Sit = true end
+        task.wait(0.2)
         root.CFrame = CFrame.new(pos + Vector3.new(0, 5, 0))
+        task.wait(0.2)
+        hum.Sit = false
         root.Velocity = Vector3.new(0, 0, 0)
         root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
     end
@@ -4500,7 +4516,7 @@ local TreeFuncs = (function()
         -- Ensure axe is equipped
         if not char:FindFirstChild("LumberAxe") then
             equipaxe()
-            task.wait(0.15)
+            task.wait(0.2)
         end
         -- Fire tool via VIM mouse click (only method that works for LumberAxe)
         vim:SendMouseButtonEvent(0, 0, 0, true, game, 0)
@@ -4722,8 +4738,8 @@ local TreeFuncs = (function()
         active = true
         wasActiveBeforeDeath = true
         bankedseed = false
-        Notify("🌲 Auto Tree active (5s load delay)")
-        task.wait(5)
+        Notify("🌲 Auto Tree active (7s load delay)")
+        task.wait(7)
         cleanupTrees()
         startHeartbeat()
         nexttree()
@@ -4794,63 +4810,58 @@ end)()
 -- ==========================================
 -- AUTO FISH (IIFE)
 -- ==========================================
+-- ==========================================
+-- AUTO FISH (ported from standalone v115)
+-- ==========================================
 local FishFuncs = (function()
     local ff = {}
     local active = false
     local fishThread = nil
-    local spotTimer = 0
-    local currentSpotIdx = 1
-    local FISH_SPOTS = {
-        Vector3.new(-5000, 45, -3000),
-        Vector3.new(-5200, 45, -3100),
-        Vector3.new(-4800, 45, -2900),
-        Vector3.new(-5100, 45, -2800),
-        Vector3.new(-4900, 45, -3200),
-    }
-    local SPOT_SWITCH_INTERVAL = 480
-    local FISH_TYPES = {"Cod", "Bass", "Snapper", "Rusty Mares Leg"}
+    local BobberConn = nil
+    local YMonitorConn = nil
+    local QTEManager = nil
 
+  -- : Two fishing spots
+    local FISH_SPOTS = {
+        {playerPos = Vector3.new(-1862, 2.8, -3394), bobberPos = Vector3.new(-1772, 36, -3363)},
+        {playerPos = Vector3.new(-2234, 2.8, -3381), bobberPos = Vector3.new(-2252, 8, -3397)},
+    }
+    local currentSpotIdx = 1
+    local spotStartTime = 0
+    local SPOT_TIME_LIMIT = 300 -- 5 minutes
+
+  -- : Saved position (bobber position for current spot)
+    local SavedPos = nil
+
+  -- : State
+    local IsFishing = false
+    local LastFrozenBobber = nil
+    local LastFreezeTime = 0
+    local QTEBusy = false
+    local LastQTETime = 0
+    local QTEJustHappened = false
+    local LastBypassTime = 0
+    local FreezeConn = nil
+
+  -- : Bite detection
+    local BITE_THRESHOLD = -1.5
+    local SETTLE_DELAY = 3
+
+    -- ==========================================
+    -- HELPERS (from v115)
+    -- ==========================================
     local function getRod()
         local bp = player:FindFirstChild("Backpack")
         if bp then
-            local rod = bp:FindFirstChild("FishingRod")
-            if rod then return rod end
+            local r = bp:FindFirstChild("FishingRod")
+            if r then return r end
         end
         local char = player.Character
         if char then
-            local rod = char:FindFirstChild("FishingRod")
-            if rod then return rod end
+            local r = char:FindFirstChild("FishingRod")
+            if r then return r end
         end
         return nil
-    end
-
-    local function buyRod()
-        local daniel = Workspace:FindFirstChild("NPC") and Workspace.NPC:FindFirstChild("Daniel")
-        if not daniel then return false end
-        local char = player.Character
-        if not char then return false end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return false end
-        hrp.CFrame = CFrame.new(daniel:GetPivot().Position + Vector3.new(0, 5, 0))
-        task.wait(0.5)
-        local cd = daniel:FindFirstChildOfClass("ClickDetector")
-        if cd then
-            fireclickdetector(cd)
-            task.wait(1)
-            local gui = playerGui:WaitForChild("DialogueGui", 3)
-            if gui then
-                local list = gui.MainFrame.ChoiceList
-                for i = 1, 3 do
-                    local btn = list:FindFirstChild("Choice_" .. i)
-                    if btn and (btn.Text:find("FishingRod") or btn.Text:find("Rod")) then
-                        pcall(function() firesignal(btn.MouseButton1Click) end)
-                        task.wait(0.5)
-                        return getRod() ~= nil
-                    end
-                end
-            end
-        end
-        return false
     end
 
     local function equipRod()
@@ -4867,169 +4878,656 @@ local FishFuncs = (function()
         return true
     end
 
-    local function freezeHRP()
+    local function isMyBobber(obj)
+        if not obj or not obj:IsA("BasePart") then return false end
+        if obj.Name ~= "Part" then return false end
+        local rope = obj:FindFirstChild("RopeConstraint")
+        if not rope or not rope:IsA("RopeConstraint") then return false end
+        local att1 = rope.Attachment1
+        local att0 = rope.Attachment0
+        if not att1 or not att0 then return false end
+        if att1.Parent ~= obj then return false end
+        local handle = att0.Parent
+        if not handle then return false end
+        local char = player.Character
+        if not char then return false end
+        local myRod = char:FindFirstChild("FishingRod")
+        if myRod and handle:IsDescendantOf(myRod) then return true end
+        if handle:IsDescendantOf(char) then return true end
+        if handle.Name == "Handle" then
+            local parent = handle.Parent
+            while parent do
+                if parent == char then return true end
+                if parent == Workspace then break end
+                parent = parent.Parent
+            end
+        end
+        return false
+    end
+
+    local function findMyBobber()
+        for _, obj in ipairs(Workspace:GetChildren()) do
+            if isMyBobber(obj) then return obj end
+        end
+        return nil
+    end
+
+    local function freezeBobber(bobber)
+        if not bobber or not SavedPos then return end
+        -- v59: Skip freeze if QTE is in progress (avoid conflicts)
+        if QTEBusy then return end
+        if LastFrozenBobber == bobber and tick() - LastFreezeTime < 1 then
+            return
+        end
+        LastFrozenBobber = bobber
+        LastFreezeTime = tick()
+        local ap = bobber:FindFirstChild("AlignPosition")
+        local ao = bobber:FindFirstChild("AlignOrientation")
+        local rc = bobber:FindFirstChild("RopeConstraint")
+        if ap then ap.Enabled = false end
+        if ao then ao.Enabled = false end
+        if rc then rc.Enabled = false end
+        bobber.Anchored = false
+        bobber.Velocity = Vector3.new(0, 0, 0)
+        bobber.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        bobber.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        bobber.CFrame = CFrame.new(SavedPos)
+        if ap then ap.Enabled = true end
+        if ao then ao.Enabled = true end
+        if rc then rc.Enabled = true end
+    end
+
+    local function clickAtWorldPosition(worldPos)
+        -- v59: Skip click if QTE is in progress
+        if QTEBusy then return end
+        VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+        task.wait(0.03)
+        VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+    end
+
+  -- : Player freeze helpers
+    local function freezePlayer()
         local char = player.Character
         if not char then return end
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
         hrp.Anchored = true
+        hrp.Velocity = Vector3.new(0, 0, 0)
+        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        if FreezeConn then FreezeConn:Disconnect() end
+        FreezeConn = RunService.Heartbeat:Connect(function()
+            if not hrp.Parent then
+                if FreezeConn then FreezeConn:Disconnect() FreezeConn = nil end
+                return
+            end
+            hrp.Velocity = Vector3.new(0, 0, 0)
+            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        end)
     end
 
-    local function unfreezeHRP()
+    local function unfreezePlayer()
+        if FreezeConn then
+            FreezeConn:Disconnect()
+            FreezeConn = nil
+        end
         local char = player.Character
         if not char then return end
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
         hrp.Anchored = false
-    end
-
-    local function tpToSpot(idx)
-        local char = player.Character
-        if not char then return end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-        local spot = FISH_SPOTS[idx]
-        if not spot then return end
-        hrp.CFrame = CFrame.new(spot + Vector3.new(0, 5, 0))
         hrp.Velocity = Vector3.new(0, 0, 0)
+        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
     end
 
-    local function castLine()
-        local VIM = game:GetService("VirtualInputManager")
-        VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-        task.wait(0.1)
-        VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-        task.wait(2)
-    end
-
-    local function waitForBite()
-        local start = tick()
-        while active do
-            local char = player.Character
-            if char then
-                local fishGui = playerGui:FindFirstChild("FishingGui") or playerGui:FindFirstChild("FishGui")
-                if fishGui then return true end
-                for _, sound in ipairs(char:GetDescendants()) do
-                    if sound:IsA("Sound") and sound.Playing and (sound.Name:find("Splash") or sound.Name:find("Bite")) then
-                        return true
-                    end
-                end
-            end
-            if tick() - start > 30 then return false end
-            task.wait(0.2)
-        end
-        return false
-    end
-
-    local function reelIn()
-        local VIM = game:GetService("VirtualInputManager")
-        VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-        task.wait(3)
-        VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-        task.wait(1)
-    end
-
-    local function handleQTE()
-        local qteGui = playerGui:FindFirstChild("QTEGui") or playerGui:FindFirstChild("QuickTimeEvent")
-        if not qteGui then
-            for _, gui in ipairs(playerGui:GetChildren()) do
-                if gui:IsA("ScreenGui") and (gui.Name:find("QTE") or gui.Name:find("Timing") or gui.Name:find("Fish")) then
-                    qteGui = gui
-                    break
-                end
-            end
-        end
-        if qteGui then
-            local start = tick()
-            while tick() - start < 5 do
-                for _, btn in ipairs(qteGui:GetDescendants()) do
-                    if btn:IsA("GuiButton") or btn:IsA("TextButton") then
-                        pcall(function() firesignal(btn.MouseButton1Click) end)
-                        pcall(function()
-                            if btn.AbsolutePosition and btn.AbsoluteSize then
-                                local x = btn.AbsolutePosition.X + btn.AbsoluteSize.X / 2
-                                local y = btn.AbsolutePosition.Y + btn.AbsoluteSize.Y / 2
-                                VIM:SendMouseButtonEvent(x, y, 0, true, game, 0)
-                                task.wait(0.05)
-                                VIM:SendMouseButtonEvent(x, y, 0, false, game, 0)
-                            end
-                        end)
-                    end
-                end
-                task.wait(0.1)
-            end
-        end
-    end
-
-    local function openChestIfAny()
+  -- : Chest detection
+    local function findChestPrompt()
         local char = player.Character
-        if not char then return end
-        for _, item in ipairs(char:GetChildren()) do
-            if item:IsA("Tool") and item.Name:find("Chest") then
-                for _, desc in ipairs(item:GetDescendants()) do
-                    if desc:IsA("ProximityPrompt") then
-                        pcall(function() fireproximityprompt(desc) end)
-                    end
-                end
-                task.wait(0.5)
-            end
-        end
+        if not char then return nil end
         local hrp = char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            for _, obj in ipairs(Workspace:GetChildren()) do
-                if obj.Name:find("Chest") and obj:IsA("Model") then
-                    local part = obj:FindFirstChildWhichIsA("BasePart")
-                    if part and (part.Position - hrp.Position).Magnitude < 10 then
-                        for _, desc in ipairs(obj:GetDescendants()) do
-                            if desc:IsA("ProximityPrompt") then
-                                pcall(function() fireproximityprompt(desc) end)
-                            end
+        if not hrp then return nil end
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("ProximityPrompt") then
+                local parent = obj.Parent
+                if parent and parent:IsA("Model") then
+                    local name = parent.Name:lower()
+                    if name:find("chest") or name:find("loot") or name:find("crate") or name:find("treasure") then
+                        local dist = (hrp.Position - parent:GetPivot().Position).Magnitude
+                        if dist < 15 then
+                            return obj
                         end
                     end
                 end
             end
         end
+        return nil
     end
 
-    local function sellFish()
-        local daniel = Workspace:FindFirstChild("NPC") and Workspace.NPC:FindFirstChild("Daniel")
-        if not daniel then return end
-        local char = player.Character
-        if not char then return end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-        hrp.CFrame = CFrame.new(daniel:GetPivot().Position + Vector3.new(0, 5, 0))
-        task.wait(0.5)
-        local cd = daniel:FindFirstChildOfClass("ClickDetector")
-        if cd then
-            fireclickdetector(cd)
-            task.wait(1)
-            local gui = playerGui:WaitForChild("DialogueGui", 3)
-            if gui then
-                local list = gui.MainFrame.ChoiceList
-                for i = 1, 5 do
-                    local btn = list:FindFirstChild("Choice_" .. i)
-                    if btn and (btn.Text:find("Sell") or btn.Text:find("sell")) then
-                        pcall(function() firesignal(btn.MouseButton1Click) end)
-                        task.wait(0.5)
-                        break
+    -- ==========================================
+    -- QTE SYSTEM (from v115, no debug)
+    -- ==========================================
+    local QTEEvent = nil
+    local function getQTEEvent()
+        if not QTEEvent then
+            QTEEvent = ReplicatedStorage:WaitForChild("QTEEvent")
+        end
+        return QTEEvent
+    end
+
+    local function isQTEActive()
+        local qteSystem = playerGui:FindFirstChild("QTESystem")
+        if qteSystem and qteSystem:IsA("ScreenGui") and qteSystem.Enabled then
+            return true, "QTESystem enabled"
+        end
+        local mashingSystem = playerGui:FindFirstChild("MashingSystem")
+        if mashingSystem and mashingSystem:IsA("ScreenGui") and mashingSystem.Enabled then
+            return true, "MashingSystem enabled"
+        end
+        return false, "No active QTE UI found"
+    end
+
+    local KEY_MAP = {
+        ["R"] = 0x52,
+        ["T"] = 0x54,
+        ["F"] = 0x46,
+        ["G"] = 0x47,
+    }
+
+    local function scanAllKeyLabels()
+        local allLabels = {}
+        for _, gui in ipairs(playerGui:GetChildren()) do
+            if gui:IsA("ScreenGui") then
+                for _, desc in ipairs(gui:GetDescendants()) do
+                    if desc.Name == "KeyLabel" and desc:IsA("TextLabel") then
+                        table.insert(allLabels, desc)
                     end
                 end
             end
         end
+        return allLabels
     end
 
+    local function getQTEKeyFromLabels()
+        local labels = scanAllKeyLabels()
+        for _, keyLabel in ipairs(labels) do
+            if not keyLabel or not keyLabel:IsA("TextLabel") then continue end
+            local keyText = keyLabel.Text
+            if not keyText or keyText == "" then continue end
+            local cleaned = keyText:gsub("[^a-zA-Z]", ""):upper()
+            local key = cleaned:sub(1, 1)
+            if key == "R" or key == "T" or key == "F" or key == "G" then
+                return KEY_MAP[key], key
+            end
+        end
+        return nil, nil
+    end
+
+    function bypassQTE()
+        local now = tick()
+        local sinceLastBypass = now - LastBypassTime
+        if sinceLastBypass < 3 then
+            QTEBusy = false
+            return false
+        end
+        local isActive, reason = isQTEActive()
+        if not isActive then
+            QTEBusy = false
+            return false
+        end
+        -- v58: LastBypassTime updated ONLY after confirmed active QTE (fix from v115)
+        LastBypassTime = now
+        QTEBusy = true
+        LastQTETime = tick()
+        freezePlayer()
+        task.spawn(function()
+            local qteStartTime = tick()
+            -- v58: timeout 2s (from v115)
+            while IsFishing do
+                if tick() - qteStartTime > 2 then
+                    break
+                end
+                local stillActive = false
+                local qteSystem = playerGui:FindFirstChild("QTESystem")
+                if qteSystem and qteSystem:IsA("ScreenGui") and qteSystem.Enabled then
+                    stillActive = true
+                end
+                local mashingSystem = playerGui:FindFirstChild("MashingSystem")
+                if mashingSystem and mashingSystem:IsA("ScreenGui") and mashingSystem.Enabled then
+                    stillActive = true
+                end
+                if not stillActive then
+                    break
+                end
+                local vkCode, keyChar = getQTEKeyFromLabels()
+                if vkCode and keyChar then
+                    pcall(function() keytap(vkCode) end)
+                    local keyCode = Enum.KeyCode[keyChar]
+                    if keyCode then
+                        pcall(function()
+                            VIM:SendKeyEvent(true, keyCode, false, game)
+                            -- v58: 0.03s interval (from v115)
+                            task.wait(0.03)
+                            VIM:SendKeyEvent(false, keyCode, false, game)
+                        end)
+                    end
+                    pcall(function() keytap(keyChar:lower()) end)
+                    pcall(function() keytap(keyChar:upper()) end)
+                    pcall(function()
+                        if keypress then
+                            keypress(vkCode)
+                            task.wait(0.03)
+                            keyrelease(vkCode)
+                        end
+                    end)
+                else
+                    for _, k in ipairs({"R", "T", "F", "G"}) do
+                        local kc = Enum.KeyCode[k]
+                        if kc then
+                            pcall(function()
+                                VIM:SendKeyEvent(true, kc, false, game)
+                                task.wait(0.03)
+                                VIM:SendKeyEvent(false, kc, false, game)
+                            end)
+                        end
+                        local vk = KEY_MAP[k]
+                        if vk then
+                            pcall(function() keytap(vk) end)
+                        end
+                    end
+                end
+                -- v58: 0.03s mash interval (from v115)
+                task.wait(0.03)
+            end
+            local chestPrompt = findChestPrompt()
+            if chestPrompt then
+                pcall(function()
+                    fireproximityprompt(chestPrompt, Enum.KeyCode.E)
+                end)
+            end
+            unfreezePlayer()
+            task.wait(1)
+            -- v59: Clear QTEBusy before casting to allow normal loop to resume
+            QTEBusy = false
+            if IsFishing then
+                clickAtWorldPosition(SavedPos)
+            end
+            QTEJustHappened = true
+            task.delay(2, function()
+                QTEJustHappened = false
+            end)
+        end)
+        return true
+    end
+
+    local QTEConnection = {}
+    QTEConnection.__index = QTEConnection
+
+    function QTEConnection.new()
+        local self = setmetatable({}, QTEConnection)
+        self.connections = {}
+        self.isRunning = false
+        self.armTime = 0
+        return self
+    end
+
+    function QTEConnection:Start()
+        if self.isRunning then return end
+        self.isRunning = true
+        self.armTime = tick()
+        local ok, qteEvent = pcall(getQTEEvent)
+        if ok and qteEvent and qteEvent:IsA("RemoteEvent") then
+            local conn1 = qteEvent.OnClientEvent:Connect(function(...)
+                if not IsFishing then return end
+                if QTEBusy then return end
+                local sinceLastBypass = tick() - LastBypassTime
+                if sinceLastBypass < 3 then return end
+                local age = tick() - self.armTime
+                if age < 1 then return end
+                self:OnQTEDetected()
+            end)
+            table.insert(self.connections, conn1)
+        end
+        task.delay(0.5, function()
+            if self.isRunning then
+                -- armed early
+            end
+        end)
+    end
+
+    function QTEConnection:OnQTEDetected()
+        if QTEBusy then return end
+        QTEBusy = true
+        LastQTETime = tick()
+        -- v58: 0.15s delay (from v115) to let QTE UI appear
+        task.delay(0.15, function()
+            if IsFishing then
+                bypassQTE()
+            else
+                QTEBusy = false
+            end
+        end)
+    end
+
+    -- v58: Restart method from v115 - resets QTEBusy and re-arms detector
+    function QTEConnection:Restart()
+        QTEBusy = false
+        self.armTime = tick()
+    end
+
+    function QTEConnection:Stop()
+        self.isRunning = false
+        for _, conn in ipairs(self.connections) do
+            pcall(function() conn:Disconnect() end)
+        end
+        self.connections = {}
+    end    -- ==========================================
+    -- BITE DETECTION
+    -- ==========================================
+    local function waitForBite()
+        if not SavedPos then return false end
+        local startTime = tick()
+        local biteDetected = false
+        local hbConn = nil
+        hbConn = RunService.Heartbeat:Connect(function()
+            if biteDetected or not IsFishing then
+                if hbConn then hbConn:Disconnect() hbConn = nil end
+                return
+            end
+            -- v59: Break if QTE started
+            if QTEBusy then
+                if hbConn then hbConn:Disconnect() hbConn = nil end
+                return
+            end
+            local bobber = findMyBobber()
+            if not bobber then
+                if hbConn then hbConn:Disconnect() hbConn = nil end
+                return
+            end
+            local delta = bobber.Position.Y - SavedPos.Y
+            if delta < BITE_THRESHOLD then
+                biteDetected = true
+                if hbConn then hbConn:Disconnect() hbConn = nil end
+            end
+        end)
+        while tick() - startTime < 30 do
+            if not IsFishing then
+                biteDetected = false
+                break
+            end
+            -- v59: Break if QTE started during wait
+            if QTEBusy then
+                biteDetected = false
+                break
+            end
+            if biteDetected then break end
+            task.wait(0.05)
+        end
+        if hbConn then hbConn:Disconnect() hbConn = nil end
+        return biteDetected
+    end
+
+    local function reelIn()
+        task.wait(0.05)
+        -- v59: Skip cast if QTE is in progress
+        if not QTEBusy then
+            clickAtWorldPosition(SavedPos)
+        end
+        task.wait(1)
+        LastFrozenBobber = nil
+        LastFreezeTime = 0
+    end
+
+    -- ==========================================
+  -- : AUTO BUY/SELL (adapted from Auto Tree)
+    -- ==========================================
+    local function getItemCount(itemName)
+        local bp = player:FindFirstChild("Backpack")
+        if not bp then return 0 end
+        local item = bp:FindFirstChild(itemName)
+        if not item then return 0 end
+        local q = item:FindFirstChild("Quantity")
+        if q and q:IsA("IntValue") then
+            return q.Value
+        end
+        return 1
+    end
+
+    local function hasItem(itemName)
+        return getItemCount(itemName) > 0
+    end
+
+    local function teleportToDaniel()
+        -- v59: Skip if QTE is in progress
+        if QTEBusy then return false end
+        local daniel = Workspace:FindFirstChild("NPC") and Workspace.NPC:FindFirstChild("Daniel")
+        if not daniel then return false end
+        local char = player.Character
+        if not char then return false end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return false end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then hum.Sit = true end
+    task.wait(0.2)
+    hrp.CFrame = CFrame.new(daniel:GetPivot().Position + Vector3.new(0, 5, 0))
+    task.wait(0.2)
+    if hum then hum.Sit = false end
+        hrp.Velocity = Vector3.new(0, 0, 0)
+        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        return true
+    end
+
+    local function clickDialogueChoice(choiceNum)
+        local gui = playerGui:FindFirstChild("DialogueGui")
+        if not gui then return false end
+        local mainFrame = gui:FindFirstChild("MainFrame")
+        if not mainFrame then return false end
+        local list = mainFrame:FindFirstChild("ChoiceList")
+        if not list then return false end
+        local btn = list:FindFirstChild("Choice_" .. choiceNum)
+        if not btn then return false end
+        pcall(function() firesignal(btn.MouseButton1Click) end)
+        -- Fallback: VIM click
+        pcall(function()
+            if btn.AbsolutePosition and btn.AbsoluteSize then
+                local x = btn.AbsolutePosition.X + btn.AbsoluteSize.X / 2
+                local y = btn.AbsolutePosition.Y + btn.AbsoluteSize.Y / 2
+                VIM:SendMouseButtonEvent(x, y, 0, true, game, 0)
+                task.wait(0.05)
+                VIM:SendMouseButtonEvent(x, y, 0, false, game, 0)
+            end
+        end)
+        return true
+    end
+
+    local function buyFishingRod()
+        Notify("🎣 Buying FishingRod...")
+        if not teleportToDaniel() then
+            Notify("❌ Daniel not found")
+            return false
+        end
+        task.wait(0.5)
+        local daniel = Workspace.NPC:FindFirstChild("Daniel")
+        if not daniel then return false end
+        local cd = daniel:FindFirstChildOfClass("ClickDetector")
+        if cd then
+            fireclickdetector(cd)
+            task.wait(0.8)
+        end
+        -- Choice 1-1-1-1
+        clickDialogueChoice(1)
+        task.wait(0.5)
+        clickDialogueChoice(1)
+        task.wait(0.5)
+        clickDialogueChoice(1)
+        task.wait(0.5)
+        clickDialogueChoice(1)
+        task.wait(0.5)
+        -- Close dialogue
+        local gui = playerGui:FindFirstChild("DialogueGui")
+        if gui then
+            local closeBtn = gui:FindFirstChild("CloseButton", true) or gui:FindFirstChild("X", true)
+            if closeBtn then
+                pcall(function() firesignal(closeBtn.MouseButton1Click) end)
+            end
+        end
+        task.wait(0.5)
+        return getRod() ~= nil
+    end
+
+    local function buyBait()
+        Notify("🪱 Buying Bait...")
+        if not teleportToDaniel() then
+            Notify("❌ Daniel not found")
+            return false
+        end
+        task.wait(0.5)
+        local daniel = Workspace.NPC:FindFirstChild("Daniel")
+        if not daniel then return false end
+        local cd = daniel:FindFirstChildOfClass("ClickDetector")
+        if cd then
+            fireclickdetector(cd)
+            task.wait(0.8)
+        end
+        -- Choice 1-1-2-2
+        clickDialogueChoice(1)
+        task.wait(0.5)
+        clickDialogueChoice(1)
+        task.wait(0.5)
+        clickDialogueChoice(2)
+        task.wait(0.5)
+        clickDialogueChoice(2)
+        task.wait(0.5)
+        -- Close dialogue
+        local gui = playerGui:FindFirstChild("DialogueGui")
+        if gui then
+            local closeBtn = gui:FindFirstChild("CloseButton", true) or gui:FindFirstChild("X", true)
+            if closeBtn then
+                pcall(function() firesignal(closeBtn.MouseButton1Click) end)
+            end
+        end
+        task.wait(0.5)
+        return hasItem("Bait")
+    end
+
+    local function sellFish()
+        Notify("💰 Selling fish...")
+        if not teleportToDaniel() then
+            Notify("❌ Daniel not found")
+            return
+        end
+        task.wait(0.5)
+        local daniel = Workspace.NPC:FindFirstChild("Daniel")
+        if not daniel then return end
+        local cd = daniel:FindFirstChildOfClass("ClickDetector")
+        if cd then
+            fireclickdetector(cd)
+            task.wait(0.8)
+        end
+        -- Choice 2-2-2-2, repeat 3 times
+        for i = 1, 3 do
+            clickDialogueChoice(2)
+            task.wait(0.5)
+            clickDialogueChoice(2)
+            task.wait(0.5)
+            clickDialogueChoice(2)
+            task.wait(0.5)
+            clickDialogueChoice(2)
+            task.wait(0.5)
+            task.wait(2) -- 2 second interval between sales
+        end
+        -- Close dialogue
+        local gui = playerGui:FindFirstChild("DialogueGui")
+        if gui then
+            local closeBtn = gui:FindFirstChild("CloseButton", true) or gui:FindFirstChild("X", true)
+            if closeBtn then
+                pcall(function() firesignal(closeBtn.MouseButton1Click) end)
+            end
+        end
+        Notify("✅ Fish sold")
+    end
+
+    local function checkAndBuyGear()
+        -- Check FishingRod
+        if not getRod() then
+            local bought = buyFishingRod()
+            if not bought then
+                Notify("❌ Failed to buy FishingRod")
+                return false
+            end
+        end
+        -- Check Bait
+        if not hasItem("Bait") then
+            local bought = buyBait()
+            if not bought then
+                Notify("❌ Failed to buy Bait")
+                return false
+            end
+        end
+        return true
+    end
+
+    local function checkAndSellFish()
+        for _, fishName in ipairs({"Cod", "Bass", "Snapper"}) do
+            if getItemCount(fishName) >= 50 then
+                sellFish()
+                return true
+            end
+        end
+        return false
+    end
+
+    -- ==========================================
+    -- BOBBER LISTENER
+    -- ==========================================
+    local function setupBobberListener()
+        if BobberConn then BobberConn:Disconnect() BobberConn = nil end
+        BobberConn = Workspace.ChildAdded:Connect(function(child)
+            if not SavedPos then return end
+            if not child:IsA("BasePart") then return end
+            if child.Name ~= "Part" then return end
+            if LastFrozenBobber and LastFrozenBobber.Parent and tick() - LastFreezeTime < 2 then
+                return
+            end
+            local rope = child:FindFirstChild("RopeConstraint")
+            if not rope then return end
+            task.wait(0.05)
+            if not child.Parent then return end
+            if isMyBobber(child) then
+                freezeBobber(child)
+            end
+        end)
+    end
+
+    -- ==========================================
+  -- : MAIN FISH LOOP
+    -- ==========================================
     function ff.StartFish()
         if active then return end
         active = true
-        spotTimer = 0
+        IsFishing = true
+        Notify("🎣 Auto Fish active (7s load delay)")
+        task.wait(7)
+
+        -- Initialize first spot
         currentSpotIdx = 1
-        Notify("🎣 Auto Fish active (5s load delay)")
-        task.wait(5)
+        spotStartTime = tick()
+        SavedPos = FISH_SPOTS[1].bobberPos
+
+        setupBobberListener()
+        QTEManager = QTEConnection.new()
+        QTEManager:Start()
 
         fishThread = task.spawn(function()
             while active do
+                -- v59: Skip iteration if QTE is in progress
+                if QTEBusy then
+                    task.wait(1)
+                    continue
+                end
+
                 local char = player.Character
                 if not char then
                     player.CharacterAdded:Wait()
@@ -5037,61 +5535,163 @@ local FishFuncs = (function()
                     char = player.Character
                 end
 
-                if not getRod() then
-                    Notify("Buying FishingRod...", 2)
-                    if not buyRod() then
-                        Notify("Failed to buy rod", 3)
-                        task.wait(5)
+                -- v59: Skip spot switch if QTE is in progress
+                if tick() - spotStartTime > SPOT_TIME_LIMIT and not QTEBusy then
+                    currentSpotIdx = currentSpotIdx % #FISH_SPOTS + 1
+                    spotStartTime = tick()
+                    SavedPos = FISH_SPOTS[currentSpotIdx].bobberPos
+                    Notify("🎣 Switching to spot " .. currentSpotIdx)
+                    -- v58: Restart QTE detector on spot switch (from v115)
+                    if QTEManager then QTEManager:Restart() end
+                end
+
+                -- v59: Skip teleport if QTE is in progress
+                if not QTEBusy then
+                    -- Teleport to current spot FIRST
+                    local spot = FISH_SPOTS[currentSpotIdx]
+                    local hrp = char:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        local hum = char:FindFirstChildOfClass("Humanoid")
+                        if hum then hum.Sit = true end
+                        task.wait(0.2)
+                        hrp.CFrame = CFrame.new(spot.playerPos + Vector3.new(0, 5, 0))
+                        task.wait(0.2)
+                        hum.Sit = false
+                        hrp.Velocity = Vector3.new(0, 0, 0)
+                        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    end
+                    task.wait(0.5)
+                end
+
+        -- : Check and buy gear (teleports to Daniel, does NOT equip rod)
+                -- v59: Skip buy/sell if QTE is in progress
+                if not QTEBusy then
+                    if not checkAndBuyGear() then
+                        task.wait(3)
                         continue
                     end
                 end
 
+        -- : Check and sell fish if needed (teleports to Daniel)
+                if not QTEBusy then
+                    checkAndSellFish()
+                end
+
+                -- v59: Skip return teleport if QTE is in progress
+                if not QTEBusy then
+                    -- Return to fishing spot after buy/sell
+                    local spot = FISH_SPOTS[currentSpotIdx]
+                    local hrp = char:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        local hum = char:FindFirstChildOfClass("Humanoid")
+                        if hum then hum.Sit = true end
+                        task.wait(0.2)
+                        hrp.CFrame = CFrame.new(spot.playerPos + Vector3.new(0, 5, 0))
+                        task.wait(0.2)
+                        hum.Sit = false
+                        hrp.Velocity = Vector3.new(0, 0, 0)
+                        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    end
+                    task.wait(0.5)
+                end
+
+                -- NOW equip rod after we're at the fishing spot
                 if not equipRod() then
-                    task.wait(1)
+                    task.wait(3)
                     continue
                 end
 
-                tpToSpot(currentSpotIdx)
-                task.wait(1)
-                freezeHRP()
-
-                local spotStart = tick()
-                while active and (tick() - spotStart) < SPOT_SWITCH_INTERVAL do
-                    castLine()
-                    if waitForBite() then
-                        reelIn()
-                        handleQTE()
-                        openChestIfAny()
-                        task.wait(1)
-                    else
-                        task.wait(2)
+                local existing = findMyBobber()
+                if existing then
+                    freezeBobber(existing)
+                    task.wait(SETTLE_DELAY)
+                    if active then
+                        local hadBite = waitForBite()
+                        if hadBite then
+                            reelIn()
+                        end
+                        if QTEJustHappened then
+                            task.wait(1)
+                            QTEJustHappened = false
+                        end
                     end
+                    task.wait(1)
+                else
+                    -- v59: Skip cast if QTE is in progress
+                    if not QTEBusy then
+                        -- Cast
+                        task.wait(0.2)
+                        if SavedPos then
+                            clickAtWorldPosition(SavedPos)
+                        else
+                            VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                            task.wait(0.03)
+                            VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                        end
+                    end
+
+                    -- Wait for bobber
+                    local waitStart = tick()
+                    while tick() - waitStart < 8 do
+                        if not active then break end
+                        -- v59: Skip bobber wait if QTE started
+                        if QTEBusy then break end
+                        local found = findMyBobber()
+                        if found then
+                            freezeBobber(found)
+                            break
+                        end
+                        task.wait(0.2)
+                    end
+
+                    -- If no bobber found, retry cast next loop
+                    if not findMyBobber() then
+                        task.wait(1)
+                        continue
+                    end
+
+                    task.wait(SETTLE_DELAY)
+                    if active then
+                        local hadBite = waitForBite()
+                        if hadBite then
+                            reelIn()
+                        end
+                        if QTEJustHappened then
+                            task.wait(1)
+                            QTEJustHappened = false
+                        end
+                    end
+                    task.wait(1)
                 end
-
-                unfreezeHRP()
-                currentSpotIdx = currentSpotIdx % #FISH_SPOTS + 1
-                spotTimer = 0
-                Notify("Switching fishing spot...", 2)
-                task.wait(2)
             end
-
-            unfreezeHRP()
-            Notify("⚫ Auto Fish stopped", 3)
+            Notify("⚫ Auto Fish stopped")
         end)
     end
 
     function ff.StopFish()
         active = false
+        IsFishing = false
         if fishThread then
-            pcall(function() coroutine.close(fishThread) end)
+            pcall(function() task.cancel(fishThread) end)
             fishThread = nil
         end
-        unfreezeHRP()
+        if BobberConn then
+            BobberConn:Disconnect()
+            BobberConn = nil
+        end
+        if QTEManager then
+            QTEManager:Stop()
+            QTEManager = nil
+        end
+        unfreezePlayer()
         Notify("⚫ Auto Fish disabled")
     end
 
     return ff
 end)()
+
 
 -- ==========================================
 -- LASSO FUNCTIONS (IIFE) - Snitch + Kill
@@ -5926,7 +6526,12 @@ UI.TeleportPlayerBtn.MouseButton1Click:Connect(function()
     if not target then Notify("Player not found", 2) return end
     local targetHrp = target:FindFirstChild("HumanoidRootPart")
     if targetHrp then
-        hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 5)
+        local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then hum.Sit = true end
+    task.wait(0.2)
+    hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 5)
+    task.wait(0.2)
+    if hum then hum.Sit = false end
         Notify("Teleported to " .. name, 2)
     else
         Notify("No root part found", 2)
@@ -5955,7 +6560,12 @@ UI.TeleportNPCBtn.MouseButton1Click:Connect(function()
         local head = target:FindFirstChild("Head")
         local targetPos = head and head.Position or targetPart.Position
         local abovePos = targetPos + Vector3.new(0, (head and head.Size.Y or 2) + 1, 0)
-        hrp.CFrame = CFrame.new(abovePos)
+        local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then hum.Sit = true end
+    task.wait(0.2)
+    hrp.CFrame = CFrame.new(abovePos)
+    task.wait(0.2)
+    if hum then hum.Sit = false end
         hrp.Velocity = Vector3.new(0, 0, 0)
         hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
         Notify("Teleported to " .. name, 2)
@@ -5965,7 +6575,7 @@ UI.TeleportNPCBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- v43: AutoLoad handled after character spawn
+-- : AutoLoad handled after character spawn
 
 
 -- ==========================================
@@ -6015,6 +6625,7 @@ end)
 repeat task.wait() until game:IsLoaded()
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
@@ -6284,19 +6895,6 @@ local function MonitorCharacter()
     table.insert(State.connections, conn)
 end
 
--- Method 5: Heartbeat freeze
-local function MonitorHeartbeat()
-    local lastTick = tick()
-    local conn = RunService.Heartbeat:Connect(function()
-        if not State.detectorActive then return end
-        if tick() - lastTick > 3 then
-            TriggerHop("Connection frozen", "Heartbeat")
-        end
-        lastTick = tick()
-    end)
-    table.insert(State.connections, conn)
-end
-
 -- ==========================================
 -- PUBLIC API
 -- ==========================================
@@ -6316,7 +6914,6 @@ function KickDetector.Start()
     pcall(MonitorGui)
     pcall(MonitorParent)
     pcall(MonitorCharacter)
-    pcall(MonitorHeartbeat)
 
     Notify("🛡️ KickDetector active", 2)
 end
@@ -6373,4 +6970,62 @@ UI.ScreenGui.Destroying:Connect(function()
     end
 end)
 
-Notify("✅ rarity.bw v43 loaded — GUI in main menu, AutoLoad after Play", 4)
+
+-- ==========================================
+-- AUTOLOAD SYSTEM (separate from KickDetector)
+-- ==========================================
+-- AutoLoad after character loads from menu into game
+-- (NOT on rejoin - only when transitioning from MainMenu to game)
+local HasAutoLoaded = false
+
+player.CharacterAdded:Connect(function(char)
+    task.delay(2, function()
+        -- Only autoload once per session, and only if we came from menu
+        if HasAutoLoaded then return end
+        HasAutoLoaded = true
+
+        -- v60: Delay to avoid notification overlap with KickDetector
+        task.wait(3)
+
+        local autoLoadPath = ConfigFolder .. "/autoload.txt"
+        if isfile(autoLoadPath) then
+            local ok, name = pcall(function() return readfile(autoLoadPath) end)
+            if ok and name and name ~= "" then
+                name = name:gsub("%s+", "")
+                if name ~= "" then
+                    UI.ConfigNameBox.Text = name
+                    CurrentConfigName = name
+                    ConfigFuncs.LoadCurrentConfig()
+                    return
+                end
+            end
+        end
+        Notify("📭 AutoLoad is empty", 3)
+    end)
+end)
+
+
+
+
+
+-- Auto press Play button after GUI loads in main menu
+-- v60: Try once, check success, repeat if needed
+local playAttempts = 0
+local maxPlayAttempts = 10
+while true do
+    if Workspace.Entities:FindFirstChild(player.Name) then break end
+    local success = PressPlayButton()
+    if success then
+        Notify("✅ Play button pressed", 2)
+        break
+    end
+    playAttempts = playAttempts + 1
+    if playAttempts >= maxPlayAttempts then
+        Notify("⚠️ Failed to press Play after " .. maxPlayAttempts .. " attempts", 3)
+        break
+    end
+    task.wait(1.5)
+end
+
+Notify("✅ rarity.bw loaded", 4)
+task.wait(0.1)
