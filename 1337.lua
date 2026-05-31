@@ -1,3 +1,7 @@
+-- rarity.bw v75 - VIM restored via Instance.new bypass
+-- Auto Press Play restored
+-- All VIM calls use Instance.new-created VirtualInputManager
+
 task.wait(0.1)
 repeat task.wait() until game:IsLoaded()
 
@@ -6,16 +10,13 @@ elseif type(clearteleport_queue) == "function" then pcall(clearteleport_queue) e
 
 if getgenv().RarityHubLoaded then return end
 getgenv().RarityHubLoaded = true
--- rarity.bw v62: Consolidated Connections Architecture
--- All runtime features use 3 master connections instead of 116
--- VIM removed in v61, connections consolidated in v62
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local GuiService = game:GetService("GuiService")
-local VIM = nil -- v61: REMOVED, detected by Adonis
+local VIM = Instance.new("VirtualInputManager")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
@@ -62,90 +63,6 @@ local Features = {
     LassoKill={E=false,C=nil}
 }
 
--- ==========================================
--- v62: MASTER CONNECTION SYSTEM
--- Consolidates all Heartbeat/Stepped/Input connections
--- to avoid Adonis connection density detection
--- ==========================================
-local MasterHeartbeat = nil
-local HeartbeatTasks = {}
-local MasterInput = nil
-local InputActions = {}
-local MasterStepped = nil
-local SteppedTasks = {}
-
-local function RegisterHeartbeatTask(name, fn)
-    HeartbeatTasks[name] = fn
-end
-
-local function UnregisterHeartbeatTask(name)
-    HeartbeatTasks[name] = nil
-end
-
-local function RegisterInputAction(keyCode, fn)
-    InputActions[keyCode] = fn
-end
-
-local function UnregisterInputAction(keyCode)
-    InputActions[keyCode] = nil
-end
-
-local function StartMasterConnections()
-    if MasterHeartbeat then return end
-    MasterHeartbeat = RunService.Heartbeat:Connect(function(dt)
-        for name, fn in pairs(HeartbeatTasks) do
-            local ok, err = pcall(fn, dt)
-            if not ok then
-                warn("[rarity.bw] Heartbeat task '" .. name .. "' error: " .. tostring(err))
-            end
-        end
-    end)
-
-    MasterInput = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        if input.UserInputType == Enum.UserInputType.Keyboard then
-            local action = InputActions[input.KeyCode]
-            if action then
-                local ok, err = pcall(action)
-                if not ok then
-                    warn("[rarity.bw] Input action error: " .. tostring(err))
-                end
-            end
-        end
-    end)
-
-    MasterStepped = RunService.Stepped:Connect(function()
-        for name, fn in pairs(SteppedTasks) do
-            local ok, err = pcall(fn)
-            if not ok then
-                warn("[rarity.bw] Stepped task '" .. name .. "' error: " .. tostring(err))
-            end
-        end
-    end)
-end
-
-local function StopMasterConnections()
-    if MasterHeartbeat then
-        MasterHeartbeat:Disconnect()
-        MasterHeartbeat = nil
-    end
-    HeartbeatTasks = {}
-    if MasterInput then
-        MasterInput:Disconnect()
-        MasterInput = nil
-    end
-    InputActions = {}
-    if MasterStepped then
-        MasterStepped:Disconnect()
-        MasterStepped = nil
-    end
-    SteppedTasks = {}
-end
-
--- Start master connections immediately (only 3 connections total)
-StartMasterConnections()
-
-
 local saintsPartNames = {"SaintsLeftArm","SaintsRightArm","SaintsLeftLeg","SaintsRightLeg","SaintsRibcage"}
 local SAINT_COORDS = {
     Vector3.new(-4114,65,-4982),Vector3.new(-3803,243,-6001),
@@ -166,20 +83,32 @@ local function PressPlayButton()
     local pb = bc:FindFirstChild("PlayButton")
     if not pb or not pb:IsA("GuiButton") then return false end
 
-    -- Method 3: getconnections (no VIM, Adonis-safe)
+    -- Method 3: VIM + SelectedObject (works on Potassium)
     local ok3 = pcall(function()
-        local connections = getconnections(pb.MouseButton1Click)
-        for _, conn in ipairs(connections) do
-            conn:Fire()
-        end
+        GuiService.SelectedObject = pb
+        task.wait(0.2)
+        VIM:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+        task.wait(0.05)
+        VIM:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+        task.wait(0.1)
+        GuiService.SelectedObject = nil
     end)
     if ok3 then return true end
 
-    -- Method 4: firesignal fallback
-    local ok4 = pcall(function()
-        firesignal(pb.MouseButton1Click)
+    -- Method 7: AutoSelectGuiEnabled + Enter (works on Volt)
+    local ok7 = pcall(function()
+        local oldAuto = GuiService.AutoSelectGuiEnabled
+        GuiService.AutoSelectGuiEnabled = true
+        GuiService.SelectedObject = pb
+        task.wait(0.3)
+        VIM:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+        task.wait(0.05)
+        VIM:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+        task.wait(0.1)
+        GuiService.SelectedObject = nil
+        GuiService.AutoSelectGuiEnabled = oldAuto
     end)
-    if ok4 then return true end
+    if ok7 then return true end
 
     return false
 end
@@ -306,8 +235,7 @@ local Notify = (function()
             f:Destroy()
         end)
     end
-end)
--- v62: GUI toggle end()
+end)()
 
 -- ==========================================
 -- THEME SYSTEM
@@ -972,8 +900,7 @@ local UI = (function()
 
         -- Auto-hide when parent tab becomes invisible
         local tabHideConn = nil
-        -- v62: tabHide via Heartbeat
-        RegisterHeartbeatTask("TabHide_" .. featureName, function()
+        tabHideConn = RunService.Heartbeat:Connect(function()
             if open and Container and Container.Parent then
                 if not Container.Parent.Visible then
                     open = false
@@ -984,7 +911,7 @@ local UI = (function()
 
         Container.Destroying:Connect(function()
             if clickAwayConn then clickAwayConn:Disconnect() end
-            -- tabHide moved to Heartbeat
+            if tabHideConn then tabHideConn:Disconnect() end
             if ListFrame then ListFrame:Destroy() end
         end)
 
@@ -1170,8 +1097,7 @@ local UI = (function()
 
         -- Auto-hide when parent tab becomes invisible
         local tabHideConn = nil
-        -- v62: tabHide via Heartbeat
-        RegisterHeartbeatTask("TabHide_" .. featureName, function()
+        tabHideConn = RunService.Heartbeat:Connect(function()
             if open and Container and Container.Parent then
                 if not Container.Parent.Visible then
                     open = false
@@ -1183,7 +1109,7 @@ local UI = (function()
         -- Cleanup on destroy
         Container.Destroying:Connect(function()
             if clickAwayConn then clickAwayConn:Disconnect() end
-            -- tabHide moved to Heartbeat
+            if tabHideConn then tabHideConn:Disconnect() end
             if ListFrame then ListFrame:Destroy() end
         end)
 
@@ -1457,13 +1383,13 @@ local UI = (function()
     -- Client-sided Remove Fog: continuous override via Heartbeat
     local fogConn = nil
     ui.FogBtn.MouseButton1Click:Connect(function()
-        if HeartbeatTasks["Fog"] then
-            UnregisterHeartbeatTask("Fog")
+        if fogConn then
+            fogConn:Disconnect()
+            fogConn = nil
             Notify("🌫️ Fog override stopped", 2)
         else
             Notify("🌫️ Fog override active", 2)
-            -- v62: Consolidated Heartbeat
-            RegisterHeartbeatTask("Fog", function()
+            fogConn = RunService.Heartbeat:Connect(function()
                 pcall(function()
                     local lighting = game:GetService("Lighting")
                     lighting.FogEnd = 100000
@@ -1913,7 +1839,18 @@ local UI = (function()
     sy = sy + 8
     ui.ConfigDropdown, sy = CreateDropdown(SetC, sy, "Config", "ConfigSelect", 9997)
     -- Auto-fill config name when dropdown selection changes
-    -- v62: Config auto-fill moved outside IIFE
+    task.spawn(function()
+        local lastSelection = nil
+        while ui.ConfigDropdown and ui.ConfigDropdown.GetSelected do
+            local current = ui.ConfigDropdown.GetSelected()
+            if current and current ~= "None" and current ~= lastSelection then
+                lastSelection = current
+                ui.ConfigNameBox.Text = current
+                CurrentConfigName = current
+            end
+            task.wait(0.5)
+        end
+    end)
     sy = sy + 8
     ui.SaveCfgBtn, sy = CreateButton(SetC,"Save Config",sy,"SaveCfgBtn")
     ui.LoadCfgBtn, sy = CreateButton(SetC,"Load Config",sy,"LoadCfgBtn")
@@ -2167,22 +2104,6 @@ local UI = (function()
 
     return ui
 end)()
-
--- v62: Config auto-fill (moved outside IIFE to avoid syntax issues)
-local lastConfigSelection = nil
-RegisterHeartbeatTask("ConfigFill", function()
-    if not UI.ConfigDropdown or not UI.ConfigDropdown.GetSelected then
-        UnregisterHeartbeatTask("ConfigFill")
-        return
-    end
-    local current = UI.ConfigDropdown.GetSelected()
-    if current and current ~= "None" and current ~= lastConfigSelection then
-        lastConfigSelection = current
-        UI.ConfigNameBox.Text = current
-        CurrentConfigName = current
-    end
-end)
-
 pcall(function() UI.ApplyTheme("Rarity") end)
 
 
@@ -2374,15 +2295,13 @@ local IsSpectatorListening = false
     function qol.startAutoBuy()
         if autoBuyRunning then return end
         autoBuyRunning = true
-        -- v62: AutoBuy via Heartbeat
-        RegisterHeartbeatTask("AutoBuy", function()
-            if not Features.AutoBuy.E or not autoBuyRunning then
-                UnregisterHeartbeatTask("AutoBuy")
-                autoBuyRunning = false
-                return
+        task.spawn(function()
+            while Features.AutoBuy.E and autoBuyRunning do
+                local items = UI.ItemDropdown.GetSelected()
+                if #items > 0 then buyItems(items) end
+                task.wait(0.5)
             end
-            local items = UI.ItemDropdown.GetSelected()
-            if #items > 0 then buyItems(items) end
+            autoBuyRunning = false
         end)
     end
 
@@ -2393,9 +2312,9 @@ local IsSpectatorListening = false
 
     function qol.startAttach()
         attachActive = true
-        -- v62: Consolidated Heartbeat
-        RegisterHeartbeatTask("Attach", function()
-            if not attachActive then UnregisterHeartbeatTask("Attach") return end
+        if attachConnection then attachConnection:Disconnect() end
+        attachConnection = RunService.Heartbeat:Connect(function()
+            if not attachActive then return end
             local selected = UI.PlayerDropdown.GetSelected()
             if not selected or selected == "None" then return end
             local char = player.Character
@@ -2418,7 +2337,10 @@ local IsSpectatorListening = false
 
     function qol.stopAttach()
         attachActive = false
-        UnregisterHeartbeatTask("Attach")
+        if attachConnection then
+            attachConnection:Disconnect()
+            attachConnection = nil
+        end
     end
 
     function qol.getPlayerList() return getPlayerList() end
@@ -2435,9 +2357,9 @@ end)()
 -- ==========================================
 -- PLAYER DROPDOWN REFRESH
 -- ==========================================
--- v62: Player dropdown refresh via Heartbeat
-RegisterHeartbeatTask("PlayerRefresh", function()
-    local saintPlayers = QoLFuncs.getSaintPartPlayers()
+task.spawn(function()
+    while true do
+        local saintPlayers = QoLFuncs.getSaintPartPlayers()
         local displayList = {}
         for _, name in ipairs(saintPlayers) do table.insert(displayList, "[SAINT] " .. name) end
         for _, name in ipairs(QoLFuncs.getPlayerList()) do
@@ -2450,8 +2372,9 @@ RegisterHeartbeatTask("PlayerRefresh", function()
         UI.PlayerDropdown.Rebuild(displayList)
         if UI.PlayersDropdown then UI.PlayersDropdown.Rebuild(displayList) end
         if UI.LassoTargetDropdown then UI.LassoTargetDropdown.Rebuild(displayList) end
+        task.wait(5)
+    end
 end)
--- Refresh interval handled by Heartbeat rate (~60Hz, throttled internally)
 
 -- ==========================================
 -- AUTO CORPSE (IIFE)
@@ -2462,7 +2385,6 @@ local FarmFuncs = (function()
     function farm.StartCorpse()
         Notify("🟣 Auto Corpse active (7s load delay)")
         task.wait(7)
-        local VIM = nil -- v61: REMOVED, detected by Adonis
         local SAFE = CFrame.new(-4387.25,217.5,-4482.04)
         local processing = false
         local function wfc()
@@ -2489,7 +2411,12 @@ local FarmFuncs = (function()
             end
             return nil
         end
-        -- tapWA REMOVED v61: VIM detected by Adonis
+        local function tapWA()
+            VIM:SendKeyEvent(true, Enum.KeyCode.W, false, game) task.wait(0.12)
+            VIM:SendKeyEvent(false, Enum.KeyCode.W, false, game) task.wait(0.2)
+            VIM:SendKeyEvent(true, Enum.KeyCode.A, false, game) task.wait(0.12)
+            VIM:SendKeyEvent(false, Enum.KeyCode.A, false, game) task.wait(0.3)
+        end
         local function rejoin()
             local r = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
             if r then r.Anchored = true end
@@ -2535,15 +2462,13 @@ if ok and src and #src > 100 then loadstring(src)() else end
         equipRandom() task.wait(2)
         local nb = nearSaint()
         if nb then
-            -- tapWA removed v61
+            tapWA() task.wait(0.5)
             rt.CFrame = nb.CFrame + Vector3.new(0, 3, 0) task.wait(0.6)
             holdPrompt(nb:FindFirstChildOfClass("ProximityPrompt") or nb.Parent:FindFirstChildOfClass("ProximityPrompt"), nb)
         else
             rt.CFrame = SAFE task.wait(1.5)
-            -- v62: Consolidated Heartbeat
-                RegisterHeartbeatTask("Corpse", function()
-                    if not Features.Corpse.E then UnregisterHeartbeatTask("Corpse") return end
-                    if processing then return end
+            Features.Corpse.C = RunService.Heartbeat:Connect(function()
+                if processing then return end
                 local s = findSaint()
                 if s then
                     processing = true
@@ -2600,7 +2525,6 @@ if ok and src and #src > 100 then loadstring(src)() else end
                     if not BankRunning then return end
                 until game:IsLoaded()
 
-                local VIM = nil -- v61: REMOVED, detected by Adonis
                 local ch = player.Character or player.CharacterAdded:Wait()
                 local rt = ch:WaitForChild("HumanoidRootPart")
 
@@ -2679,15 +2603,8 @@ if ok and src and #src > 100 then loadstring(src)() else end
                 end
                 local function clickOnce()
                     if not BankRunning then return end
-                    -- v68: mouse1click for tool activation (Potassium/Volt compatible)
-                    local char = player.Character
-                    local tool = char and char:FindFirstChildOfClass("Tool")
-                    if tool then
-                        pcall(function() firesignal(tool.Activated) end)
-                        task.wait(0.05)
-                        pcall(mouse1click)
-                    end
-                    task.wait(0.05)
+                    VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0) task.wait(0.05)
+                    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
                 end
                 local function findCash()
                     local t = {}
@@ -2981,15 +2898,14 @@ local ESPFuncs = (function()
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= player then CreateESPText(p) end
         end
-        -- v62: RenderStepped → Heartbeat (consolidated)
-RegisterHeartbeatTask("ESP", UpdateESP)
+        Features.ESP.C = RunService.RenderStepped:Connect(UpdateESP)
         Features.ESP.PlayerAdded = Players.PlayerAdded:Connect(function(p) CreateESPText(p) end)
         Features.ESP.PlayerRemoving = Players.PlayerRemoving:Connect(function(p) RemoveESPText(p) end)
     end
 
     function esp.StopESP()
         Notify("⚫ Player ESP disabled")
-        UnregisterHeartbeatTask("ESP")
+        if Features.ESP.C then Features.ESP.C:Disconnect() Features.ESP.C = nil end
         if Features.ESP.PlayerAdded then Features.ESP.PlayerAdded:Disconnect() Features.ESP.PlayerAdded = nil end
         if Features.ESP.PlayerRemoving then Features.ESP.PlayerRemoving:Disconnect() Features.ESP.PlayerRemoving = nil end
         for _, d in pairs(ESPDrawings) do d:Remove() end
@@ -3041,10 +2957,8 @@ local ChamFuncs = (function()
                 createHighlight(p.Character)
             end
         end
-        -- v62: Consolidated Heartbeat
-            RegisterHeartbeatTask("Chams", function()
-                if not Features.Chams.E then UnregisterHeartbeatTask("Chams") return end
-                for _, p in ipairs(Players:GetPlayers()) do
+        ChamConn = RunService.Heartbeat:Connect(function()
+            for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= player and p.Character then
                     if not Highlights[p.Character] then
                         createHighlight(p.Character)
@@ -3071,7 +2985,7 @@ local ChamFuncs = (function()
 
     function cf.StopChams()
         Notify("⚫ Player Chams disabled")
-        UnregisterHeartbeatTask("Chams")
+        if ChamConn then ChamConn:Disconnect() ChamConn = nil end
         if Features.Chams.PlayerAdded then Features.Chams.PlayerAdded:Disconnect() Features.Chams.PlayerAdded = nil end
         for _, hl in pairs(Highlights) do hl:Destroy() end
         Highlights = {}
@@ -3135,10 +3049,9 @@ local MovementFuncs = (function()
 
     function mov.StartClickTp()
         Notify("🖱️ ClickTP active (Shift+Click)")
-        -- v62: Consolidated Input
-RegisterInputAction(Enum.KeyCode.LeftShift, function()
-            if not Features.ClickTp.E then return end
-            if not UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then return end
+        Features.ClickTp.C = UserInputService.InputBegan:Connect(function(i, g)
+            if g then return end
+            if i.UserInputType == Enum.UserInputType.MouseButton1 and UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
                 local c = player.Character
                 if c then
                     local r = c:FindFirstChild("HumanoidRootPart")
@@ -3153,12 +3066,13 @@ RegisterInputAction(Enum.KeyCode.LeftShift, function()
                         r.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
                     end
                 end
+            end
         end)
     end
 
     function mov.StopClickTp()
         Notify("⚫ ClickTP disabled")
-        UnregisterInputAction(Enum.KeyCode.LeftShift)
+        if Features.ClickTp.C then Features.ClickTp.C:Disconnect() Features.ClickTp.C = nil end
     end
 
     local FlyConn = nil
@@ -3176,10 +3090,9 @@ RegisterInputAction(Enum.KeyCode.LeftShift, function()
         _G.RarityOriginalGravity = Workspace.Gravity
         Workspace.Gravity = 0
 
-        -- v62: Consolidated Heartbeat
-            RegisterHeartbeatTask("Fly", function()
-                if not FlyAct then UnregisterHeartbeatTask("Fly") return end
-                if not hrp.Parent or not hum.Parent then return end
+        FlyConn = RunService.Heartbeat:Connect(function()
+            if not hrp.Parent or not hum.Parent then return end
+            if FlyAct then
                 -- Sit during flight to bypass AC
                 hum.Sit = true
                 hum:ChangeState(Enum.HumanoidStateType.RunningNoPhysics)
@@ -3201,13 +3114,16 @@ RegisterInputAction(Enum.KeyCode.LeftShift, function()
                     hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
                     hrp.Velocity = Vector3.new(0, 0, 0)
                 end
+            else
+                hrp.Velocity = Vector3.new()
+            end
         end)
     end
 
     function mov.StopFly()
         Notify("⚫ Fly disabled")
         FlyAct = false
-        UnregisterHeartbeatTask("Fly")
+        if FlyConn then FlyConn:Disconnect() FlyConn = nil end
         Workspace.Gravity = _G.RarityOriginalGravity or 196.2
         local c = player.Character
         if c then
@@ -3301,10 +3217,9 @@ local SpectatorFuncs = (function()
         hum.Sit = false
 
         -- Heartbeat: Fly movement + ReplicationFocus follows CAMERA
-        -- v62: Consolidated Heartbeat
-            RegisterHeartbeatTask("Spectator", function()
-                if not active then UnregisterHeartbeatTask("Spectator") return end
-                if not hrp.Parent or not humanoid.Parent then return end
+        rsConnection = RunService.Heartbeat:Connect(function()
+            if not active then return end
+            if not hrp.Parent or not humanoid.Parent then return end
 
             humanoid:ChangeState(Enum.HumanoidStateType.RunningNoPhysics)
 
@@ -3340,9 +3255,8 @@ local SpectatorFuncs = (function()
         end)
 
         -- RenderStepped: shift camera down
-        -- v62: RenderStepped → Heartbeat (consolidated)
-RegisterHeartbeatTask("SpectatorRender", function()
-            if not active then UnregisterHeartbeatTask("SpectatorRender") return end
+        renderConnection = RunService.RenderStepped:Connect(function()
+            if not active then return end
             camera.CFrame = camera.CFrame - Vector3.new(0, FLY_HEIGHT, 0)
         end)
 
@@ -3358,8 +3272,8 @@ RegisterHeartbeatTask("SpectatorRender", function()
         active = false
         cleanupCharConnections()
 
-        UnregisterHeartbeatTask("Spectator")
-        UnregisterHeartbeatTask("SpectatorRender")
+        if rsConnection then rsConnection:Disconnect() rsConnection = nil end
+        if renderConnection then renderConnection:Disconnect() renderConnection = nil end
 
         local char = player.Character
         if not char then
@@ -3450,9 +3364,8 @@ local ExploitFuncs = (function()
                 p:SetData(b)
             end
         end
-        -- v62: Consolidated Input
-RegisterInputAction(Enum.KeyCode.U, function()
-            if not Features.RaknetDesync.E then return end
+        Features.RaknetDesync.C = uis.InputBegan:Connect(function(o)
+            if o.KeyCode ~= Enum.KeyCode.U then return end
             if h then raknet.remove_send_hook(rh) else raknet.add_send_hook(rh) end
             h = not h
         end)
@@ -3460,7 +3373,7 @@ RegisterInputAction(Enum.KeyCode.U, function()
 
     function exp.StopRaknet()
         Notify("⚫ Raknet disabled")
-        UnregisterInputAction(Enum.KeyCode.U)
+        if Features.RaknetDesync.C then Features.RaknetDesync.C:Disconnect() Features.RaknetDesync.C = nil end
     end
 
     function exp.StartHide()
@@ -3476,13 +3389,12 @@ RegisterInputAction(Enum.KeyCode.U, function()
             if l then l.Text = "discord.gg/nexonix" end
         end
         upd()
-        -- v62: Consolidated Heartbeat
-RegisterHeartbeatTask("HideName", upd)
+        Features.HideName.C = RunService.Heartbeat:Connect(upd)
     end
 
     function exp.StopHide()
         Notify("⚫ Hide Name disabled")
-        UnregisterHeartbeatTask("HideName")
+        if Features.HideName.C then Features.HideName.C:Disconnect() Features.HideName.C = nil end
     end
 
     return exp
@@ -3512,9 +3424,8 @@ local NoClipFuncs = (function()
                 end
             end
         end
-        -- v62: Consolidated Stepped
-SteppedTasks["NoClip"] = function()
-            if not NoClipActive then SteppedTasks["NoClip"] = nil return end
+        NoClipConn = RunService.Stepped:Connect(function()
+            if not NoClipActive then return end
             local c = player.Character
             if not c then return end
             for _, part in ipairs(c:GetDescendants()) do
@@ -3525,7 +3436,7 @@ SteppedTasks["NoClip"] = function()
                     part.CanCollide = false
                 end
             end
-        end
+        end)
         nc.CharAddedConn = player.CharacterAdded:Connect(function(c)
             if not NoClipActive then return end
             task.wait(0.1)
@@ -3541,7 +3452,7 @@ SteppedTasks["NoClip"] = function()
     function nc.StopNoClip()
         Notify("⚫ NoClip disabled")
         NoClipActive = false
-        SteppedTasks["NoClip"] = nil
+        if NoClipConn then NoClipConn:Disconnect() NoClipConn = nil end
         if nc.CharAddedConn then nc.CharAddedConn:Disconnect() nc.CharAddedConn = nil end
         local c = player.Character
         if c then
@@ -3644,12 +3555,7 @@ SteppedTasks["NoClip"] = function()
             if not c then return end
             applyInvis(c)
             if InvisDescendantConn then InvisDescendantConn:Disconnect() end
-            -- v62: Using Heartbeat poll instead of DescendantAdded
-RegisterHeartbeatTask("InvisiblePoll", function()
-            if not InvisActive then UnregisterHeartbeatTask("InvisiblePoll") return end
-            local c = player.Character
-            if c then onDescendantAdded(c) end
-        end)
+            InvisDescendantConn = c.DescendantAdded:Connect(onDescendantAdded)
         end
 
         setupCharacter(player.Character)
@@ -3664,7 +3570,7 @@ RegisterHeartbeatTask("InvisiblePoll", function()
         Notify("⚫ Invisible disabled")
         InvisActive = false
         if InvisConn then InvisConn:Disconnect() InvisConn = nil end
-        UnregisterHeartbeatTask("InvisiblePoll")
+        if InvisDescendantConn then InvisDescendantConn:Disconnect() InvisDescendantConn = nil end
         if InvisToolConn then InvisToolConn:Disconnect() InvisToolConn = nil end
         for obj, props in pairs(InvisOriginals) do
             if obj and obj.Parent then
@@ -3704,18 +3610,17 @@ local VisualFuncs = (function()
         Lighting.GlobalShadows = false
         Lighting.OutdoorAmbient = Color3.new(1,1,1)
         Lighting.Ambient = Color3.new(1,1,1)
-        -- v62: Using Heartbeat instead of PropertyChangedSignal
-RegisterHeartbeatTask("FullBrightCheck", function()
-            if Features.FullBright.E and Lighting.Brightness ~= 10 then
+        fbConn = Lighting:GetPropertyChangedSignal("Brightness"):Connect(function()
+            if Features.FullBright.E then
                 Lighting.Brightness = 10
             end
         end)
-        -- v62: fbConn removed, using Heartbeat
+        Features.FullBright.C = fbConn
     end
 
     function vis.StopFullBright()
         Notify("⚫ Full Brightness disabled")
-        UnregisterHeartbeatTask("FullBrightCheck")
+        if fbConn then fbConn:Disconnect() fbConn = nil end
         Features.FullBright.C = nil
         if orig.Brightness ~= nil then Lighting.Brightness = orig.Brightness end
         if orig.ClockTime ~= nil then Lighting.ClockTime = orig.ClockTime end
@@ -3757,8 +3662,7 @@ local QoLExtras = (function()
     local currentPos = nil
 
     function qe.StartPosTracker()
-        -- v62: Consolidated Heartbeat
-RegisterHeartbeatTask("PosTracker", function()
+        posConn = RunService.Heartbeat:Connect(function()
             local char = player.Character
             if not char then
                 currentPos = nil
@@ -3784,7 +3688,10 @@ RegisterHeartbeatTask("PosTracker", function()
     end
 
     function qe.StopPosTracker()
-        UnregisterHeartbeatTask("PosTracker")
+        if posConn then
+            posConn:Disconnect()
+            posConn = nil
+        end
         currentPos = nil
         if UI.PosTrackerLbl then
             UI.PosTrackerLbl.Text = "X: --  Y: --  Z: --"
@@ -3812,8 +3719,19 @@ RegisterHeartbeatTask("PosTracker", function()
             if s then copied = true end
         end
 
-        -- v61: No VIM fallback (detected by Adonis)
-        -- setclipboard/toclipboard only
+        -- Fallback: use VIM to select all + copy (Ctrl+C)
+        if not copied then
+            pcall(function()
+                -- Focus the label and select text via VIM
+                VIM:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game)
+                task.wait(0.05)
+                VIM:SendKeyEvent(true, Enum.KeyCode.C, false, game)
+                task.wait(0.05)
+                VIM:SendKeyEvent(false, Enum.KeyCode.C, false, game)
+                task.wait(0.05)
+                VIM:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game)
+            end)
+        end
 
         if copied then
             Notify("✅ Coords copied", 2)
@@ -3934,12 +3852,25 @@ RegisterHeartbeatTask("PosTracker", function()
         applyMoolaSpoofV2()
 
         -- Method 1: PropertyChangedSignal (catches most changes)
-        -- v62: PropertyChanged + Changed → Heartbeat (consolidated)
--- Removed separate connections, using MoolaSpoof Heartbeat task only
+        moolaPropertyConn = element:GetPropertyChangedSignal("Text"):Connect(function()
+            if moolaActive and moolaTargetElement then
+                task.defer(function()
+                    if moolaActive then applyMoolaSpoofV2() end
+                end)
+            end
+        end)
+
+        -- Method 2: Changed event (backup)
+        moolaChangedConn = element.Changed:Connect(function(prop)
+            if prop == "Text" and moolaActive and moolaTargetElement then
+                task.defer(function()
+                    if moolaActive then applyMoolaSpoofV2() end
+                end)
+            end
+        end)
 
         -- Method 3: Aggressive Heartbeat (frame-by-frame backup)
-        -- v62: Consolidated Heartbeat
-RegisterHeartbeatTask("MoolaSpoof", function()
+        moolaHeartbeatConn = RunService.Heartbeat:Connect(function()
             if moolaActive and moolaTargetElement and moolaTargetElement.Text ~= moolaCustomText then
                 applyMoolaSpoofV2()
             end
@@ -3950,8 +3881,9 @@ RegisterHeartbeatTask("MoolaSpoof", function()
 
     function qe.StopMoolaSpoof()
         moolaActive = false
-        UnregisterHeartbeatTask("MoolaSpoof")
-        -- Property connections removed in v62
+        if moolaHeartbeatConn then moolaHeartbeatConn:Disconnect() moolaHeartbeatConn = nil end
+        if moolaPropertyConn then moolaPropertyConn:Disconnect() moolaPropertyConn = nil end
+        if moolaChangedConn then moolaChangedConn:Disconnect() moolaChangedConn = nil end
         moolaTargetElement = nil
         moolaTargetType = nil
         Notify("Moola spoof stopped", 2)
@@ -4374,6 +4306,7 @@ local TreeFuncs = (function()
     local bankedseed = false
     local swamp = false
     local bankFull = false
+        -- VIM declared globally via Instance.new
 
     local function equipaxe()
         local axe = player.Backpack:FindFirstChild("LumberAxe")
@@ -4495,16 +4428,19 @@ local TreeFuncs = (function()
             return
         end
 
-        -- Try deposit with getconnections fallback
+        -- Try deposit with VIM click on button center
         local function clickButton(targetBtn)
             if not targetBtn or not targetBtn.Parent then return false end
-            local ok = pcall(function() firesignal(targetBtn.MouseButton1Click) end)
-            if ok then return true end
-            local ok2 = pcall(function()
-                local conns = getconnections(targetBtn.MouseButton1Click)
-                for _, conn in ipairs(conns) do conn:Fire() end
-            end)
-            if ok2 then return true end
+            local absPos = targetBtn.AbsolutePosition
+            local absSize = targetBtn.AbsoluteSize
+            if absPos and absSize then
+                local x = absPos.X + absSize.X / 2
+                local y = absPos.Y + absSize.Y / 2
+                VIM:SendMouseButtonEvent(x, y, 0, true, game, 0)
+                task.wait(0.05)
+                VIM:SendMouseButtonEvent(x, y, 0, false, game, 0)
+                return true
+            end
             return false
         end
 
@@ -4557,6 +4493,16 @@ local TreeFuncs = (function()
                 local choice = list.Choice_2
                 -- Method 1: firesignal
                 pcall(function() firesignal(choice.MouseButton1Click) end)
+                -- Method 2: VIM click on button position (fallback)
+                pcall(function()
+                    if choice.AbsolutePosition and choice.AbsoluteSize then
+                        local x = choice.AbsolutePosition.X + choice.AbsoluteSize.X / 2
+                        local y = choice.AbsolutePosition.Y + choice.AbsoluteSize.Y / 2
+                        VIM:SendMouseButtonEvent(x, y, 0, true, game, 0)
+                        task.wait(0.05)
+                        VIM:SendMouseButtonEvent(x, y, 0, false, game, 0)
+                    end
+                end)
                 task.wait(0.5)
                 attempts = attempts + 1
             end
@@ -4566,34 +4512,18 @@ local TreeFuncs = (function()
     -- ==========================================
     -- CHOP: Always fires LumberAxe, no flags, no cooldowns
     -- ==========================================
-    local function escapeMenuGlitch()
-        -- v74: Escape Menu Glitch for LumberAxe auto-chop
-        -- Hold LKM, press Esc, release LKM, press Esc
-        -- Step 1: Hold LKM (mouse button 1)
-        pcall(function() mouse1press() end)
-        task.wait(0.1)
-        -- Step 2: Press Escape
-        pcall(function() keypress(0x1B) end)  -- 0x1B = Escape key
-        task.wait(0.2)
-        -- Step 3: Release LKM
-        pcall(function() mouse1release() end)
-        task.wait(0.1)
-        -- Step 4: Press Escape again (close menu)
-        pcall(function() keypress(0x1B) end)
-        task.wait(0.2)
-        pcall(function() keyrelease(0x1B) end)
-        task.wait(0.3)
-    end
-
     local function chop()
-        -- v74: LumberAxe must be equipped, EscapeMenuGlitch handles chopping
         local char = player.Character
         if not char then return end
+        -- Ensure axe is equipped
         if not char:FindFirstChild("LumberAxe") then
             equipaxe()
-            task.wait(0.3)
+            task.wait(0.2)
         end
-        task.wait(0.1)
+        -- Fire tool via VIM mouse click (only method that works for LumberAxe)
+        VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+        task.wait(0.03)
+        VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
     end
 
     local function findbark(t)
@@ -4696,15 +4626,12 @@ local TreeFuncs = (function()
 
     local function startHeartbeat()
         if treeHeartbeat then return end
-        -- v62: Consolidated Heartbeat
-RegisterHeartbeatTask("Tree", function()
-            if not active then UnregisterHeartbeatTask("Tree") return end
+        treeHeartbeat = RunService.Heartbeat:Connect(function()
+            if not active then return end
             if _G.RarityTreeSelection and _G.RarityTreeSelection ~= selection then
                 selection = _G.RarityTreeSelection
                 tree = nil
                 _G.RarityTreeSelection = nil
-                task.wait(0.5)
-                escapeMenuGlitch()
             end
             local char = player.Character
             if not char then return end
@@ -4739,7 +4666,6 @@ RegisterHeartbeatTask("Tree", function()
                     end
                 end
                 task.wait(1)
-                escapeMenuGlitch()
                 return
             end
 
@@ -4763,8 +4689,6 @@ RegisterHeartbeatTask("Tree", function()
                 tree = nil  -- reset tree after selling
                 task.wait(1)
                 nexttree()
-                task.wait(0.5)
-                escapeMenuGlitch()
                 return
             end
 
@@ -4775,8 +4699,6 @@ RegisterHeartbeatTask("Tree", function()
 
             if not tree or not tree.Parent then
                 nexttree()
-                task.wait(0.5)
-                escapeMenuGlitch()
                 return
             end
 
@@ -4807,7 +4729,10 @@ RegisterHeartbeatTask("Tree", function()
     end
 
     local function stopHeartbeat()
-        UnregisterHeartbeatTask("Tree")
+        if treeHeartbeat then
+            treeHeartbeat:Disconnect()
+            treeHeartbeat = nil
+        end
     end
 
     function tf.StartTree()
@@ -4879,10 +4804,6 @@ RegisterHeartbeatTask("Tree", function()
             bankedseed = false
             startHeartbeat()
             nexttree()
-            task.wait(0.5)
-            escapeMenuGlitch()
-            task.wait(0.5)
-            escapeMenuGlitch()
         end)
     end)
 
@@ -5021,20 +4942,9 @@ local FishFuncs = (function()
     local function clickAtWorldPosition(worldPos)
         -- v59: Skip click if QTE is in progress
         if QTEBusy then return end
-        -- v73: Multiple methods for FishingRod cast/reel
-        local char = player.Character
-        local rod = char and char:FindFirstChild("FishingRod")
-        if rod then
-            -- Method 1: firesignal Activated
-            pcall(function() firesignal(rod.Activated) end)
-            task.wait(0.05)
-            -- Method 2: mouse1click
-            pcall(mouse1click)
-            task.wait(0.05)
-            -- Method 3: keypress E
-            pcall(function() keypress(0x45) task.wait(0.05) keyrelease(0x45) end)
-        end
+        VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
         task.wait(0.03)
+        VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
     end
 
   -- : Player freeze helpers
@@ -5048,12 +4958,9 @@ local FishFuncs = (function()
         hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
         if FreezeConn then FreezeConn:Disconnect() end
-        -- v62: Consolidated Heartbeat
-FreezeConn = true -- marker for cleanup
-RegisterHeartbeatTask("FishFreeze", function()
+        FreezeConn = RunService.Heartbeat:Connect(function()
             if not hrp.Parent then
-                FreezeConn = nil
-                UnregisterHeartbeatTask("FishFreeze")
+                if FreezeConn then FreezeConn:Disconnect() FreezeConn = nil end
                 return
             end
             hrp.Velocity = Vector3.new(0, 0, 0)
@@ -5063,8 +4970,10 @@ RegisterHeartbeatTask("FishFreeze", function()
     end
 
     local function unfreezePlayer()
-        FreezeConn = nil
-        UnregisterHeartbeatTask("FishFreeze")
+        if FreezeConn then
+            FreezeConn:Disconnect()
+            FreezeConn = nil
+        end
         local char = player.Character
         if not char then return end
         local hrp = char:FindFirstChild("HumanoidRootPart")
@@ -5196,19 +5105,37 @@ RegisterHeartbeatTask("FishFreeze", function()
                 local vkCode, keyChar = getQTEKeyFromLabels()
                 if vkCode and keyChar then
                     pcall(function() keytap(vkCode) end)
-                    pcall(function()
-                        if keypress then keypress(vkCode) task.wait(0.03) keyrelease(vkCode) end
-                    end)
+                    local keyCode = Enum.KeyCode[keyChar]
+                    if keyCode then
+                        pcall(function()
+                            VIM:SendKeyEvent(true, keyCode, false, game)
+                            -- v58: 0.03s interval (from v115)
+                            task.wait(0.03)
+                            VIM:SendKeyEvent(false, keyCode, false, game)
+                        end)
+                    end
                     pcall(function() keytap(keyChar:lower()) end)
                     pcall(function() keytap(keyChar:upper()) end)
+                    pcall(function()
+                        if keypress then
+                            keypress(vkCode)
+                            task.wait(0.03)
+                            keyrelease(vkCode)
+                        end
+                    end)
                 else
                     for _, k in ipairs({"R", "T", "F", "G"}) do
+                        local kc = Enum.KeyCode[k]
+                        if kc then
+                            pcall(function()
+                                VIM:SendKeyEvent(true, kc, false, game)
+                                task.wait(0.03)
+                                VIM:SendKeyEvent(false, kc, false, game)
+                            end)
+                        end
                         local vk = KEY_MAP[k]
                         if vk then
                             pcall(function() keytap(vk) end)
-                            pcall(function()
-                                if keypress and vk then keypress(vk) task.wait(0.03) keyrelease(vk) end
-                            end)
                         end
                     end
                 end
@@ -5253,9 +5180,8 @@ RegisterHeartbeatTask("FishFreeze", function()
         self.armTime = tick()
         local ok, qteEvent = pcall(getQTEEvent)
         if ok and qteEvent and qteEvent:IsA("RemoteEvent") then
-            -- v62: QTE event via Heartbeat poll
-RegisterHeartbeatTask("QTEPoll", function()
-                if not IsFishing then UnregisterHeartbeatTask("QTEPoll") return end
+            local conn1 = qteEvent.OnClientEvent:Connect(function(...)
+                if not IsFishing then return end
                 if QTEBusy then return end
                 local sinceLastBypass = tick() - LastBypassTime
                 if sinceLastBypass < 3 then return end
@@ -5263,7 +5189,7 @@ RegisterHeartbeatTask("QTEPoll", function()
                 if age < 1 then return end
                 self:OnQTEDetected()
             end)
-            -- QTE poll registered via Heartbeat
+            table.insert(self.connections, conn1)
         end
         task.delay(0.5, function()
             if self.isRunning then
@@ -5294,10 +5220,11 @@ RegisterHeartbeatTask("QTEPoll", function()
 
     function QTEConnection:Stop()
         self.isRunning = false
-        UnregisterHeartbeatTask("QTEPoll")
-        -- connections cleared
-    end
-    -- ==========================================
+        for _, conn in ipairs(self.connections) do
+            pcall(function() conn:Disconnect() end)
+        end
+        self.connections = {}
+    end    -- ==========================================
     -- BITE DETECTION
     -- ==========================================
     local function waitForBite()
@@ -5305,21 +5232,19 @@ RegisterHeartbeatTask("QTEPoll", function()
         local startTime = tick()
         local biteDetected = false
         local hbConn = nil
-        -- v62: Bite detection via MasterHeartbeat
-    local biteCheckActive = true
-    RegisterHeartbeatTask("FishBite", function()
-            if not biteCheckActive or not IsFishing then
-                UnregisterHeartbeatTask("FishBite")
+        hbConn = RunService.Heartbeat:Connect(function()
+            if biteDetected or not IsFishing then
+                if hbConn then hbConn:Disconnect() hbConn = nil end
                 return
             end
             -- v59: Break if QTE started
             if QTEBusy then
-                biteCheckActive = false
+                if hbConn then hbConn:Disconnect() hbConn = nil end
                 return
             end
             local bobber = findMyBobber()
             if not bobber then
-                biteCheckActive = false
+                if hbConn then hbConn:Disconnect() hbConn = nil end
                 return
             end
             local delta = bobber.Position.Y - SavedPos.Y
@@ -5406,10 +5331,15 @@ RegisterHeartbeatTask("QTEPoll", function()
         local btn = list:FindFirstChild("Choice_" .. choiceNum)
         if not btn then return false end
         pcall(function() firesignal(btn.MouseButton1Click) end)
-        -- v61: getconnections fallback (VIM detected by Adonis)
+        -- Fallback: VIM click
         pcall(function()
-            local conns = getconnections(btn.MouseButton1Click)
-            for _, conn in ipairs(conns) do conn:Fire() end
+            if btn.AbsolutePosition and btn.AbsoluteSize then
+                local x = btn.AbsolutePosition.X + btn.AbsoluteSize.X / 2
+                local y = btn.AbsolutePosition.Y + btn.AbsoluteSize.Y / 2
+                VIM:SendMouseButtonEvent(x, y, 0, true, game, 0)
+                task.wait(0.05)
+                VIM:SendMouseButtonEvent(x, y, 0, false, game, 0)
+            end
         end)
         return true
     end
@@ -5556,20 +5486,19 @@ RegisterHeartbeatTask("QTEPoll", function()
     -- ==========================================
     local function setupBobberListener()
         if BobberConn then BobberConn:Disconnect() BobberConn = nil end
-        -- v62: Using Heartbeat poll instead of ChildAdded
-RegisterHeartbeatTask("BobberPoll", function()
-            if not SavedPos then UnregisterHeartbeatTask("BobberPoll") return end
-            if not IsFishing then UnregisterHeartbeatTask("BobberPoll") return end
+        BobberConn = Workspace.ChildAdded:Connect(function(child)
+            if not SavedPos then return end
+            if not child:IsA("BasePart") then return end
+            if child.Name ~= "Part" then return end
             if LastFrozenBobber and LastFrozenBobber.Parent and tick() - LastFreezeTime < 2 then
                 return
             end
-            for _, child in ipairs(Workspace:GetChildren()) do
-                if child:IsA("BasePart") and child.Name == "Part" then
-                    local rope = child:FindFirstChild("RopeConstraint")
-                    if rope and isMyBobber(child) then
-                        freezeBobber(child)
-                    end
-                end
+            local rope = child:FindFirstChild("RopeConstraint")
+            if not rope then return end
+            task.wait(0.05)
+            if not child.Parent then return end
+            if isMyBobber(child) then
+                freezeBobber(child)
             end
         end)
     end
@@ -5699,16 +5628,9 @@ RegisterHeartbeatTask("BobberPoll", function()
                         if SavedPos then
                             clickAtWorldPosition(SavedPos)
                         else
-                            local char = player.Character
-                            local rod = char and char:FindFirstChild("FishingRod")
-                            if rod then
-                                pcall(function() firesignal(rod.Activated) end)
-                                task.wait(0.05)
-                                pcall(mouse1click)
-                                task.wait(0.05)
-                                pcall(function() keypress(0x45) task.wait(0.05) keyrelease(0x45) end)
-                            end
+                            VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
                             task.wait(0.03)
+                            VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
                         end
                     end
 
@@ -5757,7 +5679,10 @@ RegisterHeartbeatTask("BobberPoll", function()
             pcall(function() task.cancel(fishThread) end)
             fishThread = nil
         end
-        UnregisterHeartbeatTask("BobberPoll")
+        if BobberConn then
+            BobberConn:Disconnect()
+            BobberConn = nil
+        end
         if QTEManager then
             QTEManager:Stop()
             QTEManager = nil
@@ -5890,9 +5815,8 @@ local LassoFuncs = (function()
         local lassoState = 1
         local delayTime = 1.0
 
-        -- v62: Consolidated Heartbeat
-RegisterHeartbeatTask("LassoSnitch", function()
-            if not snitchActive then UnregisterHeartbeatTask("LassoSnitch") return end
+        snitchConnection = RunService.Heartbeat:Connect(function()
+            if not snitchActive then return end
 
             local lassoHead = getLassoHead()
             if not lassoHead then
@@ -5982,7 +5906,10 @@ RegisterHeartbeatTask("LassoSnitch", function()
     function lf.StopLassoSnitch()
         snitchActive = false
         lassoTarget = nil
-        UnregisterHeartbeatTask("LassoSnitch")
+        if snitchConnection then
+            pcall(function() snitchConnection:Disconnect() end)
+            snitchConnection = nil
+        end
         updateStatus("Status: Idle")
         Notify("⚫ Lasso Snitch disabled")
     end
@@ -6003,9 +5930,8 @@ RegisterHeartbeatTask("LassoSnitch", function()
         local state2Start = 0
         local killDone = false
 
-        -- v62: Consolidated Heartbeat
-RegisterHeartbeatTask("LassoKill", function()
-            if not killActive then UnregisterHeartbeatTask("LassoKill") return end
+        killConnection = RunService.Heartbeat:Connect(function()
+            if not killActive then return end
             if killDone then return end
 
             local lassoHead = getLassoHead()
@@ -6112,7 +6038,10 @@ RegisterHeartbeatTask("LassoKill", function()
     function lf.StopLassoKill()
         killActive = false
         lassoTarget = nil
-        UnregisterHeartbeatTask("LassoKill")
+        if killConnection then
+            pcall(function() killConnection:Disconnect() end)
+            killConnection = nil
+        end
         updateStatus("Status: Idle")
         Notify("⚫ Lasso Kill disabled")
     end
@@ -6237,7 +6166,6 @@ UI.KbBtn.MouseButton1Click:Connect(function()
                 KeybindConnections.Gui = nil
             end
         end
-        autoLoadTriggered = true
     end)
 end)
 UI.FlyKbBtn.MouseButton1Click:Connect(function()
@@ -6273,7 +6201,6 @@ UI.FlyKbBtn.MouseButton1Click:Connect(function()
                 KeybindConnections.Fly = nil
             end
         end
-        autoLoadTriggered = true
     end)
 end)
 UI.SpectatorKbBtn.MouseButton1Click:Connect(function()
@@ -6309,56 +6236,67 @@ UI.SpectatorKbBtn.MouseButton1Click:Connect(function()
                 KeybindConnections.Spectator = nil
             end
         end
-        autoLoadTriggered = true
     end)
 end)
--- v62: Fly keybind via MasterInput
-RegisterInputAction(FlyKeybind, function()
-    Features.Fly.E = not Features.Fly.E
-    AnimToggle(UI.FlyT, UI.FlyC, UI.FlyS, Features.Fly.E)
-    if Features.Fly.E then MovementFuncs.StartFly() else MovementFuncs.StopFly() end
+UserInputService.InputBegan:Connect(function(i, g)
+    if g then return end
+    if i.KeyCode == FlyKeybind then
+        Features.Fly.E = not Features.Fly.E
+        AnimToggle(UI.FlyT, UI.FlyC, UI.FlyS, Features.Fly.E)
+        if Features.Fly.E then MovementFuncs.StartFly() else MovementFuncs.StopFly() end
+    end
 end)
 
--- v62: Spectator keybind via MasterInput
-RegisterInputAction(SpectatorKeybind, function()
-    Features.Spectator.E = not Features.Spectator.E
-    AnimToggle(UI.SpectatorT, UI.SpectatorC, UI.SpectatorS, Features.Spectator.E)
-    if Features.Spectator.E then SpectatorFuncs.StartSpectator() else SpectatorFuncs.StopSpectator() end
+UserInputService.InputBegan:Connect(function(i, g)
+    if g then return end
+    if i.KeyCode == SpectatorKeybind then
+        Features.Spectator.E = not Features.Spectator.E
+        AnimToggle(UI.SpectatorT, UI.SpectatorC, UI.SpectatorS, Features.Spectator.E)
+        if Features.Spectator.E then SpectatorFuncs.StartSpectator() else SpectatorFuncs.StopSpectator() end
+    end
 end)
 
--- v62: Tree keybind via MasterInput
-RegisterInputAction(TreeKeybind, function()
-    Features.Tree.E = not Features.Tree.E
-    AnimToggle(UI.TreeT, UI.TreeC, UI.TreeS, Features.Tree.E)
-    if Features.Tree.E then TreeFuncs.StartTree() else TreeFuncs.StopTree() end
+UserInputService.InputBegan:Connect(function(i, g)
+    if g then return end
+    if i.KeyCode == TreeKeybind then
+        Features.Tree.E = not Features.Tree.E
+        AnimToggle(UI.TreeT, UI.TreeC, UI.TreeS, Features.Tree.E)
+        if Features.Tree.E then TreeFuncs.StartTree() else TreeFuncs.StopTree() end
+    end
 end)
 
--- v62: Attach keybind via MasterInput
-RegisterInputAction(QoLFuncs.AttachKeybind(), function()
-    Features.AttachPlayer.E = not Features.AttachPlayer.E
-    AnimToggle(UI.AttachT, UI.AttachC, UI.AttachS, Features.AttachPlayer.E)
-    if Features.AttachPlayer.E then QoLFuncs.startAttach() else QoLFuncs.stopAttach() end
+UserInputService.InputBegan:Connect(function(i, g)
+    if g then return end
+    if i.KeyCode == QoLFuncs.AttachKeybind() then
+        Features.AttachPlayer.E = not Features.AttachPlayer.E
+        AnimToggle(UI.AttachT, UI.AttachC, UI.AttachS, Features.AttachPlayer.E)
+        if Features.AttachPlayer.E then QoLFuncs.startAttach() else QoLFuncs.stopAttach() end
+    end
 end)
 
--- v62: Lasso keybind via MasterInput
-RegisterInputAction(LassoKeybind, function()
-    Features.LassoSnitch.E = not Features.LassoSnitch.E
-    AnimToggle(UI.LassoT, UI.LassoC, UI.LassoS, Features.LassoSnitch.E)
-    if Features.LassoSnitch.E then LassoFuncs.StartLassoSnitch() else LassoFuncs.StopLassoSnitch() end
+UserInputService.InputBegan:Connect(function(i, g)
+    if g then return end
+    if i.KeyCode == LassoKeybind then
+        Features.LassoSnitch.E = not Features.LassoSnitch.E
+        AnimToggle(UI.LassoT, UI.LassoC, UI.LassoS, Features.LassoSnitch.E)
+        if Features.LassoSnitch.E then LassoFuncs.StartLassoSnitch() else LassoFuncs.StopLassoSnitch() end
+    end
 end)
 
--- v62: LassoKill keybind via MasterInput
-RegisterInputAction(LassoKillKeybind, function()
-    Features.LassoKill.E = not Features.LassoKill.E
-    AnimToggle(UI.LassoKillT, UI.LassoKillC, UI.LassoKillS, Features.LassoKill.E)
-    if Features.LassoKill.E then LassoFuncs.StartLassoKill() else LassoFuncs.StopLassoKill() end
+UserInputService.InputBegan:Connect(function(i, g)
+    if g then return end
+    if i.KeyCode == LassoKillKeybind then
+        Features.LassoKill.E = not Features.LassoKill.E
+        AnimToggle(UI.LassoKillT, UI.LassoKillC, UI.LassoKillS, Features.LassoKill.E)
+        if Features.LassoKill.E then LassoFuncs.StartLassoKill() else LassoFuncs.StopLassoKill() end
+    end
 end)
 
 
 
--- v62: GUI keybind via MasterInput
-RegisterInputAction(GuiKeybind, function()
-    if true then -- placeholder for gameProcessed check
+UserInputService.InputBegan:Connect(function(i, g)
+    if g then return end
+    if i.KeyCode == GuiKeybind then
         IsGuiHidden = not IsGuiHidden
         UI.MainFrame.Visible = not IsGuiHidden
         -- NotifGui.Enabled = not IsGuiHidden
@@ -6443,9 +6381,7 @@ UI.FpsApplyBtn.MouseButton1Click:Connect(function()
             Notify("FPS Cap set to " .. fps, 2)
         else
             -- Method 2: Heartbeat-based FPS cap (works on all executors)
-            -- v62: Consolidated Heartbeat
-_G.RarityFpsCapConnection = true -- marker
-RegisterHeartbeatTask("FpsCap", function()
+            _G.RarityFpsCapConnection = RunService.Heartbeat:Connect(function()
                 local start = os.clock()
                 local target = 1 / fps
                 while (os.clock() - start) < target do
@@ -6518,7 +6454,6 @@ UI.TreeKbBtn.MouseButton1Click:Connect(function()
                 KeybindConnections.Tree = nil
             end
         end
-        autoLoadTriggered = true
     end)
 end)
 UI.AttachKbBtn.MouseButton1Click:Connect(function()
@@ -6554,7 +6489,6 @@ UI.AttachKbBtn.MouseButton1Click:Connect(function()
                 KeybindConnections.Attach = nil
             end
         end
-        autoLoadTriggered = true
     end)
 end)
 local currentSpectateSubject = nil
@@ -6649,16 +6583,17 @@ end)
 -- ==========================================
 -- PLAYERS & NPCs UPDATERS
 -- ==========================================
--- v62: NPC refresh via Heartbeat
-RegisterHeartbeatTask("NPCRefresh", function()
-    local npcs = getNPCList()
+task.spawn(function()
+    while true do
+        local npcs = getNPCList()
         UI.NPCDropdown.Rebuild(npcs)
+        task.wait(5)
+    end
 end)
--- Refresh interval handled by Heartbeat rate (~60Hz, throttled internally)
 
--- v62: Health update via Heartbeat
-RegisterHeartbeatTask("HealthUpdate", function()
-    local pName = UI.PlayersDropdown.GetSelected()
+task.spawn(function()
+    while true do
+        local pName = UI.PlayersDropdown.GetSelected()
         if pName and pName ~= "None" then
             local entities = Workspace:FindFirstChild("Entities")
             local ent = entities and entities:FindFirstChild(pName)
@@ -6677,8 +6612,9 @@ RegisterHeartbeatTask("HealthUpdate", function()
             UI.PlayerHealthLbl.Text = "Health: --"
         end
 
+        task.wait(0.5)
+    end
 end)
--- Update rate handled by Heartbeat
 
 -- ==========================================
 -- rarity.bw KickDetector
@@ -7044,13 +6980,9 @@ end)
 -- (NOT on rejoin - only when transitioning from MainMenu to game)
 local HasAutoLoaded = false
 
--- v62: AutoLoad via Heartbeat (delayed)
-local autoLoadTriggered = false
-RegisterHeartbeatTask("AutoLoad", function()
-    if autoLoadTriggered then UnregisterHeartbeatTask("AutoLoad") return end
-    local char = player.Character
-    if not char then return end
-    -- Only autoload once per session, and only if we came from menu
+player.CharacterAdded:Connect(function(char)
+    task.delay(2, function()
+        -- Only autoload once per session, and only if we came from menu
         if HasAutoLoaded then return end
         HasAutoLoaded = true
 
@@ -7072,7 +7004,30 @@ RegisterHeartbeatTask("AutoLoad", function()
         end
         Notify("📭 AutoLoad is empty", 3)
     end)
+end)
 
+
+
+
+
+-- Auto press Play button after GUI loads in main menu
+-- v60: Try once, check success, repeat if needed
+local playAttempts = 0
+local maxPlayAttempts = 10
+while true do
+    if Workspace.Entities:FindFirstChild(player.Name) then break end
+    local success = PressPlayButton()
+    if success then
+        Notify("✅ Play button pressed", 2)
+        break
+    end
+    playAttempts = playAttempts + 1
+    if playAttempts >= maxPlayAttempts then
+        Notify("⚠️ Failed to press Play after " .. maxPlayAttempts .. " attempts", 3)
+        break
+    end
+    task.wait(1.5)
+end
 
 Notify("✅ rarity.bw loaded", 4)
 task.wait(0.1)
