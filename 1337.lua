@@ -1,7 +1,3 @@
--- rarity.bw v75 - VIM restored via Instance.new bypass
--- Auto Press Play restored
--- All VIM calls use Instance.new-created VirtualInputManager
-
 task.wait(0.1)
 repeat task.wait() until game:IsLoaded()
 
@@ -86,11 +82,11 @@ local function PressPlayButton()
     -- Method 3: VIM + SelectedObject (works on Potassium)
     local ok3 = pcall(function()
         GuiService.SelectedObject = pb
-        task.wait(0.2)
+        task.wait(0.05)  -- v76: faster
         VIM:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
         task.wait(0.05)
         VIM:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
-        task.wait(0.1)
+        task.wait(0.02)  -- v76: faster
         GuiService.SelectedObject = nil
     end)
     if ok3 then return true end
@@ -100,11 +96,11 @@ local function PressPlayButton()
         local oldAuto = GuiService.AutoSelectGuiEnabled
         GuiService.AutoSelectGuiEnabled = true
         GuiService.SelectedObject = pb
-        task.wait(0.3)
+        task.wait(0.05)  -- v76: faster
         VIM:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
         task.wait(0.05)
         VIM:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
-        task.wait(0.1)
+        task.wait(0.02)  -- v76: faster
         GuiService.SelectedObject = nil
         GuiService.AutoSelectGuiEnabled = oldAuto
     end)
@@ -1256,19 +1252,7 @@ local UI = (function()
     local mvy = 0
     mvy = CreateSection(MovC,"Movement",mvy)
     ui.ClickTpT, ui.ClickTpC, ui.ClickTpS, mvy = CreateToggle(MovC,"Click Teleport",mvy,"ClickTp")
-    local FlyWarn = Instance.new("TextLabel",MovC)
-    FlyWarn.Size = UDim2.new(1,0,0,40)
-    FlyWarn.Position = UDim2.new(0,0,0,mvy)
-    FlyWarn.BackgroundTransparency = 1
-    FlyWarn.Text = "⚠️CAUTION⚠️After 10s of flying, AntiCheat drops HP to 0⚠️DONT TURN OFF FLY AT LOW HP⚠️"
-    FlyWarn.TextColor3 = Color3.fromRGB(255, 120, 120)
-    FlyWarn.TextSize = 10
-    FlyWarn.Font = Enum.Font.GothamBold
-    FlyWarn.TextXAlignment = Enum.TextXAlignment.Left
-    FlyWarn.TextYAlignment = Enum.TextYAlignment.Top
-    FlyWarn.TextWrapped = true
-    mvy = mvy + 44
-    ui.FlyT, ui.FlyC, ui.FlyS, mvy = CreateToggle(MovC,"Fly",mvy,"Fly")
+       ui.FlyT, ui.FlyC, ui.FlyS, mvy = CreateToggle(MovC,"Fly",mvy,"Fly")
     mvy = mvy + 4
     local FlyKbLbl = Instance.new("TextLabel",MovC)
     FlyKbLbl.Size = UDim2.new(0.6,0,0,24)
@@ -3078,7 +3062,7 @@ local MovementFuncs = (function()
     local FlyConn = nil
     local FlyAct = false
 
-    function mov.StartFly()
+                                                                                        function mov.StartFly()
         Notify("🪽 Fly active")
         local c = player.Character
         if not c then return end
@@ -3087,60 +3071,64 @@ local MovementFuncs = (function()
         if not hrp or not hum then return end
 
         FlyAct = true
-        _G.RarityOriginalGravity = Workspace.Gravity
-        Workspace.Gravity = 0
+        hum:ChangeState(Enum.HumanoidStateType.Climbing)
+        local expectedY = hrp.Position.Y
 
         FlyConn = RunService.Heartbeat:Connect(function()
-            if not hrp.Parent or not hum.Parent then return end
-            if FlyAct then
-                -- Sit during flight to bypass AC
-                hum.Sit = true
-                hum:ChangeState(Enum.HumanoidStateType.RunningNoPhysics)
-                local md = Vector3.new()
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then md = md + Vector3.new(0, 0, -1) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then md = md + Vector3.new(0, 0, 1) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then md = md + Vector3.new(-1, 0, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then md = md + Vector3.new(1, 0, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then md = md + Vector3.new(0, 1, 0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then md = md + Vector3.new(0, -1, 0) end
+            if not hrp or not hrp.Parent then return end
+            if not FlyAct then return end
 
-                if md.Magnitude > 0 then
-                    md = md.Unit
-                    local cam = workspace.CurrentCamera
-                    local moveDir = (cam.CFrame.LookVector * -md.Z + cam.CFrame.RightVector * md.X + Vector3.new(0, md.Y, 0)).Unit
-                    hrp.Velocity = moveDir * FlySpeed
-                else
-                    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                    hrp.Velocity = Vector3.new(0, 0, 0)
-                end
-            else
-                hrp.Velocity = Vector3.new()
+            -- Поддерживаем Climbing
+            if hum:GetState() ~= Enum.HumanoidStateType.Climbing then
+                hum:ChangeState(Enum.HumanoidStateType.Climbing)
             end
+
+            -- 1. Проверяем сползание (физика до нашего движения)
+            local currentY = hrp.Position.Y
+            local drift = currentY - expectedY
+
+            -- Компенсируем точно + микро-запас, если не нажат Shift
+            if drift < -0.001 and not UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                hrp.CFrame = hrp.CFrame + Vector3.new(0, -drift + 0.005, 0)
+            end
+
+            -- 2. Движение игрока
+            local cam = workspace.CurrentCamera
+            local dir = Vector3.new(0, 0, 0)
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0, 1, 0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir -= Vector3.new(0, 1, 0) end
+
+            if dir.Magnitude > 0 then
+                dir = dir.Unit * FlySpeed * 0.016
+                hrp.CFrame = hrp.CFrame + dir
+            end
+
+            -- 3. Обновляем ожидаемую позицию после всех манипуляций
+            expectedY = hrp.Position.Y
+
+            -- Полная остановка физики
+            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
         end)
     end
-
-    function mov.StopFly()
+        function mov.StopFly()
         Notify("⚫ Fly disabled")
         FlyAct = false
         if FlyConn then FlyConn:Disconnect() FlyConn = nil end
-        Workspace.Gravity = _G.RarityOriginalGravity or 196.2
         local c = player.Character
         if c then
             local hum = c:FindFirstChildOfClass("Humanoid")
             if hum then
-                hum.Sit = false
-                hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+                hum:ChangeState(Enum.HumanoidStateType.Running)
             end
-            local hrp = c:FindFirstChild("HumanoidRootPart")
-            if hrp then hrp.Velocity = Vector3.new() end
         end
     end
-
     return mov
-end)()
-
--- ==========================================
+end)()-- ==========================================
 -- SPECTATOR MODE (IIFE)
 -- ==========================================
 local SpectatorFuncs = (function()
@@ -4281,7 +4269,7 @@ local starters = _G.RarityStarters
             pcall(function() delfile(path) end)
             Notify("🗑️ AutoLoad deleted", 3)
         else
-            Notify("📭 AutoLoad is empty", 3)
+        -- Notify("📭 AutoLoad is empty", 3)  -- v76: removed to avoid KickDetector trigger
         end
     end
 
@@ -6987,7 +6975,7 @@ player.CharacterAdded:Connect(function(char)
         HasAutoLoaded = true
 
         -- v60: Delay to avoid notification overlap with KickDetector
-        task.wait(3)
+        -- v76: reduced delay
 
         local autoLoadPath = ConfigFolder .. "/autoload.txt"
         if isfile(autoLoadPath) then
@@ -7002,7 +6990,7 @@ player.CharacterAdded:Connect(function(char)
                 end
             end
         end
-        Notify("📭 AutoLoad is empty", 3)
+        -- Notify("📭 AutoLoad is empty", 3)  -- v76: removed to avoid KickDetector trigger
     end)
 end)
 
@@ -7018,15 +7006,15 @@ while true do
     if Workspace.Entities:FindFirstChild(player.Name) then break end
     local success = PressPlayButton()
     if success then
-        Notify("✅ Play button pressed", 2)
+        -- v76: removed Play button notification
         break
     end
     playAttempts = playAttempts + 1
     if playAttempts >= maxPlayAttempts then
-        Notify("⚠️ Failed to press Play after " .. maxPlayAttempts .. " attempts", 3)
+        -- v76: removed Play failed notification
         break
     end
-    task.wait(1.5)
+    task.wait(0.5)  -- v76: faster retry
 end
 
 Notify("✅ rarity.bw loaded", 4)
