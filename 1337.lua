@@ -56,7 +56,8 @@ local Features = {
     NoClip={E=false,C=nil}, Invisible={E=false,C=nil},
     Spectator={E=false,C=nil}, FullBright={E=false,C=nil},
     LassoSnitch={E=false,C=nil},
-    LassoKill={E=false,C=nil}
+    LassoKill={E=false,C=nil},
+    RemoveFog={E=false,C=nil}
 }
 
 local saintsPartNames = {"SaintsLeftArm","SaintsRightArm","SaintsLeftLeg","SaintsRightLeg","SaintsRibcage"}
@@ -82,11 +83,11 @@ local function PressPlayButton()
     -- Method 3: VIM + SelectedObject (works on Potassium)
     local ok3 = pcall(function()
         GuiService.SelectedObject = pb
-        task.wait(0.05)  -- v76: faster
+        task.wait(0.01)
         VIM:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
-        task.wait(0.05)
+        task.wait(0.01)
         VIM:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
-        task.wait(0.02)  -- v76: faster
+        task.wait(0.01)
         GuiService.SelectedObject = nil
     end)
     if ok3 then return true end
@@ -96,11 +97,11 @@ local function PressPlayButton()
         local oldAuto = GuiService.AutoSelectGuiEnabled
         GuiService.AutoSelectGuiEnabled = true
         GuiService.SelectedObject = pb
-        task.wait(0.05)  -- v76: faster
+        task.wait(0.01)
         VIM:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
-        task.wait(0.05)
+        task.wait(0.01)
         VIM:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
-        task.wait(0.02)  -- v76: faster
+        task.wait(0.01)
         GuiService.SelectedObject = nil
         GuiService.AutoSelectGuiEnabled = oldAuto
     end)
@@ -428,8 +429,8 @@ local UI = (function()
     TitleText.BackgroundTransparency = 1
     TitleText.Text = "▼ rarity.bw 💎"
     TitleText.TextColor3 = Themes[CurrentTheme].Text
-    TitleText.TextSize = 14
-    TitleText.Font = Enum.Font.GothamSemibold
+    TitleText.TextSize = 16
+    TitleText.Font = Enum.Font.GothamBold
     TitleText.TextXAlignment = Enum.TextXAlignment.Left
 
     TitleBar.InputBegan:Connect(function(input)
@@ -479,7 +480,7 @@ local UI = (function()
         btn.BackgroundTransparency = 1
         btn.Text = name
         btn.TextColor3 = Themes[CurrentTheme].Text
-        btn.TextSize = 11
+        btn.TextSize = 13
         btn.Font = Enum.Font.GothamMedium
         btn.Parent = TabsFrame
         local line = Instance.new("Frame",btn)
@@ -535,14 +536,14 @@ local UI = (function()
         t.BackgroundTransparency = 1
         t.Text = text
         t.TextColor3 = Themes[CurrentTheme].Text
-        t.TextSize = 12
+        t.TextSize = 14
         t.Font = Enum.Font.GothamBold
         t.TextXAlignment = Enum.TextXAlignment.Left
         t.TextYAlignment = Enum.TextYAlignment.Center
         local tStroke = Instance.new("UIStroke", t)
         tStroke.Color = Themes[CurrentTheme].Text
-        tStroke.Thickness = 2
-        tStroke.Transparency = 0.7
+        tStroke.Thickness = 1
+        tStroke.Transparency = 0.9
         local ln = Instance.new("Frame",sec)
         ln.Size = UDim2.new(1,-90,0,2)
         ln.Position = UDim2.new(0,85,0.6,0)
@@ -566,14 +567,14 @@ local UI = (function()
         lbl.BackgroundTransparency = 1
         lbl.Text = text
         lbl.TextColor3 = Themes[CurrentTheme].Text
-        lbl.TextSize = 13
-        lbl.Font = Enum.Font.Gotham
+        lbl.TextSize = 15
+        lbl.Font = Enum.Font.GothamMedium
         lbl.TextXAlignment = Enum.TextXAlignment.Left
         lbl.TextYAlignment = Enum.TextYAlignment.Center
         local lblStroke = Instance.new("UIStroke", lbl)
         lblStroke.Color = Themes[CurrentTheme].Text
-        lblStroke.Thickness = 2
-        lblStroke.Transparency = 0.7
+        lblStroke.Thickness = 1
+        lblStroke.Transparency = 0.9
         local tbg = Instance.new("TextButton",row)
         tbg.Size = UDim2.new(0,36,0,20)
         tbg.Position = UDim2.new(1,-36,0.5,-10)
@@ -595,8 +596,12 @@ local UI = (function()
         sd.TextColor3 = Themes[CurrentTheme].Text
         sd.TextSize = 8
         sd.Visible = false
-        row.MouseEnter:Connect(function() lbl.TextColor3 = Themes[CurrentTheme].Text end)
-        row.MouseLeave:Connect(function() lbl.TextColor3 = Themes[CurrentTheme].Text end)
+        row.MouseEnter:Connect(function()
+            TweenService:Create(row, TweenInfo.new(0.15), {BackgroundTransparency = 0.3}):Play()
+        end)
+        row.MouseLeave:Connect(function()
+            TweenService:Create(row, TweenInfo.new(0.15), {BackgroundTransparency = Themes[CurrentTheme].RowBgTransparency}):Play()
+        end)
         return tbg, circ, sd, posY+36, row
     end
 
@@ -640,8 +645,8 @@ local UI = (function()
         lbl.BackgroundTransparency = 1
         lbl.Text = text
         lbl.TextColor3 = Themes[CurrentTheme].Text
-        lbl.TextSize = 13
-        lbl.Font = Enum.Font.Gotham
+        lbl.TextSize = 15
+        lbl.Font = Enum.Font.GothamMedium
         lbl.TextXAlignment = Enum.TextXAlignment.Left
         local vl = Instance.new("TextLabel",lr)
         vl.Size = UDim2.new(0.3,0,1,0)
@@ -649,7 +654,7 @@ local UI = (function()
         vl.BackgroundTransparency = 1
         vl.Text = tostring(val)
         vl.TextColor3 = Themes[CurrentTheme].Text
-        vl.TextSize = 13
+        vl.TextSize = 15
         vl.Font = Enum.Font.GothamSemibold
         vl.TextXAlignment = Enum.TextXAlignment.Right
         local trk = Instance.new("TextButton",row)
@@ -708,14 +713,14 @@ local UI = (function()
         lbl.BackgroundTransparency = 1
         lbl.Text = text
         lbl.TextColor3 = Themes[CurrentTheme].Text
-        lbl.TextSize = 12
+        lbl.TextSize = 14
         lbl.Font = Enum.Font.Gotham
         lbl.TextXAlignment = Enum.TextXAlignment.Left
         lbl.TextYAlignment = Enum.TextYAlignment.Center
         local lblStroke = Instance.new("UIStroke", lbl)
         lblStroke.Color = Themes[CurrentTheme].Text
-        lblStroke.Thickness = 2
-        lblStroke.Transparency = 0.7
+        lblStroke.Thickness = 1
+        lblStroke.Transparency = 0.9
         local box = Instance.new("TextBox",row)
         box.Size = UDim2.new(0.6,-5,1,-4)
         box.Position = UDim2.new(0.4,5,0,2)
@@ -744,14 +749,14 @@ local UI = (function()
         Label.BackgroundTransparency = 1
         Label.Text = labelText
         Label.TextColor3 = Themes[CurrentTheme].Text
-        Label.TextSize = 12
+        Label.TextSize = 14
         Label.Font = Enum.Font.Gotham
         Label.TextXAlignment = Enum.TextXAlignment.Left
         Label.TextYAlignment = Enum.TextYAlignment.Center
         local LabelStroke = Instance.new("UIStroke", Label)
         LabelStroke.Color = Themes[CurrentTheme].Text
-        LabelStroke.Thickness = 2
-        LabelStroke.Transparency = 0.7
+        LabelStroke.Thickness = 1
+        LabelStroke.Transparency = 0.9
         Label.ZIndex = 51
         Label.Parent = Container
 
@@ -762,7 +767,7 @@ local UI = (function()
         DropBtn.BackgroundColor3 = Themes[CurrentTheme].Button
         DropBtn.Text = "Select..."
         DropBtn.TextColor3 = Themes[CurrentTheme].Text
-        DropBtn.TextSize = 11
+        DropBtn.TextSize = 13
         DropBtn.Font = Enum.Font.GothamMedium
         DropBtn.AutoButtonColor = false
         DropBtn.ZIndex = 51
@@ -818,6 +823,21 @@ local UI = (function()
             end)
         end
 
+        -- Update position when scrolling
+        local scrollConn = nil
+        scrollConn = RunService.Heartbeat:Connect(function()
+            if open and DropBtn and DropBtn.Parent and DropBtn.Parent.Parent then
+                local scrollFrame = DropBtn.Parent.Parent
+                if scrollFrame and scrollFrame:IsA("ScrollingFrame") then
+                    updateListPosition()
+                end
+            end
+        end)
+
+        Container.Destroying:Connect(function()
+            if scrollConn then scrollConn:Disconnect() end
+        end)
+
         for _, opt in ipairs(optionsTable) do
             local optBtn = Instance.new("TextButton")
             optBtn.Size = UDim2.new(1, -8, 0, 24)
@@ -827,9 +847,9 @@ local UI = (function()
             optBtn.TextColor3 = Themes[CurrentTheme].Text
         local optBtnStroke = Instance.new("UIStroke", optBtn)
         optBtnStroke.Color = Themes[CurrentTheme].Text
-        optBtnStroke.Thickness = 2
-        optBtnStroke.Transparency = 0.7
-            optBtn.TextSize = 11
+        optBtnStroke.Thickness = 1
+        optBtnStroke.Transparency = 0.9
+            optBtn.TextSize = 13
             optBtn.Font = Enum.Font.Gotham
             optBtn.TextXAlignment = Enum.TextXAlignment.Left
             optBtn.AutoButtonColor = false
@@ -905,6 +925,12 @@ local UI = (function()
             end
         end)
 
+        -- Track this dropdown list for global hide/show
+        ListFrame:SetAttribute("RarityDropdown", true)
+
+        -- Track this dropdown list for global hide/show
+        ListFrame:SetAttribute("RarityDropdown", true)
+
         Container.Destroying:Connect(function()
             if clickAwayConn then clickAwayConn:Disconnect() end
             if tabHideConn then tabHideConn:Disconnect() end
@@ -949,14 +975,14 @@ local UI = (function()
         Label.BackgroundTransparency = 1
         Label.Text = labelText
         Label.TextColor3 = Themes[CurrentTheme].Text
-        Label.TextSize = 12
+        Label.TextSize = 14
         Label.Font = Enum.Font.Gotham
         Label.TextXAlignment = Enum.TextXAlignment.Left
         Label.TextYAlignment = Enum.TextYAlignment.Center
         local LabelStroke = Instance.new("UIStroke", Label)
         LabelStroke.Color = Themes[CurrentTheme].Text
-        LabelStroke.Thickness = 2
-        LabelStroke.Transparency = 0.7
+        LabelStroke.Thickness = 1
+        LabelStroke.Transparency = 0.9
         Label.ZIndex = 51
         Label.Parent = Container
 
@@ -967,7 +993,7 @@ local UI = (function()
         DropBtn.BackgroundColor3 = Themes[CurrentTheme].Button
         DropBtn.Text = "None"
         DropBtn.TextColor3 = Themes[CurrentTheme].Text
-        DropBtn.TextSize = 11
+        DropBtn.TextSize = 13
         DropBtn.Font = Enum.Font.GothamMedium
         DropBtn.AutoButtonColor = false
         DropBtn.ZIndex = 51
@@ -1025,6 +1051,21 @@ local UI = (function()
             end)
         end
 
+        -- Update position when scrolling
+        local scrollConn = nil
+        scrollConn = RunService.Heartbeat:Connect(function()
+            if open and DropBtn and DropBtn.Parent and DropBtn.Parent.Parent then
+                local scrollFrame = DropBtn.Parent.Parent
+                if scrollFrame and scrollFrame:IsA("ScrollingFrame") then
+                    updateListPosition()
+                end
+            end
+        end)
+
+        Container.Destroying:Connect(function()
+            if scrollConn then scrollConn:Disconnect() end
+        end)
+
         local function rebuildList(options)
             for _, btn in pairs(optionButtons) do btn:Destroy() end
             optionButtons = {}
@@ -1037,8 +1078,8 @@ local UI = (function()
                 optBtn.TextColor3 = Themes[CurrentTheme].Text
         local optBtnStroke = Instance.new("UIStroke", optBtn)
         optBtnStroke.Color = Themes[CurrentTheme].Text
-        optBtnStroke.Thickness = 2
-        optBtnStroke.Transparency = 0.7
+        optBtnStroke.Thickness = 1
+        optBtnStroke.Transparency = 0.9
                 optBtn.TextSize = 11
                 optBtn.Font = Enum.Font.Gotham
                 optBtn.TextXAlignment = Enum.TextXAlignment.Left
@@ -1102,6 +1143,12 @@ local UI = (function()
             end
         end)
 
+        -- Track this dropdown list for global hide/show
+        ListFrame:SetAttribute("RarityDropdown", true)
+
+        -- Track this dropdown list for global hide/show
+        ListFrame:SetAttribute("RarityDropdown", true)
+
         -- Cleanup on destroy
         Container.Destroying:Connect(function()
             if clickAwayConn then clickAwayConn:Disconnect() end
@@ -1130,7 +1177,7 @@ local UI = (function()
     ui.TreeKbBtn.BackgroundColor3 = Themes[CurrentTheme].InputBg
     ui.TreeKbBtn.Text = "F2"
     ui.TreeKbBtn.TextColor3 = Themes[CurrentTheme].Text
-    ui.TreeKbBtn.TextSize = 11
+    ui.TreeKbBtn.TextSize = 13
     ui.TreeKbBtn.Font = Enum.Font.GothamMedium
     ui.TreeKbBtn.AutoButtonColor = false
     ui.TreeKbBtn.ZIndex = 52
@@ -1150,8 +1197,8 @@ local UI = (function()
     treeTypeLbl.TextColor3 = Themes[CurrentTheme].Text
         local treeTypeLblStroke = Instance.new("UIStroke", treeTypeLbl)
         treeTypeLblStroke.Color = Themes[CurrentTheme].Text
-        treeTypeLblStroke.Thickness = 2
-        treeTypeLblStroke.Transparency = 0.7
+        treeTypeLblStroke.Thickness = 1
+        treeTypeLblStroke.Transparency = 0.9
     treeTypeLbl.TextSize = 12
     treeTypeLbl.Font = Enum.Font.Gotham
     treeTypeLbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -1262,12 +1309,12 @@ local UI = (function()
     FlyKbLbl.TextColor3 = Themes[CurrentTheme].Text
         local KbLblStroke = Instance.new("UIStroke", KbLbl)
         KbLblStroke.Color = Themes[CurrentTheme].Text
-        KbLblStroke.Thickness = 2
-        KbLblStroke.Transparency = 0.7
+        KbLblStroke.Thickness = 1
+        KbLblStroke.Transparency = 0.9
         local FlyKbLblStroke = Instance.new("UIStroke", FlyKbLbl)
         FlyKbLblStroke.Color = Themes[CurrentTheme].Text
-        FlyKbLblStroke.Thickness = 2
-        FlyKbLblStroke.Transparency = 0.7
+        FlyKbLblStroke.Thickness = 1
+        FlyKbLblStroke.Transparency = 0.9
     FlyKbLbl.TextSize = 12
     FlyKbLbl.Font = Enum.Font.Gotham
     FlyKbLbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -1304,12 +1351,12 @@ local UI = (function()
     AttachKbLbl.TextColor3 = Themes[CurrentTheme].Text
         local KbLblStroke = Instance.new("UIStroke", KbLbl)
         KbLblStroke.Color = Themes[CurrentTheme].Text
-        KbLblStroke.Thickness = 2
-        KbLblStroke.Transparency = 0.7
+        KbLblStroke.Thickness = 1
+        KbLblStroke.Transparency = 0.9
         local AttachKbLblStroke = Instance.new("UIStroke", AttachKbLbl)
         AttachKbLblStroke.Color = Themes[CurrentTheme].Text
-        AttachKbLblStroke.Thickness = 2
-        AttachKbLblStroke.Transparency = 0.7
+        AttachKbLblStroke.Thickness = 1
+        AttachKbLblStroke.Transparency = 0.9
     AttachKbLbl.TextSize = 12
     AttachKbLbl.Font = Enum.Font.Gotham
     AttachKbLbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -1328,68 +1375,8 @@ local UI = (function()
     qolY = qolY + 30
     qolY = CreateSection(QoLC, "Performance", qolY + 8)
 
-    local fogRow = Instance.new("Frame")
-    fogRow.Size = UDim2.new(1, 0, 0, 32)
-    fogRow.Position = UDim2.new(0, 0, 0, qolY)
-    fogRow.BackgroundTransparency = 1
-    fogRow.Parent = QoLC
-    local fogLbl = Instance.new("TextLabel", fogRow)
-    fogLbl.Size = UDim2.new(0.7, 0, 1, 0)
-    fogLbl.BackgroundTransparency = 1
-    fogLbl.Text = "Remove Fog"
-    fogLbl.TextColor3 = Themes[CurrentTheme].Text
-        local fogLblStroke = Instance.new("UIStroke", fogLbl)
-        fogLblStroke.Color = Themes[CurrentTheme].Text
-        fogLblStroke.Thickness = 2
-        fogLblStroke.Transparency = 0.7
-    fogLbl.TextSize = 13
-    fogLbl.Font = Enum.Font.Gotham
-    fogLbl.TextXAlignment = Enum.TextXAlignment.Left
-    fogLbl.TextYAlignment = Enum.TextYAlignment.Center
-    local fogBtn = Instance.new("TextButton", fogRow)
-    fogBtn.Size = UDim2.new(0.3, -5, 1, -4)
-    fogBtn.Position = UDim2.new(0.7, 5, 0, 2)
-    fogBtn.BackgroundColor3 = Themes[CurrentTheme].Button
-    fogBtn.Text = "Apply"
-    fogBtn.TextColor3 = Themes[CurrentTheme].Text
-    fogBtn.TextSize = 13
-    fogBtn.Font = Enum.Font.GothamMedium
-    fogBtn.AutoButtonColor = false
-    Instance.new("UICorner", fogBtn).CornerRadius = UDim.new(0, 6)
-    table.insert(ThemeButtons, {Btn = fogBtn, Type = "Button"})
-    fogBtn.MouseEnter:Connect(function()
-        fogBtn.BackgroundColor3 = Themes[CurrentTheme].ButtonHover
-    end)
-    fogBtn.MouseLeave:Connect(function()
-        fogBtn.BackgroundColor3 = Themes[CurrentTheme].Button
-    end)
-    ui.FogBtn = fogBtn
-    -- Client-sided Remove Fog: continuous override via Heartbeat
-    local fogConn = nil
-    ui.FogBtn.MouseButton1Click:Connect(function()
-        if fogConn then
-            fogConn:Disconnect()
-            fogConn = nil
-            Notify("🌫️ Fog override stopped", 2)
-        else
-            Notify("🌫️ Fog override active", 2)
-            fogConn = RunService.Heartbeat:Connect(function()
-                pcall(function()
-                    local lighting = game:GetService("Lighting")
-                    lighting.FogEnd = 100000
-                    lighting.FogStart = 0
-                    lighting.FogColor = Color3.new(1,1,1)
-                    local atm = lighting:FindFirstChildOfClass("Atmosphere")
-                    if atm then
-                        atm.Density = 0
-                        atm.Haze = 0
-                        atm.Glare = 0
-                    end
-                end)
-            end)
-        end
-    end)
-    qolY = qolY + 36
+        ui.FogT, ui.FogC, ui.FogS, qolY = CreateToggle(QoLC, "Remove Fog", qolY, "RemoveFog")
+    qolY = qolY + 4
 
     ui.FullBrightT, ui.FullBrightC, ui.FullBrightS, qolY = CreateToggle(QoLC, "Full Brightness", qolY, "FullBright")
 
@@ -1750,8 +1737,8 @@ local UI = (function()
     KbLbl.TextColor3 = Themes[CurrentTheme].Text
         local KbLblStroke = Instance.new("UIStroke", KbLbl)
         KbLblStroke.Color = Themes[CurrentTheme].Text
-        KbLblStroke.Thickness = 2
-        KbLblStroke.Transparency = 0.7
+        KbLblStroke.Thickness = 1
+        KbLblStroke.Transparency = 0.9
     KbLbl.TextSize = 12
     KbLbl.Font = Enum.Font.Gotham
     KbLbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -1942,6 +1929,7 @@ local UI = (function()
             {ui.ScanT, ui.ScanC, "SaintScanner"},
             {ui.LassoT, ui.LassoC, "LassoSnitch"},
             {ui.LassoKillT, ui.LassoKillC, "LassoKill"},
+            {ui.FogT, ui.FogC, "RemoveFog"},
         }
         for _, pair in ipairs(togglePairs) do
             local btn = pair[1]
@@ -2086,6 +2074,30 @@ local UI = (function()
     end
     ui.ApplyTheme = ApplyTheme
 
+    -- GUI Animations - UIScale + Position + Fade (no overflow issues)
+    local uiScale = Instance.new("UIScale")
+    uiScale.Scale = 0
+    uiScale.Parent = ui.MainFrame
+    ui.UIScale = uiScale
+
+    ui.MainFrame.Position = UDim2.new(0.5, -200, 0.6, -260)
+    ui.MainFrame.BackgroundTransparency = 1
+    ui.MainFrame.Visible = true
+
+    -- Animate in with Elastic: scale up + slide up + fade
+    TweenService:Create(uiScale, TweenInfo.new(0.8, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {
+        Scale = 1
+    }):Play()
+    TweenService:Create(ui.MainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0.5, -200, 0.5, -260)
+    }):Play()
+    TweenService:Create(ui.MainFrame, TweenInfo.new(0.4), {
+        BackgroundTransparency = 0
+    }):Play()
+
+    -- Remember position when hidden
+    ui.LastPosition = ui.MainFrame.Position
+
     return ui
 end)()
 pcall(function() UI.ApplyTheme("Rarity") end)
@@ -2151,16 +2163,16 @@ local function SafeTeleport(target, instant)
     task.wait(0.05)
     -- AC bypass: Sit before teleport
     hum.Sit = true
-    task.wait(0.2)
+    task.wait(0.25)
     if typeof(target) == "CFrame" then
         hrp.CFrame = target
     elseif typeof(target) == "Vector3" then
         hrp.CFrame = CFrame.new(target)
     end
-    task.wait(0.2)
+    task.wait(0.25)
     hum.Sit = false
     if not instant then
-        task.wait(0.1)
+        task.wait(0.25)
         hrp.Velocity = Vector3.new(0, 0, 0)
         hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
@@ -2312,9 +2324,9 @@ local IsSpectatorListening = false
             local targetHrp = targetModel:FindFirstChild("HumanoidRootPart")
             local hum = char:FindFirstChildOfClass("Humanoid")
             if hum then hum.Sit = true end
-            task.wait(0.2)
+            task.wait(0.25)
             if targetHrp then hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 3) end
-            task.wait(0.2)
+            task.wait(0.25)
             hum.Sit = false
         end)
     end
@@ -2430,9 +2442,9 @@ if ok and src and #src > 100 then loadstring(src)() else end
                     local lookCFrame = CFrame.lookAt(hrp.Position, Vector3.new(promptPos.X, hrp.Position.Y, promptPos.Z))
                     local hum = char:FindFirstChildOfClass("Humanoid")
                     if hum then hum.Sit = true end
-                    task.wait(0.1)
+                    task.wait(0.25)
                     hrp.CFrame = lookCFrame
-                    task.wait(0.1)
+                    task.wait(0.25)
                     if hum then hum.Sit = false end
                 end
 
@@ -2473,9 +2485,9 @@ if ok and src and #src > 100 then loadstring(src)() else end
                 tapWA() task.wait(0.5)
                 local hum2 = nc:FindFirstChildOfClass("Humanoid")
                 if hum2 then hum2.Sit = true end
-                task.wait(0.2)
+                task.wait(0.25)
                 nr.CFrame = ns.CFrame + Vector3.new(0, 3, 0)
-                task.wait(0.2)
+                task.wait(0.25)
                 hum2.Sit = false
                 task.wait(0.6)
                 holdPrompt(ns:FindFirstChildOfClass("ProximityPrompt") or ns.Parent:FindFirstChildOfClass("ProximityPrompt"), ns)
@@ -2516,13 +2528,13 @@ if ok and src and #src > 100 then loadstring(src)() else end
                     if not BankRunning then return end
                     local hum = ch:FindFirstChildOfClass("Humanoid")
                     if hum then hum.Sit = true end
-                    task.wait(0.2)
+                    task.wait(0.25)
                     rt.CFrame = CFrame.new(x, y, z)
                     rt.Velocity = Vector3.new(0, 0, 0)
                     rt.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                    task.wait(0.2)
+                    task.wait(0.25)
                     hum.Sit = false
-                    task.wait(0.2)
+                    task.wait(0.25)
                 end
                 local function clickD(o)
                     if not BankRunning then return false end
@@ -2610,17 +2622,17 @@ if ok and src and #src > 100 then loadstring(src)() else end
                         if not BankRunning then break end
                         local cash = findCash()
                         if #cash == 0 then break end
-                        tp(-5764.15, 48.4, -4035.92) task.wait(0.2)
+                        tp(-5764.15, 48.4, -4035.92) task.wait(0.25)
                         for _, d in ipairs(cash) do
                             for i = 1, 3 do
                                 fireclickdetector(d.cd)
                                 task.wait(0.08)
                             end
                             col = col + 1
-                            task.wait(0.2)
+                            task.wait(0.25)
                         end
                         att = att + 1
-                        task.wait(0.2)
+                        task.wait(0.25)
                     end
                     return col
                 end
@@ -2631,13 +2643,13 @@ if ok and src and #src > 100 then loadstring(src)() else end
                     if hasItem("Makeshift Explosive") then hasExp = true break end
                     tp(-2561.91, 45.03, -2594.83)
                     local ad = Workspace:FindFirstChild("Arms Dealer")
-                    if ad then clickD(ad) task.wait(0.2) end
+                    if ad then clickD(ad) task.wait(0.25) end
                     if waitDialog(5) then
                         acceptQuest()
                         local a = 0
                         while not hasItem("Makeshift Explosive") and a < 15 do
                             if not BankRunning then return end
-                            if #getChoices() > 0 then clickChoice(1) task.wait(0.4)
+                            if #getChoices() > 0 then clickChoice(1) task.wait(0.25)
                             else if ad then clickD(ad) task.wait(0.5) waitDialog(3) end end
                             a = a + 1
                         end
@@ -2647,7 +2659,7 @@ if ok and src and #src > 100 then loadstring(src)() else end
 
                 if not BankRunning then return end
                 tp(-5744.06, 47.5, -4032.02)
-                if equipItem("Makeshift Explosive") then task.wait(0.2) clickOnce() task.wait(0.5) end
+                if equipItem("Makeshift Explosive") then task.wait(0.25) clickOnce() task.wait(0.5) end
 
                 local ew = tick()
                 local ef = false
@@ -2658,7 +2670,7 @@ if ok and src and #src > 100 then loadstring(src)() else end
                         tp(-5743.32, 78.7, -4037.94)
                         break
                     end
-                    task.wait(0.2)
+                    task.wait(0.25)
                 end
 
                 if not BankRunning then return end
@@ -2680,8 +2692,8 @@ if ok and src and #src > 100 then loadstring(src)() else end
                 if not BankRunning then return end
                 tp(-2561.91, 45.03, -2594.83)
                 local ad = Workspace:FindFirstChild("Arms Dealer")
-                if ad then clickD(ad) task.wait(0.2) end
-                if waitDialog(5) then clickChoice(1) task.wait(0.4) if #getChoices() > 0 then clickChoice(1) task.wait(0.4) end end
+                if ad then clickD(ad) task.wait(0.25) end
+                if waitDialog(5) then clickChoice(1) task.wait(0.25) if #getChoices() > 0 then clickChoice(1) task.wait(0.25) end end
                 task.wait(1)
                 ServerHop()
             end)
@@ -2731,9 +2743,9 @@ if ok and src and #src > 100 then loadstring(src)() else end
             if not part then return end
             local hum = char:FindFirstChildOfClass("Humanoid")
             if hum then hum.Sit = true end
-            task.wait(0.2)
+            task.wait(0.25)
             hrp.CFrame = part.CFrame * CFrame.new(0, 5, 0)
-            task.wait(0.2)
+            task.wait(0.25)
             hum.Sit = false
             task.wait(0.3)
             for _, desc in ipairs(chest:GetDescendants()) do
@@ -2741,7 +2753,7 @@ if ok and src and #src > 100 then loadstring(src)() else end
                     pcall(function() fireproximityprompt(desc) end)
                 end
             end
-            task.wait(0.2)
+            task.wait(0.25)
         end
 
         for _, chest in ipairs(cf:GetChildren()) do
@@ -2809,9 +2821,9 @@ local ScannerFuncs = (function()
             if c and c:FindFirstChild("HumanoidRootPart") then
                 local hum = c:FindFirstChildOfClass("Humanoid")
                 if hum then hum.Sit = true end
-                task.wait(0.2)
+                task.wait(0.25)
                 c.HumanoidRootPart.CFrame = ScannerData.DP.CFrame + Vector3.new(0, 5, 0)
-                task.wait(0.2)
+                task.wait(0.25)
                 if hum then hum.Sit = false end
                 Notify("Teleported", 3)
             end
@@ -3042,9 +3054,9 @@ local MovementFuncs = (function()
                     if r then
                         local hum = c:FindFirstChildOfClass("Humanoid")
                         if hum then hum.Sit = true end
-                        task.wait(0.2)
+                        task.wait(0.25)
                         r.CFrame = CFrame.new(Mouse.Hit.Position + Vector3.new(0, 3, 0))
-                        task.wait(0.2)
+                        task.wait(0.25)
                         hum.Sit = false
                         r.Velocity = Vector3.new(0, 0, 0)
                         r.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
@@ -3199,9 +3211,9 @@ local SpectatorFuncs = (function()
         local newPos = Vector3.new(originalPos.X, targetY, originalPos.Z)
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then hum.Sit = true end
-        task.wait(0.2)
+        task.wait(0.25)
         hrp.CFrame = CFrame.lookAt(newPos, newPos + Vector3.new(lookDir.X, 0, lookDir.Z))
-        task.wait(0.2)
+        task.wait(0.25)
         hum.Sit = false
 
         -- Heartbeat: Fly movement + ReplicationFocus follows CAMERA
@@ -3298,9 +3310,9 @@ local SpectatorFuncs = (function()
         humanoid.PlatformStand = false
         task.wait(0.1)
         if humanoid then humanoid.Sit = true end
-        task.wait(0.2)
+        task.wait(0.25)
         hrp.CFrame = CFrame.new(originalPos.X, originalPos.Y + 5, originalPos.Z) * CFrame.Angles(0, math.atan2(hrp.CFrame.LookVector.X, hrp.CFrame.LookVector.Z), 0)
-        task.wait(0.2)
+        task.wait(0.25)
         humanoid.Sit = false
 
         task.wait(0.3)
@@ -3311,9 +3323,9 @@ local SpectatorFuncs = (function()
         hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
         hrp.Velocity = Vector3.new(0, 0, 0)
         if humanoid then humanoid.Sit = true end
-        task.wait(0.2)
+        task.wait(0.25)
         hrp.CFrame = CFrame.new(originalPos.X, originalPos.Y + 3, originalPos.Z) * CFrame.Angles(0, math.atan2(hrp.CFrame.LookVector.X, hrp.CFrame.LookVector.Z), 0)
-        task.wait(0.2)
+        task.wait(0.25)
         humanoid.Sit = false
 
 
@@ -4085,7 +4097,7 @@ local ConfigFuncs = (function()
         c.FlySlider=UI.GetFlySpeed and UI.GetFlySpeed() or 20
         c.MinPlayers=UI.GetMin and UI.GetMin() or 1
         c.MaxPlayers=UI.GetMax and UI.GetMax() or 25
-                                        c.AttachKeybind = tostring(QoLFuncs.AttachKeybind())
+        c.AttachKeybind = tostring(QoLFuncs.AttachKeybind())
         c.SpectatorKeybind = tostring(SpectatorFuncs.SpectatorKeybind())
         c.TreeKeybind = tostring(TreeKeybind)
         c.TreeType = UI.TreeTypeBtn.Text
@@ -4094,19 +4106,23 @@ local ConfigFuncs = (function()
         c.Spectator = Features.Spectator.E
         c.FullBright = Features.FullBright.E
         c.Fish = Features.Fish.E
-c.Chams = Features.Chams.E
-c.ChamsR = tonumber(UI.ChamsRBox.Text) or 255
-c.ChamsG = tonumber(UI.ChamsGBox.Text) or 0
-c.ChamsB = tonumber(UI.ChamsBBox.Text) or 0
-c.SaintESP = Features.SaintESP.E
-c.PosTracker = Features.PosTracker.E
-c.CustomMoola = UI.MoolaSpoofBox.Text or ""
+        c.Chams = Features.Chams.E
+        c.ChamsR = tonumber(UI.ChamsRBox.Text) or 255
+        c.ChamsG = tonumber(UI.ChamsGBox.Text) or 0
+        c.ChamsB = tonumber(UI.ChamsBBox.Text) or 0
+        c.SaintESP = Features.SaintESP.E
+        c.PosTracker = Features.PosTracker.E
+        c.CustomMoola = UI.MoolaSpoofBox.Text or ""
         c.LassoSnitch = Features.LassoSnitch.E
         c.LassoKill = Features.LassoKill.E
         c.LassoKeybind = tostring(LassoKeybind)
         c.LassoKillKeybind = tostring(LassoKillKeybind)
         c.Theme = CurrentTheme
-return c
+        -- Dropdowns (excluding player-related ones)
+        c.BuyItems = UI.ItemDropdown.GetSelected()
+        c.NPCTarget = UI.NPCDropdown.GetSelected()
+        c.RemoveFog = Features.RemoveFog.E
+        return c
     end
 
     function cfg.RefreshConfigListUI()
@@ -4183,6 +4199,9 @@ return c
             if ok2 and kc2 then TreeKeybind=kc2 UI.TreeKbBtn.Text=data.TreeKeybind end
         end
         if data.TreeType then
+            UI.TreeTypeBtn.Text = data.TreeType
+            _G.RarityTreeSelection = data.TreeType
+        end
         if data.ChamsR then UI.ChamsRBox.Text = tostring(data.ChamsR) end
         if data.ChamsG then UI.ChamsGBox.Text = tostring(data.ChamsG) end
         if data.ChamsB then UI.ChamsBBox.Text = tostring(data.ChamsB) end
@@ -4190,9 +4209,9 @@ return c
             UI.MoolaSpoofBox.Text = data.CustomMoola
             QoLExtras.StartMoolaSpoof(data.CustomMoola)
         end
-            UI.TreeTypeBtn.Text = data.TreeType
-            _G.RarityTreeSelection = data.TreeType
-        end
+        -- Load dropdowns (excluding player-related)
+        if data.BuyItems and #data.BuyItems > 0 then UI.ItemDropdown.SetSelected(data.BuyItems) end
+        if data.NPCTarget and data.NPCTarget ~= "None" then UI.NPCDropdown.SetSelected(data.NPCTarget) end
 
                 -- Theme loading
         if data.Theme then
@@ -4329,9 +4348,9 @@ local TreeFuncs = (function()
         if not root then return end
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then hum.Sit = true end
-        task.wait(0.2)
+        task.wait(0.25)
         root.CFrame = CFrame.new(pos + Vector3.new(0, 5, 0))
-        task.wait(0.2)
+        task.wait(0.25)
         hum.Sit = false
         root.Velocity = Vector3.new(0, 0, 0)
         root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
@@ -5299,9 +5318,9 @@ local FishFuncs = (function()
         if not hrp then return false end
         local hum = char:FindFirstChildOfClass("Humanoid")
     if hum then hum.Sit = true end
-    task.wait(0.2)
+    task.wait(0.25)
     hrp.CFrame = CFrame.new(daniel:GetPivot().Position + Vector3.new(0, 5, 0))
-    task.wait(0.2)
+    task.wait(0.25)
     if hum then hum.Sit = false end
         hrp.Velocity = Vector3.new(0, 0, 0)
         hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
@@ -5543,9 +5562,9 @@ local FishFuncs = (function()
                     if hrp then
                         local hum = char:FindFirstChildOfClass("Humanoid")
                         if hum then hum.Sit = true end
-                        task.wait(0.2)
+                        task.wait(0.25)
                         hrp.CFrame = CFrame.new(spot.playerPos + Vector3.new(0, 5, 0))
-                        task.wait(0.2)
+                        task.wait(0.25)
                         hum.Sit = false
                         hrp.Velocity = Vector3.new(0, 0, 0)
                         hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
@@ -5576,9 +5595,9 @@ local FishFuncs = (function()
                     if hrp then
                         local hum = char:FindFirstChildOfClass("Humanoid")
                         if hum then hum.Sit = true end
-                        task.wait(0.2)
+                        task.wait(0.25)
                         hrp.CFrame = CFrame.new(spot.playerPos + Vector3.new(0, 5, 0))
-                        task.wait(0.2)
+                        task.wait(0.25)
                         hum.Sit = false
                         hrp.Velocity = Vector3.new(0, 0, 0)
                         hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
@@ -5692,11 +5711,125 @@ local LassoFuncs = (function()
     local killActive = false
     local snitchConnection = nil
     local killConnection = nil
-    local moveInterval = 0.075
+    local moveInterval = 0.03
     local lassoTarget = nil
 
-    local function getLassoHead()
+    -- ==========================================
+    -- NEW v99: Get physical BasePart inside LassoHead Model
+    -- ==========================================
+    local function getLassoPhysicalPart(lassoHead)
+        if not lassoHead then return nil end
+        -- If it's already a BasePart, return it
+        if lassoHead:IsA("BasePart") then return lassoHead end
+        -- If it's a Model, find the real physical part inside
+        if lassoHead:IsA("Model") then
+            -- Priority: PrimaryPart > parts named "Head" or "LassoHead" > any BasePart
+            if lassoHead.PrimaryPart then return lassoHead.PrimaryPart end
+            for _, child in ipairs(lassoHead:GetDescendants()) do
+                if child:IsA("BasePart") then
+                    if child.Name == "LassoHead" or child.Name == "Head" then
+                        return child
+                    end
+                end
+            end
+            -- Fallback: any BasePart
+            for _, child in ipairs(lassoHead:GetDescendants()) do
+                if child:IsA("BasePart") then return child end
+            end
+        end
+        return nil
+    end
+
+    -- ==========================================
+    -- NEW v99: Reset physics on ALL descendants of LassoHead
+    -- ==========================================
+    local function resetLassoPhysics(lassoHead)
+        if not lassoHead then return end
+        for _, desc in ipairs(lassoHead:GetDescendants()) do
+            if desc:IsA("BasePart") then
+                desc.Velocity = Vector3.new(0, 0, 0)
+                desc.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                desc.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                desc.RotVelocity = Vector3.new(0, 0, 0)
+            end
+        end
+        -- Also on the head itself if it's a BasePart
+        if lassoHead:IsA("BasePart") then
+            lassoHead.Velocity = Vector3.new(0, 0, 0)
+            lassoHead.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            lassoHead.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+            lassoHead.RotVelocity = Vector3.new(0, 0, 0)
+        end
+    end
+
+    -- ==========================================
+    -- NEW v99: AC-safe teleport for Lasso physical part
+    -- Uses same method as v41 void teleport
+    -- ==========================================
+    -- ==========================================
+    -- v100: MODIFIED - Added firetouchinterest for collision simulation
+    -- ==========================================
+    local function teleportLassoPart(physicalPart, targetCF, targetHRP)
+        if not physicalPart or not physicalPart.Parent then return end
+        resetLassoPhysics(physicalPart.Parent)
+        local x, y, z, r00, r01, r02, r10, r11, r12, r20, r21, r22 = targetCF:GetComponents()
+        local safeCF = CFrame.fromMatrix(
+            Vector3.new(x, y, z),
+            Vector3.new(r00, r10, r20),
+            Vector3.new(r01, r11, r21)
+        )
+        physicalPart.CFrame = safeCF
+        -- v100: Simulate collision with target to trigger server-side grab
+        if targetHRP and targetHRP.Parent then
+            pcall(function()
+                firetouchinterest(physicalPart, targetHRP, 0)
+                task.wait(0.05)
+                firetouchinterest(physicalPart, targetHRP, 1)
+            end)
+        end
+        -- Double-reset after teleport
+        task.defer(function()
+            if physicalPart and physicalPart.Parent then
+                resetLassoPhysics(physicalPart.Parent)
+            end
+        end)
+    end
+
+    local function getMyLassoHead()
+        local char = player.Character
+        if not char then return nil end
+        return char:FindFirstChild("LassoHead")
+    end
+
+    local function getWorkspaceLassoHead()
         return Workspace:FindFirstChild("LassoHead")
+    end
+
+    local function getLassoHead()
+        -- Privacy check: only affect our own lasso
+        local entities = Workspace:FindFirstChild("Entities")
+        if not entities then return nil end
+        local myFolder = entities:FindFirstChild(player.Name)
+        if not myFolder then return nil end
+
+        local myLassoHead = myFolder:FindFirstChild("LassoHead")
+        local myLassoTool = myFolder:FindFirstChild("Lasso")
+
+        -- Case A: LassoHead in hands + Lasso tool = don't touch workspace
+        if myLassoHead and myLassoTool then
+            return nil
+        end
+
+        -- Case B: Only Lasso tool (no LassoHead) = thrown, check workspace
+        if not myLassoHead and myLassoTool then
+            local wsLasso = getWorkspaceLassoHead()
+            if wsLasso then
+                return wsLasso
+            end
+        end
+
+        -- Case C/D: No Lasso tool or impossible state = don't touch
+        return nil
     end
 
     local function getPlayerHRP()
@@ -5758,22 +5891,23 @@ local LassoFuncs = (function()
         return findClosestPlayer()
     end
 
+    -- ==========================================
+    -- v99: MODIFIED - Target CENTER of HRP for "sticking into"
+    -- ==========================================
     local function getLassoTargetCF(targetChar, lassoHead)
-        local t = targetChar:FindFirstChild("Torso") or targetChar:FindFirstChild("UpperTorso") or targetChar:FindFirstChild("HumanoidRootPart")
-        if not t then return nil end
-        local r = targetChar:FindFirstChild("HumanoidRootPart")
-        if not r then return t.CFrame end
-        local vel = r.Velocity
+        local hrp = targetChar:FindFirstChild("HumanoidRootPart")
+        if not hrp then return nil end
+        local vel = hrp.Velocity
         local spd = vel.Magnitude
+        local targetPos = hrp.Position -- Center of HRP for "sticking into"
         if spd > 3 then
             local flatVel = Vector3.new(vel.X, 0, vel.Z)
             local dir = flatVel.Unit
-            local lead = math.min(spd * 0.15, 8)
-            local newPos = Vector3.new(t.Position.X + dir.X * lead, t.Position.Y, t.Position.Z + dir.Z * lead)
-            return CFrame.new(newPos)
-        else
-            return t.CFrame
+            local lead = math.min(spd * 0.35, 12)
+            targetPos = Vector3.new(targetPos.X + dir.X * lead, targetPos.Y, targetPos.Z + dir.Z * lead)
         end
+        -- v99: Return position as CFrame, matching HRP orientation
+        return CFrame.new(targetPos) * CFrame.Angles(0, math.atan2(hrp.CFrame.LookVector.X, hrp.CFrame.LookVector.Z), 0)
     end
 
     local function updateStatus(text)
@@ -5815,6 +5949,13 @@ local LassoFuncs = (function()
                 return
             end
 
+            -- v99: Get the REAL physical part inside the Model
+            local physicalPart = getLassoPhysicalPart(lassoHead)
+            if not physicalPart then
+                updateStatus("Status: No physical part found")
+                return
+            end
+
             -- Validate target
             if lassoTarget and not isPlayerValid(lassoTarget) then
                 destroyLassoHead()
@@ -5843,7 +5984,9 @@ local LassoFuncs = (function()
                         if cf then
                             if tick() - lastMove >= moveInterval then
                                 lastMove = tick()
-                                pcall(function() lassoHead:PivotTo(cf) end)
+                                -- v100: Pass target HRP for firetouchinterest
+                                local targetHRP = nextTarget.Character:FindFirstChild("HumanoidRootPart")
+                                teleportLassoPart(physicalPart, cf, targetHRP)
                             end
                         end
                     end
@@ -5873,7 +6016,9 @@ local LassoFuncs = (function()
                         local pullPos = hrp.CFrame + Vector3.new(0, 0.5, -2)
                         if tick() - lastMove >= moveInterval then
                             lastMove = tick()
-                            pcall(function() lassoHead:PivotTo(pullPos) end)
+                            -- v100: Pass target HRP for firetouchinterest
+                            local targetHRP = lassoTarget.Character and lassoTarget.Character:FindFirstChild("HumanoidRootPart")
+                            teleportLassoPart(physicalPart, pullPos, targetHRP)
                         end
                     end
                     updateStatus("Status: Snitch pulling " .. lassoTarget.Name)
@@ -5882,7 +6027,9 @@ local LassoFuncs = (function()
                     if cf then
                         if tick() - lastMove >= moveInterval then
                             lastMove = tick()
-                            pcall(function() lassoHead:PivotTo(cf) end)
+                            -- v100: Pass target HRP for firetouchinterest
+                            local targetHRP = lassoTarget.Character and lassoTarget.Character:FindFirstChild("HumanoidRootPart")
+                            teleportLassoPart(physicalPart, cf, targetHRP)
                         end
                     end
                     updateStatus("Status: Snitching " .. lassoTarget.Name)
@@ -5931,6 +6078,13 @@ local LassoFuncs = (function()
                 return
             end
 
+            -- v99: Get the REAL physical part inside the Model
+            local physicalPart = getLassoPhysicalPart(lassoHead)
+            if not physicalPart then
+                updateStatus("Status: No physical part found")
+                return
+            end
+
             -- Validate target
             if lassoTarget and not isPlayerValid(lassoTarget) then
                 destroyLassoHead()
@@ -5961,7 +6115,9 @@ local LassoFuncs = (function()
                         if cf then
                             if tick() - lastMove >= moveInterval then
                                 lastMove = tick()
-                                pcall(function() lassoHead:PivotTo(cf) end)
+                                -- v100: Pass target HRP for firetouchinterest
+                                local targetHRP = nextTarget.Character:FindFirstChild("HumanoidRootPart")
+                                teleportLassoPart(physicalPart, cf, targetHRP)
                             end
                         end
                     end
@@ -5988,12 +6144,14 @@ local LassoFuncs = (function()
                 end
 
                 -- Drop to void immediately in Phase 2
-                local cf = lassoHead:GetPivot()
+                local cf = physicalPart.CFrame
                 local x, y, z, r00, r01, r02, r10, r11, r12, r20, r21, r22 = cf:GetComponents()
                 local voidCF = CFrame.fromMatrix(Vector3.new(x, -500, z), Vector3.new(r00, r10, r20), Vector3.new(r01, r11, r21))
                 if tick() - lastMove >= moveInterval then
                     lastMove = tick()
-                    pcall(function() lassoHead:PivotTo(voidCF) end)
+                    -- v100: Pass target HRP for firetouchinterest (maintain grab while dropping)
+                    local targetHRP = lassoTarget.Character and lassoTarget.Character:FindFirstChild("HumanoidRootPart")
+                    teleportLassoPart(physicalPart, voidCF, targetHRP)
                 end
 
                 local state2Elapsed = tick() - state2Start
@@ -6058,7 +6216,25 @@ _G.RarityStarters = {
     SaintESP = ChamFuncs.StartSaintESP,
     PosTracker = QoLExtras.StartPosTracker,
     LassoSnitch = LassoFuncs.StartLassoSnitch,
-    LassoKill = LassoFuncs.StartLassoKill
+    LassoKill = LassoFuncs.StartLassoKill,
+    RemoveFog = function()
+        Notify("🌫️ Fog override active", 2)
+        local fogConn = RunService.Heartbeat:Connect(function()
+            pcall(function()
+                local lighting = game:GetService("Lighting")
+                lighting.FogEnd = 100000
+                lighting.FogStart = 0
+                lighting.FogColor = Color3.new(1,1,1)
+                local atm = lighting:FindFirstChildOfClass("Atmosphere")
+                if atm then
+                    atm.Density = 0
+                    atm.Haze = 0
+                    atm.Glare = 0
+                end
+            end)
+        end)
+        Features.RemoveFog.C = {Disconnect = function() fogConn:Disconnect() end}
+    end
 }
 _G.RarityStoppers = {
     Corpse = FarmFuncs.StopCorpse,
@@ -6081,7 +6257,14 @@ _G.RarityStoppers = {
     SaintESP = ChamFuncs.StopSaintESP,
     PosTracker = QoLExtras.StopPosTracker,
     LassoSnitch = LassoFuncs.StopLassoSnitch,
-    LassoKill = LassoFuncs.StopLassoKill
+    LassoKill = LassoFuncs.StopLassoKill,
+    RemoveFog = function()
+        if Features.RemoveFog.C then
+            pcall(function() Features.RemoveFog.C:Disconnect() end)
+            Features.RemoveFog.C = nil
+        end
+        Notify("🌫️ Fog override stopped", 2)
+    end
 }
 
 -- ==========================================
@@ -6117,6 +6300,7 @@ ST(UI.SaintEspT, UI.SaintEspC, UI.SaintEspS, "SaintESP", ChamFuncs.StartSaintESP
 ST(UI.PosTrackerT, UI.PosTrackerC, UI.PosTrackerS, "PosTracker", QoLExtras.StartPosTracker, QoLExtras.StopPosTracker)
 ST(UI.LassoT, UI.LassoC, UI.LassoS, "LassoSnitch", LassoFuncs.StartLassoSnitch, LassoFuncs.StopLassoSnitch)
 ST(UI.LassoKillT, UI.LassoKillC, UI.LassoKillS, "LassoKill", LassoFuncs.StartLassoKill, LassoFuncs.StopLassoKill)
+ST(UI.FogT, UI.FogC, UI.FogS, "RemoveFog", _G.RarityStarters.RemoveFog, _G.RarityStoppers.RemoveFog)
 
 -- ==========================================
 -- KEYBINDS
@@ -6286,18 +6470,44 @@ UserInputService.InputBegan:Connect(function(i, g)
     if g then return end
     if i.KeyCode == GuiKeybind then
         IsGuiHidden = not IsGuiHidden
-        UI.MainFrame.Visible = not IsGuiHidden
-        -- NotifGui.Enabled = not IsGuiHidden
-        if not IsGuiHidden then
-            local ts = UDim2.new(0, 400, 0, 520)
-            local at = UI.ActiveTab()
-            if at == "ESP" then ts = UDim2.new(0, 400, 0, 360)
-            elseif at == "Movement" then ts = UDim2.new(0, 400, 0, 520)
-            elseif at == "QoL" then ts = UDim2.new(0, 400, 0, 420)
-            elseif at == "Misc" then ts = UDim2.new(0, 400, 0, 420)
-            elseif at == "Server" then ts = UDim2.new(0, 400, 0, 460)
-            elseif at == "Settings" then ts = UDim2.new(0, 400, 0, 420) end
-            UI.MainFrame.Size = ts
+        if IsGuiHidden then
+            -- Save position and scale out
+            UI.LastPosition = UI.MainFrame.Position
+            if UI.UIScale then
+                TweenService:Create(UI.UIScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                    Scale = 0
+                }):Play()
+            end
+            TweenService:Create(UI.MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                Position = UDim2.new(UI.LastPosition.X.Scale, UI.LastPosition.X.Offset, UI.LastPosition.Y.Scale, UI.LastPosition.Y.Offset + 50)
+            }):Play()
+            TweenService:Create(UI.MainFrame, TweenInfo.new(0.3), {
+                BackgroundTransparency = 1
+            }):Play()
+            -- Hide all dropdown lists
+            for _, child in ipairs(UI.ScreenGui:GetChildren()) do
+                if child:GetAttribute("RarityDropdown") and child:IsA("ScrollingFrame") then
+                    child.Visible = false
+                end
+            end
+            task.delay(0.3, function()
+                UI.MainFrame.Visible = false
+            end)
+        else
+            -- Restore position and scale in
+            UI.MainFrame.Visible = true
+            UI.MainFrame.Position = UI.LastPosition
+            if UI.UIScale then
+                TweenService:Create(UI.UIScale, TweenInfo.new(0.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {
+                    Scale = 1
+                }):Play()
+            end
+            TweenService:Create(UI.MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Position = UI.LastPosition
+            }):Play()
+            TweenService:Create(UI.MainFrame, TweenInfo.new(0.3), {
+                BackgroundTransparency = 0
+            }):Play()
         end
     end
 end)
@@ -6518,9 +6728,9 @@ UI.TeleportPlayerBtn.MouseButton1Click:Connect(function()
     if targetHrp then
         local hum = char:FindFirstChildOfClass("Humanoid")
     if hum then hum.Sit = true end
-    task.wait(0.2)
+    task.wait(0.25)
     hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 5)
-    task.wait(0.2)
+    task.wait(0.25)
     if hum then hum.Sit = false end
         Notify("Teleported to " .. name, 2)
     else
@@ -6552,9 +6762,9 @@ UI.TeleportNPCBtn.MouseButton1Click:Connect(function()
         local abovePos = targetPos + Vector3.new(0, (head and head.Size.Y or 2) + 1, 0)
         local hum = char:FindFirstChildOfClass("Humanoid")
     if hum then hum.Sit = true end
-    task.wait(0.2)
+    task.wait(0.25)
     hrp.CFrame = CFrame.new(abovePos)
-    task.wait(0.2)
+    task.wait(0.25)
     if hum then hum.Sit = false end
         hrp.Velocity = Vector3.new(0, 0, 0)
         hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
@@ -7014,7 +7224,7 @@ while true do
         -- v76: removed Play failed notification
         break
     end
-    task.wait(0.5)  -- v76: faster retry
+    task.wait(0.1)
 end
 
 Notify("✅ rarity.bw loaded", 4)
