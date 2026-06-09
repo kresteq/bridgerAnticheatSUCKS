@@ -27,7 +27,7 @@ local Lighting = game:GetService("Lighting")
 local oldGui = playerGui:FindFirstChild("rarity.tsb")
 if oldGui then oldGui:Destroy() end
 
-local SCRIPT_URL = "https://raw.githubusercontent.com/kresteq/tsb-rarity/refs/heads/main/rarity_tsb.lua"
+local SCRIPT_URL = "https://raw.githubusercontent.com/kresteq/bridgerAnticheatSUCKS/refs/heads/main/67.lua"
 local ConfigFolder = "rarity.tsb"
 if not isfolder(ConfigFolder) then makefolder(ConfigFolder) end
 
