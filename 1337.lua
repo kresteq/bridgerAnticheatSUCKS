@@ -1,4 +1,3 @@
-
 task.wait(0.1)
 repeat task.wait() until game:IsLoaded()
 
@@ -2164,16 +2163,16 @@ local function SafeTeleport(target, instant)
     task.wait(0.05)
     -- AC bypass: Sit before teleport
     hum.Sit = true
-    task.wait(0.25)
+    task.wait(0.4)
     if typeof(target) == "CFrame" then
         hrp.CFrame = target
     elseif typeof(target) == "Vector3" then
         hrp.CFrame = CFrame.new(target)
     end
-    task.wait(0.25)
+    task.wait(0.4)
     hum.Sit = false
     if not instant then
-        task.wait(0.25)
+        task.wait(0.2)
         hrp.Velocity = Vector3.new(0, 0, 0)
         hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
@@ -2325,9 +2324,9 @@ local IsSpectatorListening = false
             local targetHrp = targetModel:FindFirstChild("HumanoidRootPart")
             local hum = char:FindFirstChildOfClass("Humanoid")
             if hum then hum.Sit = true end
-            task.wait(0.25)
+            task.wait(0.4)
             if targetHrp then hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 3) end
-            task.wait(0.25)
+            task.wait(0.4)
             hum.Sit = false
         end)
     end
@@ -2443,9 +2442,9 @@ if ok and src and #src > 100 then loadstring(src)() else end
                     local lookCFrame = CFrame.lookAt(hrp.Position, Vector3.new(promptPos.X, hrp.Position.Y, promptPos.Z))
                     local hum = char:FindFirstChildOfClass("Humanoid")
                     if hum then hum.Sit = true end
-                    task.wait(0.25)
+                    task.wait(0.4)
                     hrp.CFrame = lookCFrame
-                    task.wait(0.25)
+                    task.wait(0.4)
                     if hum then hum.Sit = false end
                 end
 
@@ -2486,9 +2485,9 @@ if ok and src and #src > 100 then loadstring(src)() else end
                 tapWA() task.wait(0.5)
                 local hum2 = nc:FindFirstChildOfClass("Humanoid")
                 if hum2 then hum2.Sit = true end
-                task.wait(0.25)
+                task.wait(0.4)
                 nr.CFrame = ns.CFrame + Vector3.new(0, 3, 0)
-                task.wait(0.25)
+                task.wait(0.4)
                 hum2.Sit = false
                 task.wait(0.6)
                 holdPrompt(ns:FindFirstChildOfClass("ProximityPrompt") or ns.Parent:FindFirstChildOfClass("ProximityPrompt"), ns)
@@ -2529,13 +2528,13 @@ if ok and src and #src > 100 then loadstring(src)() else end
                     if not BankRunning then return end
                     local hum = ch:FindFirstChildOfClass("Humanoid")
                     if hum then hum.Sit = true end
-                    task.wait(0.25)
+                    task.wait(0.4)
                     rt.CFrame = CFrame.new(x, y, z)
                     rt.Velocity = Vector3.new(0, 0, 0)
                     rt.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                    task.wait(0.25)
+                    task.wait(0.4)
                     hum.Sit = false
-                    task.wait(0.25)
+                    task.wait(0.4)
                 end
                 local function clickD(o)
                     if not BankRunning then return false end
@@ -2623,17 +2622,17 @@ if ok and src and #src > 100 then loadstring(src)() else end
                         if not BankRunning then break end
                         local cash = findCash()
                         if #cash == 0 then break end
-                        tp(-5764.15, 48.4, -4035.92) task.wait(0.25)
+                        tp(-5764.15, 48.4, -4035.92) task.wait(0.4)
                         for _, d in ipairs(cash) do
                             for i = 1, 3 do
                                 fireclickdetector(d.cd)
                                 task.wait(0.08)
                             end
                             col = col + 1
-                            task.wait(0.25)
+                            task.wait(0.4)
                         end
                         att = att + 1
-                        task.wait(0.25)
+                        task.wait(0.4)
                     end
                     return col
                 end
@@ -2644,13 +2643,13 @@ if ok and src and #src > 100 then loadstring(src)() else end
                     if hasItem("Makeshift Explosive") then hasExp = true break end
                     tp(-2561.91, 45.03, -2594.83)
                     local ad = Workspace:FindFirstChild("Arms Dealer")
-                    if ad then clickD(ad) task.wait(0.25) end
+                    if ad then clickD(ad) task.wait(0.4) end
                     if waitDialog(5) then
                         acceptQuest()
                         local a = 0
                         while not hasItem("Makeshift Explosive") and a < 15 do
                             if not BankRunning then return end
-                            if #getChoices() > 0 then clickChoice(1) task.wait(0.25)
+                            if #getChoices() > 0 then clickChoice(1) task.wait(0.4)
                             else if ad then clickD(ad) task.wait(0.5) waitDialog(3) end end
                             a = a + 1
                         end
@@ -2660,7 +2659,7 @@ if ok and src and #src > 100 then loadstring(src)() else end
 
                 if not BankRunning then return end
                 tp(-5744.06, 47.5, -4032.02)
-                if equipItem("Makeshift Explosive") then task.wait(0.25) clickOnce() task.wait(0.5) end
+                if equipItem("Makeshift Explosive") then task.wait(0.4) clickOnce() task.wait(0.5) end
 
                 local ew = tick()
                 local ef = false
@@ -2671,7 +2670,7 @@ if ok and src and #src > 100 then loadstring(src)() else end
                         tp(-5743.32, 78.7, -4037.94)
                         break
                     end
-                    task.wait(0.25)
+                    task.wait(0.4)
                 end
 
                 if not BankRunning then return end
@@ -2693,8 +2692,8 @@ if ok and src and #src > 100 then loadstring(src)() else end
                 if not BankRunning then return end
                 tp(-2561.91, 45.03, -2594.83)
                 local ad = Workspace:FindFirstChild("Arms Dealer")
-                if ad then clickD(ad) task.wait(0.25) end
-                if waitDialog(5) then clickChoice(1) task.wait(0.25) if #getChoices() > 0 then clickChoice(1) task.wait(0.25) end end
+                if ad then clickD(ad) task.wait(0.4) end
+                if waitDialog(5) then clickChoice(1) task.wait(0.4) if #getChoices() > 0 then clickChoice(1) task.wait(0.4) end end
                 task.wait(1)
                 ServerHop()
             end)
@@ -2744,9 +2743,9 @@ if ok and src and #src > 100 then loadstring(src)() else end
             if not part then return end
             local hum = char:FindFirstChildOfClass("Humanoid")
             if hum then hum.Sit = true end
-            task.wait(0.25)
+            task.wait(0.4)
             hrp.CFrame = part.CFrame * CFrame.new(0, 5, 0)
-            task.wait(0.25)
+            task.wait(0.4)
             hum.Sit = false
             task.wait(0.3)
             for _, desc in ipairs(chest:GetDescendants()) do
@@ -2754,7 +2753,7 @@ if ok and src and #src > 100 then loadstring(src)() else end
                     pcall(function() fireproximityprompt(desc) end)
                 end
             end
-            task.wait(0.25)
+            task.wait(0.4)
         end
 
         for _, chest in ipairs(cf:GetChildren()) do
@@ -2822,9 +2821,9 @@ local ScannerFuncs = (function()
             if c and c:FindFirstChild("HumanoidRootPart") then
                 local hum = c:FindFirstChildOfClass("Humanoid")
                 if hum then hum.Sit = true end
-                task.wait(0.25)
+                task.wait(0.4)
                 c.HumanoidRootPart.CFrame = ScannerData.DP.CFrame + Vector3.new(0, 5, 0)
-                task.wait(0.25)
+                task.wait(0.4)
                 if hum then hum.Sit = false end
                 Notify("Teleported", 3)
             end
@@ -3055,9 +3054,9 @@ local MovementFuncs = (function()
                     if r then
                         local hum = c:FindFirstChildOfClass("Humanoid")
                         if hum then hum.Sit = true end
-                        task.wait(0.25)
+                        task.wait(0.4)
                         r.CFrame = CFrame.new(Mouse.Hit.Position + Vector3.new(0, 3, 0))
-                        task.wait(0.25)
+                        task.wait(0.4)
                         hum.Sit = false
                         r.Velocity = Vector3.new(0, 0, 0)
                         r.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
@@ -3212,9 +3211,9 @@ local SpectatorFuncs = (function()
         local newPos = Vector3.new(originalPos.X, targetY, originalPos.Z)
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then hum.Sit = true end
-        task.wait(0.25)
+        task.wait(0.4)
         hrp.CFrame = CFrame.lookAt(newPos, newPos + Vector3.new(lookDir.X, 0, lookDir.Z))
-        task.wait(0.25)
+        task.wait(0.4)
         hum.Sit = false
 
         -- Heartbeat: Fly movement + ReplicationFocus follows CAMERA
@@ -3311,9 +3310,9 @@ local SpectatorFuncs = (function()
         humanoid.PlatformStand = false
         task.wait(0.1)
         if humanoid then humanoid.Sit = true end
-        task.wait(0.25)
+        task.wait(0.4)
         hrp.CFrame = CFrame.new(originalPos.X, originalPos.Y + 5, originalPos.Z) * CFrame.Angles(0, math.atan2(hrp.CFrame.LookVector.X, hrp.CFrame.LookVector.Z), 0)
-        task.wait(0.25)
+        task.wait(0.4)
         humanoid.Sit = false
 
         task.wait(0.3)
@@ -3324,9 +3323,9 @@ local SpectatorFuncs = (function()
         hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
         hrp.Velocity = Vector3.new(0, 0, 0)
         if humanoid then humanoid.Sit = true end
-        task.wait(0.25)
+        task.wait(0.4)
         hrp.CFrame = CFrame.new(originalPos.X, originalPos.Y + 3, originalPos.Z) * CFrame.Angles(0, math.atan2(hrp.CFrame.LookVector.X, hrp.CFrame.LookVector.Z), 0)
-        task.wait(0.25)
+        task.wait(0.4)
         humanoid.Sit = false
 
 
@@ -4349,9 +4348,9 @@ local TreeFuncs = (function()
         if not root then return end
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then hum.Sit = true end
-        task.wait(0.25)
+        task.wait(0.4)
         root.CFrame = CFrame.new(pos + Vector3.new(0, 5, 0))
-        task.wait(0.25)
+        task.wait(0.4)
         hum.Sit = false
         root.Velocity = Vector3.new(0, 0, 0)
         root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
@@ -5319,9 +5318,9 @@ local FishFuncs = (function()
         if not hrp then return false end
         local hum = char:FindFirstChildOfClass("Humanoid")
     if hum then hum.Sit = true end
-    task.wait(0.25)
+    task.wait(0.4)
     hrp.CFrame = CFrame.new(daniel:GetPivot().Position + Vector3.new(0, 5, 0))
-    task.wait(0.25)
+    task.wait(0.4)
     if hum then hum.Sit = false end
         hrp.Velocity = Vector3.new(0, 0, 0)
         hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
@@ -5563,9 +5562,9 @@ local FishFuncs = (function()
                     if hrp then
                         local hum = char:FindFirstChildOfClass("Humanoid")
                         if hum then hum.Sit = true end
-                        task.wait(0.25)
+                        task.wait(0.4)
                         hrp.CFrame = CFrame.new(spot.playerPos + Vector3.new(0, 5, 0))
-                        task.wait(0.25)
+                        task.wait(0.4)
                         hum.Sit = false
                         hrp.Velocity = Vector3.new(0, 0, 0)
                         hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
@@ -5596,9 +5595,9 @@ local FishFuncs = (function()
                     if hrp then
                         local hum = char:FindFirstChildOfClass("Humanoid")
                         if hum then hum.Sit = true end
-                        task.wait(0.25)
+                        task.wait(0.4)
                         hrp.CFrame = CFrame.new(spot.playerPos + Vector3.new(0, 5, 0))
-                        task.wait(0.25)
+                        task.wait(0.4)
                         hum.Sit = false
                         hrp.Velocity = Vector3.new(0, 0, 0)
                         hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
@@ -6729,9 +6728,9 @@ UI.TeleportPlayerBtn.MouseButton1Click:Connect(function()
     if targetHrp then
         local hum = char:FindFirstChildOfClass("Humanoid")
     if hum then hum.Sit = true end
-    task.wait(0.25)
+    task.wait(0.4)
     hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 5)
-    task.wait(0.25)
+    task.wait(0.4)
     if hum then hum.Sit = false end
         Notify("Teleported to " .. name, 2)
     else
@@ -6763,9 +6762,9 @@ UI.TeleportNPCBtn.MouseButton1Click:Connect(function()
         local abovePos = targetPos + Vector3.new(0, (head and head.Size.Y or 2) + 1, 0)
         local hum = char:FindFirstChildOfClass("Humanoid")
     if hum then hum.Sit = true end
-    task.wait(0.25)
+    task.wait(0.4)
     hrp.CFrame = CFrame.new(abovePos)
-    task.wait(0.25)
+    task.wait(0.4)
     if hum then hum.Sit = false end
         hrp.Velocity = Vector3.new(0, 0, 0)
         hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
